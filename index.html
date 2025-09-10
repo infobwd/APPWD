@@ -1,137 +1,81 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>WD School Portal — Phase 3</title>
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#9CC5FF">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme:{
-        extend:{
-          fontFamily:{ sans:['Kanit','system-ui','sans-serif'] },
-          colors:{ base:'#0E1320', card:'#121A2E', prim:'#9CC5FF', primSoft:'#EAF3FF', warn:'#FFF1A6' }
-        }
-      }
-    }
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
-  <style>
-    html,body{height:100%;background:#0E1320;color:#E7F0FF}
-    .hide{display:none!important}
-    .card{background:#121A2E;border:1px solid #223052;border-radius:20px}
-    .chip{padding:.25rem .6rem;border:1px solid #223052;border-radius:999px;font-size:.75rem;background:#0E1320}
-    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1rem;border-radius:999px;border:1px solid #223052;background:#16203A}
-    .btn-prim{background:linear-gradient(0deg,#122447,#162F5A);border-color:#2E4373;box-shadow:0 6px 16px rgba(156,197,255,.15)}
-    .banner-grad{background:linear-gradient(135deg,#9CC5FF 0%, #FFF1A6 100%);}
-    @media (min-width:1024px){.layout{display:grid;grid-template-columns:280px 1fr;gap:1.2rem}.sidebar{display:block}.bottom-nav{display:none}}
-    @media (max-width:1023px){.layout{display:grid;grid-template-columns:1fr;gap:1.2rem}.sidebar{display:none}.bottom-nav{display:flex}}
-  </style>
+<html lang="th"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WD School Portal — v3B Light</title>
+<link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#E9F3FF">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#1E88E5',brandSoft:'#E9F3FF'}}}};
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+<style>
+html,body{height:100%;background:#F6FAFF;color:#182230} .card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
+.btn-prim{background:#1E88E5;color:#fff;border-color:#1E88E5}
+.bottom-nav svg{width:24px;height:24px;stroke:#6B7280}.bottom-nav .active svg{stroke:#111827}.bottom-nav .active span{color:#111827}
+.hide{display:none!important}
+</style>
 </head>
 <body class="font-sans">
-  <div class="banner-grad">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-white/25 grid place-items-center text-sm font-bold">WD</div>
-      <div class="flex-1">
-        <div class="text-base lg:text-lg font-semibold">WD School Portal</div>
-        <div class="text-xs text-black/70">Phase 3 • Pastel Blue/Yellow • LIFF Login</div>
+<header class="border-b border-[#E6EAF0] bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-xl bg-brandSoft grid place-items-center text-brand font-bold">WD</div>
+    <div class="text-base font-semibold">WD School Portal</div>
+    <div class="ml-auto flex items-center gap-3">
+      <div id="userBadge" class="flex items-center gap-2 hide">
+        <img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar">
+        <span id="userName" class="text-sm"></span>
       </div>
-      <div id="userBox" class="flex items-center gap-2">
-        <button id="btnLineLogin" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
-        <div id="userInfo" class="hide chip bg-white/20 text-black">—</div>
-        <button id="btnLogout" class="hide btn">ออกจากระบบ</button>
-      </div>
+      <button id="btnLineLogin" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
+      <button id="btnLogout" class="btn hide">ออกจากระบบ</button>
     </div>
   </div>
+</header>
 
-  <main class="max-w-7xl mx-auto px-4 py-4 layout">
-    <aside class="sidebar">
-      <nav class="card p-3">
-        <div class="text-sm uppercase text-slate-300 mb-2 px-2">เมนูหลัก</div>
-        <ul class="space-y-1">
-          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#0F1B34]" data-nav="#home">🏠 หน้าแรก</a></li>
-          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#0F1B34]" data-nav="#helpdesk">🆘 Helpdesk/ร้องเรียน</a></li>
-          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#0F1B34]" data-nav="#polls">📊 Polls & Forms</a></li>
-          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#0F1B34]" data-nav="#directory">👥 ทำเนียบบุคลากร</a></li>
-        </ul>
-      </nav>
-    </aside>
-
-    <section id="viewports" class="space-y-6">
-      <div class="viewport" data-view="#home">
-        <div class="card p-4">
-          <div class="text-lg font-semibold mb-2">ยินดีต้อนรับ (Phase 3)</div>
-          <div class="text-sm opacity-80">ธีมพาสเทล + LIFF Login + Helpdesk/Polls/Directory + PWA</div>
-        </div>
+<main class="max-w-6xl mx-auto px-4 py-4">
+  <section class="space-y-4">
+    <div class="card p-4"><div class="text-lg font-semibold mb-2">ข่าวล่าสุด</div><div id="homeNews" class="grid gap-2"></div></div>
+    <div class="card p-4"><div class="text-lg font-semibold mb-2">เมนูด่วน</div>
+      <div class="grid grid-cols-2 gap-3">
+        <a data-nav="#applinks" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>ลิงก์</span></a>
+        <a data-nav="#leave" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg><span>ลา</span></a>
+        <a data-nav="#checkin" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>ลงเวลา</span></a>
+        <a data-nav="#news" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 4h18"/><path d="M3 10h18"/><path d="M3 16h18"/></svg><span>ข่าว</span></a>
       </div>
-
-      <div class="viewport hide" data-view="#helpdesk">
-        <div class="grid lg:grid-cols-3 gap-6">
-          <div class="card p-4">
-            <div class="text-lg font-semibold mb-2">สร้างคำร้อง/แจ้งปัญหา</div>
-            <form id="ticketForm" class="grid gap-3 text-sm">
-              <label class="flex flex-col gap-1"><span>หมวด</span>
-                <select name="category" class="bg-[#091124] border border-[#223052] rounded p-2">
-                  <option>IT</option><option>พัสดุ/ซ่อมบำรุง</option><option>ความปลอดภัย</option><option>วินัยนักเรียน</option><option>วิชาการ/การสอน</option>
-                </select>
-              </label>
-              <label class="flex flex-col gap-1"><span>หัวข้อ</span><input name="title" required class="bg-[#091124] border border-[#223052] rounded p-2"></label>
-              <label class="flex flex-col gap-1"><span>รายละเอียด</span><textarea name="detail" rows="4" class="bg-[#091124] border border-[#223052] rounded p-2"></textarea></label>
-              <label class="flex flex-col gap-1"><span>แนบรูป/ไฟล์</span><input name="file" type="file" class="text-xs"></label>
-              <button class="btn btn-prim">ส่งคำร้อง</button>
-            </form>
-          </div>
-          <div class="lg:col-span-2 card p-4">
-            <div class="flex items-center justify-between">
-              <div class="text-lg font-semibold">คำร้องของฉัน</div>
-              <div class="text-xs chip bg-primSoft text-[#102548]" id="ticketCounter">—</div>
-            </div>
-            <div id="myTickets" class="mt-3 grid gap-3"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="viewport hide" data-view="#polls">
-        <div class="card p-4">
-          <div class="flex items-center justify-between">
-            <div class="text-lg font-semibold">โหวต/แบบสอบถาม</div>
-            <a id="btnNewPoll" class="btn btn-prim" style="display:none">+ สร้างโหวต</a>
-          </div>
-          <div id="pollList" class="mt-3 grid lg:grid-cols-2 gap-4"></div>
-        </div>
-      </div>
-
-      <div class="viewport hide" data-view="#directory">
-        <div class="card p-4">
-          <div class="text-lg font-semibold mb-3">ทำเนียบบุคลากร</div>
-          <div class="flex gap-2 mb-3">
-            <input id="dirQuery" placeholder="ค้นหาชื่อ/แผนก/เบอร์" class="flex-1 bg-[#091124] border border-[#223052] rounded p-2">
-            <button id="dirSearch" class="btn">ค้นหา</button>
-          </div>
-          <div id="dirGrid" class="grid md:grid-cols-3 gap-3"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <nav class="bottom-nav fixed bottom-0 inset-x-0 bg-[#0E1320]/95 border-t border-[#223052]">
-    <div class="max-w-7xl mx-auto grid grid-cols-4">
-      <button class="py-2 navbtn flex flex-col items-center text-base" data-nav="#home"><div class="text-2xl">🏠</div><div class="text-[12px] mt-0.5">หน้าแรก</div></button>
-      <button class="py-2 navbtn flex flex-col items-center text-base" data-nav="#helpdesk"><div class="text-2xl">🆘</div><div class="text-[12px] mt-0.5">Help</div></button>
-      <button class="py-2 navbtn flex flex-col items-center text-base" data-nav="#polls"><div class="text-2xl">📝</div><div class="text-[12px] mt-0.5">โหวต</div></button>
-      <button class="py-2 navbtn flex flex-col items-center text-base" data-nav="#directory"><div class="text-2xl">👥</div><div class="text-[12px] mt-0.5">ทำเนียบ</div></button>
     </div>
-  </nav>
 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script type="module" src="./liff-bridge.js"></script>
-  <script type="module" src="./app.js"></script>
-  <script>
-    if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js'); }
-  </script>
-</body>
-</html>
+    <div class="card p-4 hide" id="newsView"><div class="text-lg font-semibold mb-2">ข่าว/ประกาศ</div><div id="newsList" class="grid gap-2"></div></div>
+    <div class="card p-4 hide" id="linkView"><div class="text-lg font-semibold mb-2">ศูนย์ลิงก์</div><div id="linkGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div></div>
+    <div class="card p-4 hide" id="leaveView">
+      <div class="text-lg font-semibold mb-2">ยื่นลา</div>
+      <form id="leaveForm" class="grid sm:grid-cols-2 gap-3 text-sm">
+        <label class="flex flex-col gap-1"><span>ประเภทลา</span><select name="type" class="border border-[#E6EAF0] rounded p-2"><option value="vacation">ลาพักผ่อน</option><option value="business">ลากิจ</option><option value="sick">ลาป่วย</option></select></label>
+        <label class="flex flex-col gap-1"><span>วันที่เริ่ม</span><input name="start_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
+        <label class="flex flex-col gap-1"><span>วันที่สิ้นสุด</span><input name="end_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
+        <label class="flex flex-col gap-1 sm:col-span-2"><span>เหตุผล</span><textarea name="reason" rows="3" class="border border-[#E6EAF0] rounded p-2"></textarea></label>
+        <div class="sm:col-span-2"><button class="btn btn-prim">ส่งคำขอ</button></div>
+      </form>
+      <div class="mt-4"><div class="text-lg font-semibold mb-2">คำขอของฉัน</div><div id="myLeaves" class="grid gap-2"></div></div>
+    </div>
+    <div class="card p-4 hide" id="checkView">
+      <div class="text-lg font-semibold mb-3">ลงเวลาเข้า-ออก</div>
+      <div class="flex gap-2 mb-2"><button id="btnCheckIn" class="btn btn-prim">เช็คอิน</button><button id="btnCheckOut" class="btn">เช็คเอาท์</button><label class="ml-auto text-sm text-gray-600">แนบรูป: <input id="photoInput" type="file" accept="image/*" class="text-xs"/></label></div>
+      <div class="text-xs text-gray-500 mb-3">* ระบบจะขอ GPS เพื่อแนบกับบันทึกเวลา</div>
+      <div id="myCheckins" class="grid gap-2"></div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom-nav fixed bottom-0 inset-x-0 bg-white/95 border-t border-[#E6EAF0]">
+  <div class="max-w-6xl mx-auto grid grid-cols-4">
+    <button class="py-2 navbtn flex flex-col items-center text-sm active" data-nav="#home"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg><span>หน้าแรก</span></button>
+    <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#applinks"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>ลิงก์</span></button>
+    <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#leave"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg><span>ลา</span></button>
+    <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#checkin"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>ลงเวลา</span></button>
+  </div>
+</nav>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script type="module" src="./liff-ui-only.js"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
