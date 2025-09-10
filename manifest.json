@@ -1,0 +1,10 @@
+{
+  "name": "WD School Portal",
+  "short_name": "WD Portal",
+  "theme_color": "#9CC5FF",
+  "background_color": "#0E1320",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./index.html",
+  "icons": []
+}
