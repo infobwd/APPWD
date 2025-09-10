@@ -18,7 +18,6 @@ export async function renderList(){
 }
 
 export async function renderComposeButton(){
-  // Show compose button if role is editor/admin
   const header = document.querySelector('[data-view="#announcements"] .card .flex.items-center.justify-between');
   if(!header) return;
   let btn = header.querySelector('#btnAddPost');
@@ -69,7 +68,6 @@ export async function renderDetail(id){
     <div class="whitespace-pre-wrap leading-relaxed">${escapeHtml(post.body||'')}</div>
   `;
 
-  // Mark as read
   const user = await currentUser();
   if(user){
     await supabase.from('post_reads').upsert({ post_id: post.id, user_id: user.id, read_at: new Date().toISOString() }, { onConflict: 'post_id,user_id' });
@@ -97,7 +95,6 @@ export async function renderCompose(){
     wrap.innerHTML = '<div class="card p-6 text-red-300">คุณไม่มีสิทธิ์เพิ่มข่าว</div>';
     return;
   }
-  // Wire submit
   const form = document.getElementById('composeForm');
   const files = document.getElementById('composeFiles');
   form.onsubmit = async (e) => {
@@ -114,7 +111,6 @@ export async function renderCompose(){
     const { data: inserted, error } = await supabase.from('posts').insert(payload).select('id').maybeSingle();
     if(error || !inserted){ alert('บันทึกโพสต์ไม่สำเร็จ: ' + (error?.message||'')); return; }
 
-    // Upload attachments if any
     const filesArr = Array.from(files.files || []);
     for(const f of filesArr){
       const path = `posts/${inserted.id}/${Date.now()}_${f.name}`;
@@ -126,32 +122,7 @@ export async function renderCompose(){
   };
 }
 
-function filePublicUrl(path){
-  // For public bucket, direct public URL pattern
-  const url = `${location.origin}/_supabase_storage_proxy/${encodeURIComponent(path)}`;
-  // Fallback: use Supabase storage public URL if configured as public
-  return url;
-}
-
-function iconFor(mime){
-  if(!mime) return '📎';
-  if(mime.includes('pdf')) return '📕';
-  if(mime.includes('image')) return '🖼️';
-  if(mime.includes('spreadsheet') || mime.includes('excel')) return '📊';
-  if(mime.includes('word')) return '📝';
-  return '📎';
-}
-
-function skeleton(){
-  return Array.from({length:6}).map(()=>`
-    <div class="card p-4">
-      <div class="animate-pulse h-5 bg-slate-700/30 rounded w-3/4 mb-2"></div>
-      <div class="animate-pulse h-4 bg-slate-700/20 rounded w-2/3 mb-3"></div>
-      <div class="animate-pulse h-16 bg-slate-700/10 rounded"></div>
-    </div>
-  `).join('');
-}
-
-function escapeHtml(s){
-  return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
+function filePublicUrl(path){ return path.startsWith('http') ? path : path; }
+function iconFor(mime){ if(!mime) return '📎'; if(mime.includes('pdf')) return '📕'; if(mime.includes('image')) return '🖼️'; if(mime.includes('spreadsheet')||mime.includes('excel')) return '📊'; if(mime.includes('word')) return '📝'; return '📎'; }
+function skeleton(){ return Array.from({length:6}).map(()=>`<div class="card p-4"><div class="animate-pulse h-5 bg-slate-700/30 rounded w-3/4 mb-2"></div><div class="animate-pulse h-4 bg-slate-700/20 rounded w-2/3 mb-3"></div><div class="animate-pulse h-16 bg-slate-700/10 rounded"></div></div>`).join(''); }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }

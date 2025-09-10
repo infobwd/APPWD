@@ -3,9 +3,9 @@ import { supabase, currentUser } from '../api.js';
 export async function render(){
   const form = document.getElementById('leaveForm');
   form.onsubmit = onSubmit;
+  await refreshBalances();
   await refreshMyLeaves();
 }
-
 async function onSubmit(e){
   e.preventDefault();
   const user = await currentUser();
@@ -19,8 +19,6 @@ async function onSubmit(e){
     reason: fd.get('reason') || null,
     status: 'pending'
   };
-
-  // attachment optional -> upload to 'attachments' bucket
   const file = fd.get('attachment');
   let attachment = null;
   if(file && file.size){
@@ -30,56 +28,28 @@ async function onSubmit(e){
     attachment = path;
   }
   payload.attachment = attachment;
-
   const { error } = await supabase.from('leave_requests').insert(payload);
   if(error){ alert('ยื่นคำขอไม่สำเร็จ: ' + error.message); return; }
   e.target.reset();
   await refreshMyLeaves();
 }
-
 async function refreshMyLeaves(){
   const user = await currentUser();
   const box = document.getElementById('myLeaves');
-  await refreshBalances();
   if(!user){ box.innerHTML = '<div class="text-slate-400">กรุณาเข้าสู่ระบบ</div>'; return; }
   box.innerHTML = '<div class="animate-pulse h-4 bg-slate-700/20 rounded w-1/2"></div>';
-  const { data, error } = await supabase
-    .from('leave_requests')
-    .select('id,type,start_date,end_date,status,created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending:false })
-    .limit(20);
+  const { data, error } = await supabase.from('leave_requests').select('id,type,start_date,end_date,status,created_at').eq('user_id', user.id).order('created_at', { ascending:false }).limit(20);
   if(error){ box.innerHTML = '<div class="text-red-300">โหลดคำขอไม่สำเร็จ</div>'; return; }
-  box.innerHTML = (data||[]).map(r => `
-    <div class="p-2 border border-[#223052] rounded-lg">
-      <div class="font-medium">${labelType(r.type)} • ${labelStatus(r.status)}</div>
-      <div class="text-xs text-slate-400">${r.start_date||'—'} → ${r.end_date||'—'}</div>
-    </div>
-  `).join('') || '<div class="text-slate-400">ยังไม่มีคำขอ</div>';
+  box.innerHTML = (data||[]).map(r => `<div class="p-2 border border-[#223052] rounded-lg"><div class="font-medium">${labelType(r.type)} • ${labelStatus(r.status)}</div><div class="text-xs text-slate-400">${r.start_date||'—'} → ${r.end_date||'—'}</div></div>`).join('') || '<div class="text-slate-400">ยังไม่มีคำขอ</div>';
 }
-
-function labelType(t){
-  return ({vacation:'ลาพักผ่อน', business:'ลากิจ', sick:'ลาป่วย'})[t] || t;
-}
-function labelStatus(s){
-  return ({pending:'รออนุมัติ', approved:'อนุมัติ', rejected:'ตีกลับ'})[s] || s;
-}
-
 async function refreshBalances(){
   const user = await currentUser();
   const panel = document.querySelector('[data-view="#leave"] .grid .card ul');
   if(!panel || !user) return;
-  // Load balances by type
-  const { data } = await supabase
-    .from('leave_balances')
-    .select('type,balance')
-    .eq('user_id', user.id);
+  const { data } = await supabase.from('leave_balances').select('type,balance').eq('user_id', user.id);
   const map = Object.fromEntries((data||[]).map(x => [x.type, x.balance]));
-  const items = [
-    ['vacation','ลาพักผ่อน'], ['business','ลากิจ'], ['sick','ลาป่วย']
-  ];
-  panel.innerHTML = items.map(([k,label]) => {
-    const v = (map[k] ?? (k==='sick' ? 'ไม่จำกัด' : 0));
-    return `<li class="flex justify-between"><span>${label}</span><span class="chip">${v}</span></li>`;
-  }).join('');
+  const items = [['vacation','ลาพักผ่อน'], ['business','ลากิจ'], ['sick','ลาป่วย']];
+  panel.innerHTML = items.map(([k,label]) => { const v = (map[k] ?? (k==='sick' ? 'ไม่จำกัด' : 0)); return `<li class="flex justify-between"><span>${label}</span><span class="chip">${v}</span></li>`; }).join('');
 }
+function labelType(t){ return ({vacation:'ลาพักผ่อน', business:'ลากิจ', sick:'ลาป่วย'})[t] || t; }
+function labelStatus(s){ return ({pending:'รออนุมัติ', approved:'อนุมัติ', rejected:'ตีกลับ'})[s] || s; }

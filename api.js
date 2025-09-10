@@ -7,35 +7,22 @@ export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session || null;
 }
-
 export async function signInEmail(email) {
-  // Magic link (OTP) sign-in
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: {
-      emailRedirectTo: window.location.origin + '/'
-    }
+    options: { emailRedirectTo: window.location.origin + '/' }
   });
   if (error) throw error;
   return true;
 }
-
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
-
 export async function currentUser() {
   const { data } = await supabase.auth.getUser();
   return data.user || null;
 }
-
-export async function signedUrl(bucket, path, expires = 3600) {
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expires);
-  if (error) return null;
-  return data.signedUrl;
-}
-
 export async function getProfile() {
   const user = await currentUser();
   if(!user) return null;
@@ -49,4 +36,9 @@ export async function isRole(role){
 export async function anyRole(roles){
   const p = await getProfile();
   return !!p && roles.includes(p.role);
+}
+export async function signedUrl(bucket, path, expires = 3600) {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expires);
+  if (error) return null;
+  return data.signedUrl;
 }
