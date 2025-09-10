@@ -1,0 +1,389 @@
+<!-- index.html — Wireframe Mockup (GitHub static, no backend yet) -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>WD School Portal — Mockup</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme:{
+        extend:{
+          fontFamily:{ sans:['Kanit','system-ui','sans-serif'] },
+          colors:{
+            ink:'#1e2a44', bg:'#0f1424', card:'#141a2f', line:'#223052',
+            accent:'#8ab4ff', soft:'#eaf4ff', warn:'#fff3b0', ok:'#34d399', danger:'#ef4444'
+          },
+          boxShadow:{ card:'0 12px 28px rgba(0,0,0,.12)' }
+        }
+      }
+    }
+  </script>
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+
+  <style>
+    /* Wireframe look */
+    .wf { border:1.5px dashed #2b3b66; border-radius:16px; }
+    .muted { color:#a9b7d0 }
+    .card { background:var(--card, #141a2f); border:1px solid #223052; border-radius:18px; }
+    .btn { display:inline-flex; align-items:center; gap:.5rem; padding:.65rem 1rem; border-radius:999px; border:1px solid #223052 }
+    .btn-prim{ background:#1b2746; border-color:#2b3b66 }
+    .chip { padding:.3rem .7rem; border-radius:999px; border:1px dashed #2b3b66; color:#cbd5e1 }
+    .skeleton { background:linear-gradient(90deg,#1a2140 25%,#1e274b 37%,#1a2140 63%); background-size:400% 100%; animation:sheen 1.2s infinite }
+    @keyframes sheen{ 0%{background-position:100% 0} 100%{background-position:0 0} }
+    .hide { display:none !important; }
+    html, body { height:100%; background:#0f1424; color:#e5eefc }
+    /* Desktop sidebar vs mobile bottom nav */
+    @media (min-width: 1024px){
+      .layout { grid-template-columns: 260px 1fr }
+      .bottom-nav { display:none }
+      .sidebar { display:block }
+    }
+    @media (max-width: 1023px){
+      .layout { grid-template-columns: 1fr }
+      .bottom-nav { display:flex }
+      .sidebar { display:none }
+    }
+  </style>
+</head>
+<body class="font-sans">
+  <!-- Topbar -->
+  <header class="sticky top-0 z-40 bg-[#0f1424]/85 backdrop-blur border-b border-[#223052]">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-xl wf grid place-items-center" aria-hidden="true">WD</div>
+      <div class="flex-1">
+        <div class="text-base lg:text-lg font-semibold">WD School Portal</div>
+        <div class="text-xs muted">Mockup • ข่าว • ลงเวลา • ลา • App Hub</div>
+      </div>
+      <div class="hidden md:flex items-center gap-2">
+        <button class="btn btn-prim" data-nav="#home">หน้าแรก</button>
+        <button class="btn" data-nav="#announcements">ข่าว</button>
+        <button class="btn" data-nav="#checkin">ลงเวลา</button>
+        <button class="btn" data-nav="#leave">ลา/อนุมัติ</button>
+        <button class="btn" data-nav="#apphub">App Hub</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="chip text-xs">คุณ: ครูอาร์ม</div>
+        <div class="w-9 h-9 rounded-full wf"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto grid layout gap-6 px-4 py-6">
+    <!-- Sidebar (Desktop) -->
+    <aside class="sidebar">
+      <nav class="card p-3">
+        <div class="text-sm uppercase muted mb-2 px-2">เมนูหลัก</div>
+        <ul class="space-y-1">
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#home">🏠 หน้าแรก</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#announcements">📰 ข่าว/ประกาศ</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#checkin">⏱️ ลงเวลาเข้า-ออก</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#leave">🗓️ ลา & อนุมัติ</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#calendar">📅 ปฏิทิน</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#docs">📁 ศูนย์เอกสาร</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#helpdesk">💬 Helpdesk</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#apphub">🔗 App Hub</a></li>
+          <li><a class="navlink block px-3 py-2 rounded-lg hover:bg-[#1b2746]" data-nav="#admin">🛠️ Admin</a></li>
+        </ul>
+      </nav>
+      <div class="card mt-3 p-3">
+        <div class="text-sm uppercase muted mb-2 px-2">สรุปย่อ</div>
+        <ul class="text-sm space-y-2">
+          <li class="flex justify-between"><span>ข่าวใหม่</span><span class="chip">3</span></li>
+          <li class="flex justify-between"><span>คำขอลา(รออนุมัติ)</span><span class="chip">2</span></li>
+          <li class="flex justify-between"><span>ลงเวลา (วันนี้)</span><span class="chip">เช็คอินแล้ว</span></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <section id="viewports" class="space-y-6">
+      <!-- HOME -->
+      <div class="viewport" data-view="#home">
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Urgent banner -->
+          <div class="lg:col-span-3 card p-4">
+            <div class="wf p-4 flex items-center justify-between">
+              <div>
+                <div class="font-semibold">ประกาศเร่งด่วน (ตัวอย่าง)</div>
+                <div class="muted text-sm">ปิดเรียนพิเศษวันศุกร์นี้ เนื่องจากกิจกรรม…</div>
+              </div>
+              <button class="btn">ดูรายละเอียด</button>
+            </div>
+          </div>
+          <!-- News feed -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="text-lg font-semibold">ข่าวล่าสุด</div>
+              <div class="flex gap-2">
+                <span class="chip text-xs">ทั้งหมด</span>
+                <span class="chip text-xs">วิชาการ</span>
+                <span class="chip text-xs">ประกาศทั่วไป</span>
+              </div>
+            </div>
+            <div class="card p-4 space-y-4">
+              <!-- skeleton list -->
+              <div class="h-5 w-3/5 skeleton rounded-md"></div>
+              <div class="h-4 w-4/5 skeleton rounded-md"></div>
+              <div class="h-4 w-2/5 skeleton rounded-md"></div>
+              <hr class="border-[#223052]">
+              <div class="h-5 w-2/3 skeleton rounded-md"></div>
+              <div class="h-4 w-3/4 skeleton rounded-md"></div>
+            </div>
+          </div>
+          <!-- My Today -->
+          <div class="space-y-4">
+            <div class="card p-4">
+              <div class="text-lg font-semibold mb-2">วันนี้ของฉัน</div>
+              <div class="wf p-3 mb-2">สถานะลงเวลา: <span class="chip">ยังไม่เช็คเอาท์</span></div>
+              <div class="wf p-3">นัดหมายถัดไป: ประชุม PLC 13:30</div>
+            </div>
+            <div class="card p-4">
+              <div class="text-lg font-semibold mb-3">ลัดไปยังระบบ</div>
+              <div class="grid grid-cols-3 gap-3">
+                <a class="wf p-3 text-center text-sm" data-nav="#checkin">⏱️ ลงเวลา</a>
+                <a class="wf p-3 text-center text-sm" data-nav="#leave">🗓️ ลา</a>
+                <a class="wf p-3 text-center text-sm" data-nav="#apphub">🔗 Hub</a>
+                <a class="wf p-3 text-center text-sm" data-nav="#announcements">📰 ข่าว</a>
+                <a class="wf p-3 text-center text-sm" data-nav="#calendar">📅 ปฏิทิน</a>
+                <a class="wf p-3 text-center text-sm" data-nav="#docs">📁 เอกสาร</a>
+              </div>
+            </div>
+          </div>
+          <!-- App Hub preview -->
+          <div class="lg:col-span-3 card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-lg font-semibold">ศูนย์ไอคอน App Hub</div>
+              <a class="btn" data-nav="#apphub">ดูทั้งหมด</a>
+            </div>
+            <div class="grid sm:grid-cols-4 grid-cols-2 gap-3">
+              <div class="wf p-4 text-center">🍱 อาหารกลางวัน</div>
+              <div class="wf p-4 text-center">🧑‍🏫 นิเทศการสอน</div>
+              <div class="wf p-4 text-center">🇹🇭 Thai Literacy</div>
+              <div class="wf p-4 text-center">🏆 กีฬา</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS -->
+      <div class="viewport hide" data-view="#announcements">
+        <div class="card p-4 mb-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="text-lg font-semibold">ข่าวประชาสัมพันธ์</div>
+            <div class="flex flex-wrap gap-2">
+              <span class="chip">ทั้งหมด</span>
+              <span class="chip">วิชาการ</span>
+              <span class="chip">กิจการนักเรียน</span>
+              <span class="chip">บุคลากร</span>
+              <button class="btn btn-prim">+ เพิ่มข่าว (ตัวอย่าง)</button>
+            </div>
+          </div>
+        </div>
+        <!-- list -->
+        <div class="grid lg:grid-cols-3 gap-4">
+          <article class="card p-4">
+            <div class="h-5 w-3/4 skeleton rounded-md mb-2"></div>
+            <div class="muted text-sm mb-3">หมวด: วิชาการ • เผยแพร่ 10 ก.ย. 2568</div>
+            <div class="wf p-3 mb-3">ตัวอย่างสรุปเนื้อหาสั้น ๆ …</div>
+            <div class="flex gap-2">
+              <button class="btn">ดูรายละเอียด</button>
+              <button class="btn">ดาวน์โหลดแนบ</button>
+            </div>
+          </article>
+          <article class="card p-4">
+            <div class="h-5 w-2/3 skeleton rounded-md mb-2"></div>
+            <div class="muted text-sm mb-3">หมวด: บุคลากร • เผยแพร่ 9 ก.ย. 2568</div>
+            <div class="wf p-3 mb-3">ตัวอย่าง…</div>
+            <div class="flex gap-2">
+              <button class="btn">ดูรายละเอียด</button>
+            </div>
+          </article>
+          <article class="card p-4">
+            <div class="h-5 w-2/3 skeleton rounded-md mb-2"></div>
+            <div class="muted text-sm mb-3">หมวด: ประชาสัมพันธ์</div>
+            <div class="wf p-3 mb-3">ตัวอย่าง…</div>
+            <div class="flex gap-2">
+              <button class="btn">ดูรายละเอียด</button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- CHECK-IN -->
+      <div class="viewport hide" data-view="#checkin">
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 card p-4">
+            <div class="text-lg font-semibold mb-3">ลงเวลาเข้า-ออก (ตัวอย่าง)</div>
+            <div class="wf p-4 mb-3 flex items-center justify-between">
+              <div>
+                <div class="font-semibold">สถานะปัจจุบัน</div>
+                <div class="muted text-sm">เช็คอิน 07:58 • ยังไม่เช็คเอาท์</div>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-prim">เช็คอิน</button>
+                <button class="btn">เช็คเอาท์</button>
+              </div>
+            </div>
+            <div class="wf p-4">พื้นที่อนุญาต (Geofence): อาคาร A • รัศมี 60 ม.</div>
+          </div>
+          <div class="card p-4">
+            <div class="text-lg font-semibold mb-2">ประวัติ (เดือนนี้)</div>
+            <div class="space-y-2">
+              <div class="wf p-3">10 ก.ย. • 07:58 / —</div>
+              <div class="wf p-3">09 ก.ย. • 08:02 / 16:31</div>
+              <div class="wf p-3">08 ก.ย. • 07:55 / 16:40</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEAVE -->
+      <div class="viewport hide" data-view="#leave">
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="card p-4">
+            <div class="text-lg font-semibold mb-2">คงเหลือวันลา</div>
+            <ul class="space-y-2">
+              <li class="flex justify-between"><span>ลาพักผ่อน</span><span class="chip">8 วัน</span></li>
+              <li class="flex justify-between"><span>ลากิจ</span><span class="chip">4 วัน</span></li>
+              <li class="flex justify-between"><span>ลาป่วย</span><span class="chip">ไม่จำกัด</span></li>
+            </ul>
+          </div>
+          <div class="lg:col-span-2 card p-4">
+            <div class="text-lg font-semibold mb-3">ยื่นคำขอลา (ตัวอย่าง)</div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div class="wf p-3">ประเภทลา</div>
+              <div class="wf p-3">ช่วงวันที่</div>
+              <div class="wf p-3 sm:col-span-2">เหตุผล (ข้อความ)</div>
+              <div class="wf p-3 sm:col-span-2">แนบไฟล์ (ใบรับรอง)</div>
+            </div>
+            <div class="mt-3"><button class="btn btn-prim">ส่งคำขอ</button></div>
+          </div>
+          <div class="lg:col-span-3 card p-4">
+            <div class="text-lg font-semibold mb-2">สถานะคำขอ (ตัวอย่าง)</div>
+            <div class="grid md:grid-cols-3 gap-3">
+              <div class="wf p-3">ลาพักผ่อน • รออนุมัติ</div>
+              <div class="wf p-3">ลากิจ • อนุมัติแล้ว</div>
+              <div class="wf p-3">ลาป่วย • ตีกลับ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APP HUB -->
+      <div class="viewport hide" data-view="#apphub">
+        <div class="card p-4 mb-3">
+          <div class="flex items-center justify-between">
+            <div class="text-lg font-semibold">ศูนย์ไอคอนลิงก์ระบบ</div>
+            <div class="flex gap-2">
+              <span class="chip">ทั้งหมด</span>
+              <span class="chip">วิชาการ</span>
+              <span class="chip">บริหารทั่วไป</span>
+              <span class="chip">ฝ่ายกิจการนักเรียน</span>
+            </div>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-4 grid-cols-2 gap-4">
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">🍱</div>
+            <div class="font-semibold">ระบบอาหารกลางวัน</div>
+            <div class="muted text-xs">เมนู • โภชนาการ • ความเห็น</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">🧑‍🏫</div>
+            <div class="font-semibold">นิเทศการสอน</div>
+            <div class="muted text-xs">ประเมิน • สรุป • รูป</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">🇹🇭</div>
+            <div class="font-semibold">Thai Literacy</div>
+            <div class="muted text-xs">P1–P3 • เกมภาษา</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">🏆</div>
+            <div class="font-semibold">ระบบกีฬา</div>
+            <div class="muted text-xs">โปรแกรม • คะแนน</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">📰</div>
+            <div class="font-semibold">Newsletter</div>
+            <div class="muted text-xs">ข่าวโรงเรียน</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">📊</div>
+            <div class="font-semibold">Q-Info</div>
+            <div class="muted text-xs">สารสนเทศผู้เรียน</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">📁</div>
+            <div class="font-semibold">ศูนย์เอกสาร</div>
+            <div class="muted text-xs">OIT • แบบฟอร์ม</div>
+          </a>
+          <a class="card p-4 text-center">
+            <div class="text-3xl mb-2">💬</div>
+            <div class="font-semibold">ร้องเรียน/Helpdesk</div>
+            <div class="muted text-xs">Ticket • ติดตาม</div>
+          </a>
+        </div>
+      </div>
+
+      <!-- STUB PAGES -->
+      <div class="viewport hide" data-view="#calendar">
+        <div class="card p-6 wf">📅 ปฏิทิน (wireframe)</div>
+      </div>
+      <div class="viewport hide" data-view="#docs">
+        <div class="card p-6 wf">📁 ศูนย์เอกสาร (wireframe)</div>
+      </div>
+      <div class="viewport hide" data-view="#helpdesk">
+        <div class="card p-6 wf">💬 Helpdesk (wireframe)</div>
+      </div>
+      <div class="viewport hide" data-view="#admin">
+        <div class="card p-6 wf">🛠️ Admin (wireframe)</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav (Mobile) -->
+  <nav class="bottom-nav fixed bottom-0 inset-x-0 bg-[#0f1424] border-t border-[#223052]">
+    <div class="max-w-7xl mx-auto grid grid-cols-5">
+      <button class="py-3 text-sm navbtn" data-nav="#home">🏠<div class="text-[11px]">หน้าแรก</div></button>
+      <button class="py-3 text-sm navbtn" data-nav="#announcements">📰<div class="text-[11px]">ข่าว</div></button>
+      <button class="py-3 text-sm navbtn" data-nav="#checkin">⏱️<div class="text-[11px]">ลงเวลา</div></button>
+      <button class="py-3 text-sm navbtn" data-nav="#leave">🗓️<div class="text-[11px]">ลา</div></button>
+      <button class="py-3 text-sm navbtn" data-nav="#apphub">🔗<div class="text-[11px]">Hub</div></button>
+    </div>
+  </nav>
+
+  <script>
+    // --- Minimal hash router for mockup ---
+    const views = Array.from(document.querySelectorAll('.viewport'));
+    function show(hash){
+      if(!hash) hash = '#home';
+      views.forEach(v => v.classList.toggle('hide', v.dataset.view !== hash));
+      // mark active in sidebar/top/bottom
+      document.querySelectorAll('[data-nav]').forEach(btn=>{
+        const on = btn.getAttribute('data-nav') === hash;
+        btn.classList.toggle('text-accent', on);
+      });
+      if(location.hash !== hash) location.hash = hash;
+    }
+    window.addEventListener('hashchange', ()=>show(location.hash));
+    document.querySelectorAll('[data-nav]').forEach(el=>{
+      el.addEventListener('click', (e)=>{ e.preventDefault(); show(el.getAttribute('data-nav')); });
+    });
+    show(location.hash || '#home');
+
+    // --- Notes for later Supabase wiring (placeholders) ---
+    // 1) Announcements: fetch from supabase.from('posts').select('*').order('published_at','desc')
+    // 2) Check-in: insert into 'checkins' with lat/lng/photo_path; guard by geofence from 'geofences'
+    // 3) Leave: read 'leave_balances', CRUD 'leave_requests', role-based approvals
+    // 4) AppHub: read 'app_links' and render filtered by visible_roles
+  </script>
+</body>
+</html>
