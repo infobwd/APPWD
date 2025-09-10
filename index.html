@@ -1,26 +1,39 @@
 <!DOCTYPE html>
 <html lang="th"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>WD School Portal — v3B Light</title>
-<link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#E9F3FF">
+<title>APPWD — Green + Markdown + Scan</title>
+<link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#E9FBE5">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#1E88E5',brandSoft:'#E9F3FF'}}}};
+tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#22C55E',brandDark:'#16A34A',brandSoft:'#E9FBE5',ink:'#182230',border:'#E6EAF0'}}}};
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
 <style>
-html,body{height:100%;background:#F6FAFF;color:#182230} .card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
+html,body{height:100%;background:#F8FFFB;color:#182230}
+.card{background:#fff;border:1px solid #E8F2EA;border-radius:18px}
 .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
-.btn-prim{background:#1E88E5;color:#fff;border-color:#1E88E5}
-.bottom-nav svg{width:24px;height:24px;stroke:#6B7280}.bottom-nav .active svg{stroke:#111827}.bottom-nav .active span{color:#111827}
+.btn-prim{background:#22C55E;color:#fff;border-color:#22C55E;box-shadow:0 10px 18px rgba(34,197,94,.25)}
+.chip{display:inline-flex;align-items:center;padding:.25rem .6rem;border-radius:999px;background:#F1FFF5;border:1px solid #E0F5E5;font-size:.75rem}
 .hide{display:none!important}
+/* Bottom nav + big center FAB */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E6EAF0}
+.bottom-nav svg{width:24px;height:24px;stroke:#6B7280}
+.bottom-nav .active svg{stroke:#111827}.bottom-nav .active span{color:#111827}
+.fab{position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#22C55E;color:#fff;box-shadow:0 16px 30px rgba(34,197,94,.35);border:6px solid #fff}
+/* Responsive */
+@media (min-width:1024px){.container{max-width:960px;margin:0 auto}}
+.prose img{max-width:100%;border-radius:12px}
+.cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0}
 </style>
 </head>
 <body class="font-sans">
-<header class="border-b border-[#E6EAF0] bg-white">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-    <div class="w-9 h-9 rounded-xl bg-brandSoft grid place-items-center text-brand font-bold">WD</div>
-    <div class="text-base font-semibold">WD School Portal</div>
+<header class="border-b border-[#E6EAF0] bg-gradient-to-b from-brandSoft to-white">
+  <div class="container px-4 py-3 flex items-center gap-3">
+    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><circle cx='18' cy='18' r='18' fill='%2322C55E'/><text x='18' y='23' text-anchor='middle' font-family='Arial' font-size='14' fill='white'>WD</text></svg>" class="w-9 h-9 rounded-xl" alt="WD">
+    <div class="">
+      <div class="text-base font-semibold">APPWD</div>
+      <div class="text-[11px] text-gray-500">Mobile-first • Green</div>
+    </div>
     <div class="ml-auto flex items-center gap-3">
       <div id="userBadge" class="flex items-center gap-2 hide">
         <img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar">
@@ -32,50 +45,170 @@ html,body{height:100%;background:#F6FAFF;color:#182230} .card{background:#fff;bo
   </div>
 </header>
 
-<main class="max-w-6xl mx-auto px-4 py-4">
-  <section class="space-y-4">
-    <div class="card p-4"><div class="text-lg font-semibold mb-2">ข่าวล่าสุด</div><div id="homeNews" class="grid gap-2"></div></div>
-    <div class="card p-4"><div class="text-lg font-semibold mb-2">เมนูด่วน</div>
-      <div class="grid grid-cols-2 gap-3">
-        <a data-nav="#applinks" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>ลิงก์</span></a>
-        <a data-nav="#leave" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg><span>ลา</span></a>
-        <a data-nav="#checkin" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>ลงเวลา</span></a>
-        <a data-nav="#news" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 4h18"/><path d="M3 10h18"/><path d="M3 16h18"/></svg><span>ข่าว</span></a>
+<main class="container px-4 py-4">
+  <section id="homeView" class="space-y-4">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-lg font-semibold">ข่าวล่าสุด</div>
+          <a data-nav="#news" class="text-brand text-sm">ดูทั้งหมด</a>
+        </div>
+        <div id="homeNews" class="grid gap-2"></div>
+      </div>
+      <div class="card p-4">
+        <div class="text-lg font-semibold mb-2">เมนูด่วน</div>
+        <div class="grid grid-cols-4 gap-3 text-center">
+          <a data-nav="#applinks" class="flex flex-col items-center gap-1">
+            <div class="w-12 h-12 rounded-2xl grid place-items-center bg-brandSoft text-brand">🔗</div>
+            <div class="text-[12px]">ลิงก์</div>
+          </a>
+          <a data-nav="#leave" class="flex flex-col items-center gap-1">
+            <div class="w-12 h-12 rounded-2xl grid place-items-center bg-brandSoft text-brand">📆</div>
+            <div class="text-[12px]">ลา</div>
+          </a>
+          <a data-nav="#checkin" class="flex flex-col items-center gap-1">
+            <div class="w-12 h-12 rounded-2xl grid place-items-center bg-brandSoft text-brand">⏱️</div>
+            <div class="text-[12px]">ลงเวลา</div>
+          </a>
+          <a data-nav="#news" class="flex flex-col items-center gap-1">
+            <div class="w-12 h-12 rounded-2xl grid place-items-center bg-brandSoft text-brand">📰</div>
+            <div class="text-[12px]">ข่าว</div>
+          </a>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="card p-4 hide" id="newsView"><div class="text-lg font-semibold mb-2">ข่าว/ประกาศ</div><div id="newsList" class="grid gap-2"></div></div>
-    <div class="card p-4 hide" id="linkView"><div class="text-lg font-semibold mb-2">ศูนย์ลิงก์</div><div id="linkGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div></div>
-    <div class="card p-4 hide" id="leaveView">
-      <div class="text-lg font-semibold mb-2">ยื่นลา</div>
-      <form id="leaveForm" class="grid sm:grid-cols-2 gap-3 text-sm">
-        <label class="flex flex-col gap-1"><span>ประเภทลา</span><select name="type" class="border border-[#E6EAF0] rounded p-2"><option value="vacation">ลาพักผ่อน</option><option value="business">ลากิจ</option><option value="sick">ลาป่วย</option></select></label>
-        <label class="flex flex-col gap-1"><span>วันที่เริ่ม</span><input name="start_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
-        <label class="flex flex-col gap-1"><span>วันที่สิ้นสุด</span><input name="end_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
-        <label class="flex flex-col gap-1 sm:col-span-2"><span>เหตุผล</span><textarea name="reason" rows="3" class="border border-[#E6EAF0] rounded p-2"></textarea></label>
-        <div class="sm:col-span-2"><button class="btn btn-prim">ส่งคำขอ</button></div>
-      </form>
-      <div class="mt-4"><div class="text-lg font-semibold mb-2">คำขอของฉัน</div><div id="myLeaves" class="grid gap-2"></div></div>
+  <!-- News list -->
+  <section id="newsView" class="space-y-3 hide">
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-lg font-semibold">ข่าว/ประกาศ</div>
+        <div class="flex items-center gap-2">
+          <button id="btnCompose" class="btn btn-prim hide">+ เพิ่มข่าว</button>
+        </div>
+      </div>
+      <div id="newsList" class="grid gap-2"></div>
+      <div id="composeBox" class="hide mt-3">
+        <hr class="my-3"/>
+        <div class="text-base font-semibold mb-1">เขียนข่าวใหม่ (Markdown + รูปภาพ)</div>
+        <form id="composeForm" class="grid gap-2 text-sm">
+          <input name="title" placeholder="หัวข้อข่าว" class="border border-[#E6EAF0] rounded p-2" required>
+          <input name="category" placeholder="หมวด (เช่น ประกาศ, วิชาการ)" class="border border-[#E6EAF0] rounded p-2">
+          <div class="grid md:grid-cols-2 gap-2">
+            <input name="cover_url" placeholder="ลิงก์รูปหน้าปก (cover_url)" class="border border-[#E6EAF0] rounded p-2">
+            <label class="flex items-center gap-2 text-sm">อัปโหลดปก: <input type="file" id="composeCover" accept="image/*" class="text-xs"></label>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <label>แทรกรูปลงเนื้อหา: <input type="file" id="composeImage" accept="image/*" class="text-xs"></label>
+            <span class="text-gray-500">* ระบบจะอัปโหลดและแทรก Markdown ให้อัตโนมัติ</span>
+          </div>
+          <textarea name="body" rows="8" placeholder="เนื้อหา (รองรับ Markdown)" class="border border-[#E6EAF0] rounded p-2"></textarea>
+          <div class="flex items-center gap-2">
+            <label class="text-sm">วันที่เผยแพร่: <input type="datetime-local" name="published_at" class="border border-[#E6EAF0] rounded p-1"></label>
+            <button class="btn btn-prim">บันทึก</button>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="card p-4 hide" id="checkView">
+  </section>
+
+  <!-- Post detail -->
+  <section id="postView" class="hide">
+    <div class="card p-4">
+      <button id="btnBackList" class="btn mb-3">← กลับไปข่าวทั้งหมด</button>
+      <article id="postDetail"></article>
+      <div id="editorTools" class="hide mt-4">
+        <hr class="my-3"/>
+        <div class="text-base font-semibold mb-1">แก้ไขข่าวนี้</div>
+        <form id="editForm" class="grid gap-2 text-sm">
+          <input name="title" class="border border-[#E6EAF0] rounded p-2">
+          <input name="category" class="border border-[#E6EAF0] rounded p-2">
+          <input name="cover_url" class="border border-[#E6EAF0] rounded p-2" placeholder="ลิงก์รูปหน้าปก (cover_url)">
+          <label class="text-sm">อัปโหลดปกใหม่: <input type="file" id="editCover" accept="image/*" class="text-xs"></label>
+          <div class="flex items-center gap-2 text-sm">
+            <label>แทรกรูปลงเนื้อหา: <input type="file" id="editImage" accept="image/*" class="text-xs"></label>
+            <span class="text-gray-500">* อัปโหลดและแทรก Markdown ให้อัตโนมัติ</span>
+          </div>
+          <textarea name="body" rows="10" class="border border-[#E6EAF0] rounded p-2"></textarea>
+          <div class="flex items-center gap-2">
+            <label class="text-sm">วันที่เผยแพร่: <input type="datetime-local" name="published_at" class="border border-[#E6EAF0] rounded p-1"></label>
+            <button class="btn btn-prim" id="btnSaveEdit">บันทึกการแก้ไข</button>
+            <button class="btn" id="btnDelete">ลบข่าว</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- App Links -->
+  <section id="linkView" class="hide">
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">ศูนย์ลิงก์</div>
+      <div id="linkGrid" class="grid grid-cols-4 gap-3 text-center"></div>
+    </div>
+  </section>
+
+  <!-- Leave -->
+  <section id="leaveView" class="hide">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="card p-4">
+        <div class="text-lg font-semibold mb-2">ยื่นลา</div>
+        <form id="leaveForm" class="grid sm:grid-cols-2 gap-3 text-sm">
+          <label class="flex flex-col gap-1"><span>ประเภทลา</span>
+            <select name="type" class="border border-[#E6EAF0] rounded p-2"><option value="vacation">ลาพักผ่อน</option><option value="business">ลากิจ</option><option value="sick">ลาป่วย</option></select>
+          </label>
+          <label class="flex flex-col gap-1"><span>วันที่เริ่ม</span><input name="start_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
+          <label class="flex flex-col gap-1"><span>วันที่สิ้นสุด</span><input name="end_date" type="date" class="border border-[#E6EAF0] rounded p-2"></label>
+          <label class="flex flex-col gap-1 sm:col-span-2"><span>เหตุผล</span><textarea name="reason" rows="3" class="border border-[#E6EAF0] rounded p-2"></textarea></label>
+          <div class="sm:col-span-2"><button class="btn btn-prim">ส่งคำขอ</button></div>
+        </form>
+      </div>
+      <div class="card p-4">
+        <div class="text-lg font-semibold mb-2">คำขอของฉัน</div>
+        <div id="myLeaves" class="grid gap-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Check-in -->
+  <section id="checkView" class="hide">
+    <div class="card p-4">
       <div class="text-lg font-semibold mb-3">ลงเวลาเข้า-ออก</div>
       <div class="flex gap-2 mb-2"><button id="btnCheckIn" class="btn btn-prim">เช็คอิน</button><button id="btnCheckOut" class="btn">เช็คเอาท์</button><label class="ml-auto text-sm text-gray-600">แนบรูป: <input id="photoInput" type="file" accept="image/*" class="text-xs"/></label></div>
       <div class="text-xs text-gray-500 mb-3">* ระบบจะขอ GPS เพื่อแนบกับบันทึกเวลา</div>
       <div id="myCheckins" class="grid gap-2"></div>
     </div>
   </section>
+
+  <!-- Scan (QR/ตรวจ) -->
+  <section id="scanView" class="hide">
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">สแกน/ตรวจ</div>
+      <div id="qrReader" style="width:100%"></div>
+      <div id="scanResult" class="mt-3 text-sm text-gray-700"></div>
+    </div>
+  </section>
 </main>
 
-<nav class="bottom-nav fixed bottom-0 inset-x-0 bg-white/95 border-t border-[#E6EAF0]">
-  <div class="max-w-6xl mx-auto grid grid-cols-4">
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <div class="container grid grid-cols-4">
     <button class="py-2 navbtn flex flex-col items-center text-sm active" data-nav="#home"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg><span>หน้าแรก</span></button>
     <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#applinks"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>ลิงก์</span></button>
     <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#leave"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="6" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg><span>ลา</span></button>
-    <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#checkin"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>ลงเวลา</span></button>
+    <button class="py-2 navbtn flex flex-col items-center text-sm" data-nav="#checkin"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>เวลา</span></button>
   </div>
 </nav>
+<a class="fab" data-nav="#scan" title="สแกน/ตรวจ">🔍</a>
 
+<!-- Libs: LIFF, Markdown, Sanitizer, QR -->
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<!-- App scripts -->
 <script type="module" src="./liff-ui-only.js"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

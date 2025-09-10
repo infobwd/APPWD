@@ -6,7 +6,7 @@ const btnLogin = document.getElementById('btnLineLogin');
 const btnLogout = document.getElementById('btnLogout');
 function renderProfile(p){
   badge.classList.remove('hide');
-  avatar.src = p?.pictureUrl || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2218%22 fill=%22%23E9F3FF%22 stroke=%22%23D5E5FF%22/><circle cx=%2220%22 cy=%2216%22 r=%227%22 fill=%22%23CBE0FF%22/><rect x=%229%22 y=%2224%22 width=%2222%22 height=%229%22 rx=%224%22 fill=%22%23CBE0FF%22/></svg>';
+  avatar.src = p?.pictureUrl || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2218%22 fill=%22%23E9FBE5%22 stroke=%22%23CFF3D9%22/><circle cx=%2220%22 cy=%2216%22 r=%227%22 fill=%22%23B5EFC7%22/><rect x=%229%22 y=%2224%22 width=%2222%22 height=%229%22 rx=%224%22 fill=%22%23B5EFC7%22/></svg>';
   nameEl.textContent = p?.displayName || 'LINE User';
   btnLogin.classList.add('hide');
   btnLogout.classList.remove('hide');
