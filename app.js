@@ -6,6 +6,45 @@ import * as AppHub from './modules/apphub.js';
 
 // Simple router
 const views = Array.from(document.querySelectorAll('.viewport'));
+
+// Router with query params (#path?key=value)
+function parseHash(){
+  const raw = location.hash || '#home';
+  const [path, q] = raw.split('?');
+  const params = {};
+  if(q){ q.split('&').forEach(pair => {
+    const [k,v] = pair.split('=');
+    params[decodeURIComponent(k)] = decodeURIComponent(v||'');
+  });}
+  return { path, params };
+}
+
+async function showRoute(route){
+  const { path, params } = route || parseHash();
+  const hash = path || '#home';
+  views.forEach(v => v.classList.toggle('hide', v.dataset.view !== hash));
+  document.querySelectorAll('[data-nav]').forEach(btn=>{
+    const on = btn.getAttribute('data-nav') === hash;
+    btn.classList.toggle('text-accent', on);
+  });
+  if(location.hash !== hash + (Object.keys(params).length? '?' + new URLSearchParams(params).toString() : '')){
+    location.hash = hash + (Object.keys(params).length? '?' + new URLSearchParams(params).toString() : '');
+  }
+  switch(hash){
+    case '#home': await renderHome(); break;
+    case '#announcements': await Ann.renderList(); await Ann.renderComposeButton(); break;
+    case '#checkin': await Checkin.render(); break;
+    case '#leave': await Leave.render(); break;
+    case '#apphub': await AppHub.render(); break;
+    case '#post': await Ann.renderDetail(params.id); break;
+    case '#compose': await Ann.renderCompose(); break;
+  }
+}
+window.addEventListener('hashchange', ()=>showRoute(parseHash()));
+document.querySelectorAll('[data-nav]').forEach(el=>{
+  el.addEventListener('click', (e)=>{ e.preventDefault(); showRoute({ path: el.getAttribute('data-nav'), params:{} }); });
+});
+
 function show(hash){
   if(!hash) hash = '#home';
   views.forEach(v => v.classList.toggle('hide', v.dataset.view !== hash));
@@ -23,10 +62,6 @@ function show(hash){
     case '#apphub': AppHub.render(); break;
   }
 }
-window.addEventListener('hashchange', ()=>show(location.hash));
-document.querySelectorAll('[data-nav]').forEach(el=>{
-  el.addEventListener('click', (e)=>{ e.preventDefault(); show(el.getAttribute('data-nav')); });
-});
 
 // Auth UI
 const btnLogin = document.getElementById('btnLogin');
@@ -129,10 +164,10 @@ function escapeHtml(s){
 
 // Initialize
 await initAuth();
-show(location.hash || '#home');
+showRoute(parseHash());
 
 // Listen for auth state changes (e.g., after magic link)
 supabase.auth.onAuthStateChange(async (_event, _session)=>{
   await initAuth();
-  show(location.hash || '#home');
+  showRoute(parseHash());
 });

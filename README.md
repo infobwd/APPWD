@@ -52,3 +52,18 @@
 - ภาพ Check-in ใช้ **signed URL** แสดงผล (นโยบาย storage จำกัดให้เจ้าของอ่านได้)
 
 > พร้อมต่อยอด: ปฏิทิน, ศูนย์เอกสาร (OIT), Helpdesk/ร้องเรียน, RBAC ลึกขึ้น, Geofence server logic
+
+
+## อัปเดตใน Phase 1
+- หน้าอ่านข่าวแบบเต็ม (#post?id=ID) + บันทึกการอ่าน (post_reads)
+- หน้าเขียนข่าว (#compose) สำหรับ `editor/admin` + แนบไฟล์หลายไฟล์ (post_attachments)
+- คงเหลือวันลา (leave_balances) แสดงบนหน้า Leave
+- Router รองรับพารามิเตอร์ใน hash
+
+### ตัวอย่าง seed (balances)
+```sql
+insert into leave_balances (user_id, type, balance)
+values
+  ('<USER_UUID>', 'vacation', 10),
+  ('<USER_UUID>', 'business', 5);
+```

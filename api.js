@@ -35,3 +35,18 @@ export async function signedUrl(bucket, path, expires = 3600) {
   if (error) return null;
   return data.signedUrl;
 }
+
+export async function getProfile() {
+  const user = await currentUser();
+  if(!user) return null;
+  const { data } = await supabase.from('profiles').select('user_id, display_name, role, department').eq('user_id', user.id).maybeSingle();
+  return data || null;
+}
+export async function isRole(role){
+  const p = await getProfile();
+  return !!p && p.role === role;
+}
+export async function anyRole(roles){
+  const p = await getProfile();
+  return !!p && roles.includes(p.role);
+}

@@ -40,6 +40,7 @@ async function onSubmit(e){
 async function refreshMyLeaves(){
   const user = await currentUser();
   const box = document.getElementById('myLeaves');
+  await refreshBalances();
   if(!user){ box.innerHTML = '<div class="text-slate-400">กรุณาเข้าสู่ระบบ</div>'; return; }
   box.innerHTML = '<div class="animate-pulse h-4 bg-slate-700/20 rounded w-1/2"></div>';
   const { data, error } = await supabase
@@ -62,4 +63,23 @@ function labelType(t){
 }
 function labelStatus(s){
   return ({pending:'รออนุมัติ', approved:'อนุมัติ', rejected:'ตีกลับ'})[s] || s;
+}
+
+async function refreshBalances(){
+  const user = await currentUser();
+  const panel = document.querySelector('[data-view="#leave"] .grid .card ul');
+  if(!panel || !user) return;
+  // Load balances by type
+  const { data } = await supabase
+    .from('leave_balances')
+    .select('type,balance')
+    .eq('user_id', user.id);
+  const map = Object.fromEntries((data||[]).map(x => [x.type, x.balance]));
+  const items = [
+    ['vacation','ลาพักผ่อน'], ['business','ลากิจ'], ['sick','ลาป่วย']
+  ];
+  panel.innerHTML = items.map(([k,label]) => {
+    const v = (map[k] ?? (k==='sick' ? 'ไม่จำกัด' : 0));
+    return `<li class="flex justify-between"><span>${label}</span><span class="chip">${v}</span></li>`;
+  }).join('');
 }
