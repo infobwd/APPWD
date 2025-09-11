@@ -1,0 +1,6 @@
+<!DOCTYPE html><meta charset="utf-8"><title>Auth Callback</title>
+<body>กำลังกลับสู่แอป…</body>
+<script type="module">
+  try{ window.opener?.postMessage('auth:ok','*'); }catch(e){}
+  window.close();
+</script>

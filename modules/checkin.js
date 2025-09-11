@@ -1,22 +1,25 @@
-import { supabase, currentUser } from '../api.js';
-import { PUBLIC_URL } from '../config.js';
-const els = { list: ()=>document.getElementById('myCheckins'), btnIn: ()=>document.getElementById('btnCheckIn'), btnOut: ()=>document.getElementById('btnCheckOut'), photo: ()=>document.getElementById('photoInput') };
-export async function render(){ wire(); await refresh(); }
-function wire(){ els.btnIn().onclick=()=>handle('in'); els.btnOut().onclick=()=>handle('out'); }
-async function ensureSession(){ const u = await currentUser(); if(u) return u; const email = prompt('กรุณาใส่อีเมลเพื่อยืนยัน (ครั้งแรกเท่านั้น):'); if(!email) return null; const { error } = await supabase.auth.signInWithOtp({ email, options:{ emailRedirectTo: PUBLIC_URL } }); if(error){ alert('ส่งลิงก์ไม่สำเร็จ: '+error.message); return null; } alert('ส่งลิงก์ยืนยันไปที่อีเมลแล้ว กดยืนยันแล้วกลับมาอีกครั้ง'); return null; }
-async function handle(type){
-  const u = await ensureSession(); if(!u) return;
-  let lat=null,lng=null; try{ const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000})); lat=pos.coords.latitude; lng=pos.coords.longitude; }catch(_){}
-  let photo_path=null; const file=els.photo().files?.[0];
-  if(file){ const path=`checkin/${u.id}/${Date.now()}_${file.name}`; const up=await supabase.storage.from('checkin-photos').upload(path,file,{upsert:false,contentType:file.type}); if(!up.error) photo_path=path; }
-  const { error } = await supabase.from('checkins').insert({ user_id:u.id, type, lat, lng, photo_path }); if(error){ alert('ผิดพลาด: '+error.message); return; } await refresh();
+import { supabase } from '../api.js';
+import { toast } from '../ui.js';
+export async function scanCheckin(){ location.hash='#scan'; }
+export async function gpsCheckin(){
+  if(!navigator.geolocation){ toast('อุปกรณ์ไม่รองรับ GPS'); return; }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const { latitude:lat, longitude:lon } = pos.coords || {};
+    const SCHOOL = { lat: 14.102000, lon: 99.511000 };
+    const ok = distanceMeters(lat,lon,SCHOOL.lat,SCHOOL.lon) <= 120;
+    if(!ok){ toast('อยู่นอกเขตเช็คอิน'); return; }
+    await saveCheckin('gps', null, lat, lon);
+  }, err=> toast('เปิด GPS ไม่สำเร็จ'));
 }
-async function refresh(){
-  const u = await currentUser(); const list = els.list(); if(!u){ list.innerHTML='<div class="text-gray-500">เข้าสู่ระบบด้วย LINE เพื่อใช้งาน และยืนยันอีเมลเมื่อต้องบันทึกข้อมูล</div>'; return; }
-  const { data, error } = await supabase.from('checkins').select('id,type,ts,photo_path,lat,lng').eq('user_id',u.id).order('ts',{ascending:false}).limit(30);
-  if(error){ list.innerHTML='<div class="text-red-600">โหลดประวัติไม่สำเร็จ</div>'; return; }
-  list.innerHTML = (data||[]).map(r => {
-    const time=new Date(r.ts).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
-    return `<div class="p-3 border border-[#E6EAF0] rounded-xl bg-white"><div class="font-medium">${r.type==='in'?'เช็คอิน':'เช็คเอาท์'} • ${time}</div></div>`;
-  }).join('') || '<div class="text-gray-500">ยังไม่มีข้อมูล</div>';
+export async function saveCheckin(method, payload=null, lat=null, lon=null){
+  const { data: session } = await supabase.auth.getUser();
+  if(!session?.user){ toast('กรุณาเข้าสู่ระบบ'); return; }
+  const { error } = await supabase.from('checkins').insert({ user_id: session.user.id, method, payload, lat, lon });
+  toast(error ? 'บันทึกเช็คอินไม่สำเร็จ' : 'เช็คอินสำเร็จ');
+}
+function distanceMeters(lat1,lon1,lat2,lon2){
+  const toRad = v=> v*Math.PI/180, R=6371000;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
 }
