@@ -1,6 +1,6 @@
-export function toast(msg){ const box=document.getElementById('toast'); box.classList.remove('hide'); box.innerHTML=`<div class="glass rounded-xl px-3 py-2 shadow-soft">${msg}</div>`; clearTimeout(window.__toast); window.__toast=setTimeout(()=>box.classList.add('hide'), 2200); }
-const io = new IntersectionObserver((entries)=>entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('show'); io.unobserve(e.target);} }), {threshold:.15});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-document.addEventListener('click', e => { const b=e.target.closest('.btn'); if(!b) return; const r=document.createElement('span'); r.style.cssText='position:absolute;inset:auto;pointer-events:none;width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.6);mix-blend-mode:overlay;transform:translate(-50%,-50%) scale(1); animation:rip .6s ease-out'; r.style.left=e.offsetX+'px'; r.style.top=e.offsetY+'px'; b.appendChild(r); setTimeout(()=>r.remove(),600);}); const style=document.createElement('style'); style.textContent='@keyframes rip{to{opacity:0;transform:translate(-50%,-50%) scale(22)}}'; document.head.appendChild(style);
-export function enableTilt(selector){ if(!window.VanillaTilt) return; document.querySelectorAll(selector).forEach(el=>window.VanillaTilt.init(el,{max:8,speed:400,glare:true,"max-glare":.15,scale:1.02})); }
-export function markLoaded(img){ if(img) img.classList.add('loaded'); }
+export function toast(msg){ const box=document.getElementById('toast'); box.classList.remove('hide'); box.innerHTML=`<div class="rounded-xl px-3 py-2 shadow-soft bg-white border border-[#E6EAF0]">${msg}</div>`; clearTimeout(window.__toast); window.__toast=setTimeout(()=>box.classList.add('hide'), 2200); }
+const sheet=document.getElementById('sheet'); const body=document.getElementById('sheet-body');
+export function openSheet(html){ body.innerHTML=html; sheet.classList.add('show'); }
+export function closeSheet(){ sheet.classList.remove('show'); }
+export function goto(hash){ const old=document.querySelector('.view:not(.hide)'); const t=document.querySelector(hash+'View'); if(!t) return; if(old){ old.classList.add('hide'); } t.classList.remove('hide'); t.classList.add('slide-in'); requestAnimationFrame(()=>t.classList.add('show')); }
+export async function copy(text){ try{ await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว'); }catch(e){ toast('คัดลอกไม่สำเร็จ'); } }

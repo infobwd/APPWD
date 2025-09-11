@@ -1,15 +1,20 @@
 import * as News from './modules/news.js';
 import * as Links from './modules/links.js';
-import { enableTilt } from './ui.js';
-const views={home:document.getElementById('homeView'),news:document.getElementById('newsView'),post:document.getElementById('postView'),links:document.getElementById('linksView')};
-function parseHash(){ const raw=location.hash||'#home'; const [p,qs]=raw.split('?'); const params={}; if(qs){ qs.split('&').forEach(x=>{ const [k,v]=x.split('='); params[decodeURIComponent(k)]=decodeURIComponent(v||''); }); } return { path:p, params }; }
-function active(h){ document.querySelectorAll('.bottom-nav .navbtn').forEach(b=>b.classList.toggle('active', b.getAttribute('data-nav')===h)); }
-async function route(r){ const {path,params}=r||parseHash(); const h=path||'#home'; Object.values(views).forEach(v=>v.classList.add('hide')); active(h);
-  if(h==='#home'){ views.home.classList.remove('hide'); await News.renderHero(); await News.renderHome(); await Links.renderHome(); enableTilt('.tilt'); }
-  else if(h==='#news'){ views.news.classList.remove('hide'); await News.renderList(); }
-  else if(h==='#post'){ views.post.classList.remove('hide'); await News.renderDetail(params.id); }
-  else if(h==='#links'){ views.links.classList.remove('hide'); await Links.render(); enableTilt('.tilt'); } }
-window.addEventListener('hashchange', ()=>route(parseHash()));
-document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click',e=>{ e.preventDefault(); location.hash=el.getAttribute('data-nav'); }));
-document.getElementById('btnBackList')?.addEventListener('click', ()=>location.hash='#news');
-route(parseHash());
+import * as Scan from './modules/scan.js';
+import { goto } from './ui.js';
+const navBtns=document.querySelectorAll('.navbtn');
+function setActive(hash){ navBtns.forEach(b=>b.classList.toggle('active', b.getAttribute('data-nav')===hash)); }
+function parseHash(){ const raw=location.hash||'#home'; const [path,qs]=raw.split('?'); const params={}; if(qs){ qs.split('&').forEach(p=>{ const [k,v]=p.split('='); params[decodeURIComponent(k)]=decodeURIComponent(v||''); }); } return { path, params }; }
+async function route(){ const {path,params}=parseHash(); const h=path||'#home'; setActive(h);
+  if(h==='#home'){ goto('#home'); await News.renderHome(); await Links.renderHome(); }
+  else if(h==='#news'){ goto('#news'); await News.renderList(); }
+  else if(h==='#post'){ goto('#post'); await News.renderDetail(params.id); }
+  else if(h==='#links'){ goto('#links'); await Links.render(); }
+  else if(h==='#profile'){ goto('#profile'); }
+  else if(h==='#scan'){ goto('#scan'); await Scan.render(); } }
+window.addEventListener('hashchange', route);
+navBtns.forEach(el=>el.addEventListener('click',e=>{ e.preventDefault(); location.hash=el.getAttribute('data-nav'); }));
+document.getElementById('btnBackList').addEventListener('click', ()=>location.hash='#news');
+document.getElementById('fabScan').addEventListener('click', ()=>{ location.hash='#scan'; });
+let deferredPrompt=null; window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredPrompt=e; const btn=document.getElementById('btnInstall'); btn.classList.remove('hide'); btn.onclick=async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; btn.classList.add('hide'); };});
+route();

@@ -1,15 +1,1 @@
-const CACHE = 'wd-portal-v3';
-self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./app.js','./api.js','./config.js','./liff-bridge.js']))); });
-self.addEventListener('activate', e=>{ e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); });
-self.addEventListener('fetch', e=>{
-  if(e.request.method!=='GET') return;
-  e.respondWith((async()=>{
-    const cached = await caches.match(e.request);
-    try{
-      const fresh = await fetch(e.request);
-      const c = await caches.open(CACHE);
-      c.put(e.request, fresh.clone());
-      return fresh;
-    }catch(_){ return cached || new Response('offline', { status: 200, headers: { 'Content-Type': 'text/plain' } }); }
-  })());
-});
+const CACHE='appwd-v4.2';const ASSETS=['.','./index.html','./app.js','./ui.js','./api.js','./config.js','./modules/news.js','./modules/links.js','./modules/scan.js','./manifest.json'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});self.addEventListener('fetch',e=>{const url=new URL(e.request.url);if(url.origin===location.origin){if(ASSETS.includes(url.pathname)||url.pathname.endsWith('.js')||url.pathname.endsWith('.css')){e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));return;}if(url.pathname.match(/\.(png|jpg|jpeg|gif|webp)$/)){e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return resp;})));return;}}});
