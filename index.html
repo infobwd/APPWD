@@ -3,9 +3,23 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>APPWD — Blue Minimal</title>
+<title>APPWD — Blue Luxe</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#EAF2FF"/>
+<script>
+// --- Canonicalize URL: ensure trailing slash for GitHub Pages SPA ---
+(function(){
+  var must = "https://infobwd.github.io/APPWD/"; // default, overridden by config.js at runtime too
+  try{ var meta = localStorage.getItem("APPWD_PUBLIC_URL"); if(meta) must = meta; }catch(e){}
+  if(must.slice(-1) !== "/") must += "/";
+  var href = window.location.href;
+  // if we are exactly /APPWD (no slash) -> redirect to /APPWD/
+  if (href.indexOf(must.slice(0,-1)) === 0 && window.location.pathname && !window.location.pathname.endsWith("/")) {
+    var target = must + window.location.search + window.location.hash;
+    window.location.replace(target);
+  }
+})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -21,34 +35,48 @@ tailwind.config = {
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.8.1/dist/vanilla-tilt.min.js"></script>
 <style>
+  :root{ --grad1:#EAF2FF; --grad2:#DCEBFF; --grad3:#F7FAFF; }
   html,body{height:100%;background:#F7FAFF;color:#0F172A}
+  .glass{backdrop-filter: saturate(160%) blur(8px); background: rgba(255,255,255,.65); border:1px solid rgba(230,234,240,.9);}
   .card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
+  .btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff;transition:transform .12s ease}
+  .btn:active{transform:scale(.98)}
   .btn-prim{background:#2563EB;color:#fff;border-color:#2563EB;box-shadow:0 10px 18px rgba(37,99,235,.25)}
   .hide{display:none!important}
   .skeleton{position:relative;overflow:hidden;background:#EEF2F7;border-radius:12px}
   .skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:sh 1.2s infinite}
   @keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .hero{position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;inset:-20%;background:conic-gradient(from 0deg at 50% 50%, var(--grad1), var(--grad2), var(--grad3), var(--grad1));animation:spin 18s linear infinite;opacity:.7;filter:blur(40px);}
+  @keyframes spin{to{transform:rotate(1turn)}}
   .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #E6EAF0}
   .bottom-nav svg{width:24px;height:24px;stroke:#6B7280}
   .bottom-nav .active svg{stroke:#111827}.bottom-nav .active span{color:#111827}
   .iconbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:.6rem 0}
   @media (min-width:1024px){.container{max-width:980px;margin:0 auto}}
-  .cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0}
+  .cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0;transition:filter .4s ease;filter:blur(12px);}
+  .cover.loaded{filter:blur(0)}
+  .reveal{opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease}
+  .reveal.show{opacity:1; transform:none}
+  #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
 </style>
 </head>
 <body class="font-sans">
-  <header class="bg-gradient-to-b from-brandSoft to-white border-b border-[#E6EAF0]">
-    <div class="container px-4 py-3 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
-      <div>
-        <div class="text-base font-semibold">APPWD</div>
-        <div class="text-[11px] text-gray-500">Blue • Minimal • Powerful</div>
+  <header class="hero border-b border-[#E6EAF0]">
+    <div class="container px-4 py-4 relative">
+      <div class="glass rounded-2xl px-3 py-2 inline-flex items-center gap-3 shadow-soft">
+        <div class="w-9 h-9 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
+        <div>
+          <div class="text-base font-semibold">APPWD</div>
+          <div class="text-[11px] text-gray-600">Blue • Luxe • Mobile-first</div>
+        </div>
       </div>
-      <div class="ml-auto flex items-center gap-3">
-        <div id="userBadge" class="flex items-center gap-2 hide">
-          <img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar">
+      <div class="ml-auto absolute right-4 top-4 flex items-center gap-3">
+        <div id="userBadge" class="glass rounded-xl px-2 py-1 flex items-center gap-2 hide">
+          <img id="userAvatar" class="w-7 h-7 rounded-full border border-[#E6EAF0]" src="" alt="avatar">
           <span id="userName" class="text-sm"></span>
         </div>
         <button id="btnLineLogin" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
@@ -57,16 +85,23 @@ tailwind.config = {
     </div>
   </header>
 
+  <section class="container px-4 mt-4">
+    <div class="swiper card p-0 overflow-hidden" id="heroSwiper">
+      <div class="swiper-wrapper" id="heroSlides"></div>
+      <div class="swiper-pagination"></div>
+    </div>
+  </section>
+
   <main class="container px-4 py-4">
     <section id="homeView" class="space-y-4">
-      <div class="card p-4">
+      <div class="card p-4 reveal">
         <div class="flex items-center justify-between mb-2">
           <div class="text-lg font-semibold">ข่าวล่าสุด</div>
           <a class="text-brand text-sm" data-nav="#news">ดูทั้งหมด</a>
         </div>
         <div id="homeNews" class="grid gap-2"></div>
       </div>
-      <div class="card p-4">
+      <div class="card p-4 reveal">
         <div class="text-lg font-semibold mb-2">แอป/ระบบในโรงเรียน</div>
         <div id="homeLinks" class="grid grid-cols-4 gap-3 text-center"></div>
       </div>
@@ -81,6 +116,7 @@ tailwind.config = {
           </div>
         </div>
         <div id="newsList" class="grid gap-2"></div>
+
         <div id="composePostBox" class="hide mt-3">
           <hr class="my-3"/>
           <div class="text-base font-semibold mb-1">เขียนข่าวใหม่</div>
@@ -131,6 +167,7 @@ tailwind.config = {
           <button id="btnComposeLink" class="btn btn-prim hide">+ เพิ่มลิงก์</button>
         </div>
         <div id="linkGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+
         <div id="composeLinkBox" class="hide mt-3">
           <hr class="my-3"/>
           <div class="text-base font-semibold mb-1">เพิ่มลิงก์ใหม่</div>
@@ -167,9 +204,14 @@ tailwind.config = {
     </div>
   </nav>
 
+  <div id="toast" class="hide"></div>
+
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+  <script type="module" src="./ui.js"></script>
   <script type="module" src="./liff-ui-only.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
