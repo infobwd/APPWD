@@ -1,1 +1,97 @@
-<!doctype html><meta charset=utf-8><title>APPWD v4.3</title><link rel=manifest href=./manifest.json><script src=https://cdn.tailwindcss.com></script><body><script type=module src=./app.js></script>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>APPWD — Mobile Polish</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#EAF2FF"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#2563EB',brandSoft:'#EAF2FF',border:'#E6EAF0',ink:'#0F172A'},boxShadow:{card:'0 10px 24px rgba(37,99,235,.12)',soft:'0 6px 18px rgba(15,23,42,.08)'}}}};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+<style>
+:root{--safe-b:env(safe-area-inset-bottom);--safe-t:env(safe-area-inset-top)}
+html,body{height:100%;background:#F7FAFF;color:#0F172A}
+.card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
+.btn-prim{background:#2563EB;color:#fff;border-color:#2563EB;box-shadow:0 10px 18px rgba(37,99,235,.25)}
+.hide{display:none!important}
+.appbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#EAF2FF 0%,#FFFFFF 100%);border-bottom:1px solid #E6EAF0;padding-top:calc(10px + var(--safe-t));}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6EAF0;padding-bottom:calc(8px + var(--safe-b));height:calc(66px + var(--safe-b));z-index:40}
+.iconbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.5rem 0;min-width:64px}
+.iconbtn svg{width:24px;height:24px;stroke:#6B7280}
+.iconbtn.active svg{stroke:#111827}.iconbtn.active span{color:#111827}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(33px + var(--safe-b));z-index:45;width:64px;height:64px;border-radius:18px;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 36px rgba(37,99,235,.35);}
+@media (min-width:1024px){.container{max-width:980px;margin:0 auto}}
+.cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0}
+.skeleton{position:relative;overflow:hidden;background:#EEF2F7;border-radius:12px}
+.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:sh 1.2s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.view{transition:transform .25s ease,opacity .2s ease}
+.view.hide{display:none}
+.slide-in{transform:translateX(12px);opacity:0}.slide-in.show{transform:translateX(0);opacity:1}
+#sheet{position:fixed;left:0;right:0;bottom:0;transform:translateY(100%);transition:transform .3s ease;z-index:60}
+#sheet .panel{margin:0 auto;max-width:560px;border-top-left-radius:18px;border-top-right-radius:18px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.08);padding:14px}
+#sheet.show{transform:translateY(0)}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
+</style>
+</head>
+<body class="font-sans">
+<header class="appbar">
+  <div class="container px-4 py-3 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
+    <div><div class="text-base font-semibold leading-tight">APPWD</div><div class="text-[11px] text-gray-500">Mobile • Minimal • Powerful</div></div>
+    <div class="ml-auto flex items-center gap-2">
+      <button id="btnInstall" class="btn hide">ติดตั้งแอป</button>
+      <div id="userBadge" class="flex items-center gap-2 hide"><img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><span id="userName" class="text-sm"></span></div>
+      <button id="btnLineLogin" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
+      <button id="btnLogout" class="btn hide">ออกจากระบบ</button>
+    </div>
+  </div>
+</header>
+<main class="container px-4 pb-28 pt-3">
+  <section id="homeView" class="view slide-in show space-y-4">
+    <div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="text-lg font-semibold">ข่าวล่าสุด</div><a class="text-brand text-sm" data-nav="#news">ดูทั้งหมด</a></div><div id="homeNews" class="grid gap-2"></div></div>
+    <div class="card p-4"><div class="text-lg font-semibold mb-2">แอป/ระบบในโรงเรียน</div><div id="homeLinks" class="grid grid-cols-4 gap-3 text-center"></div></div>
+  </section>
+  <section id="newsView" class="view hide space-y-3">
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-2"><div class="text-lg font-semibold">ข่าว/ประกาศ</div><div class="flex items-center gap-2"><button id="btnComposePost" class="btn btn-prim hide">+ เพิ่มข่าว</button></div></div>
+      <div id="newsList" class="grid gap-2"></div>
+    </div>
+  </section>
+  <section id="postView" class="view hide">
+    <div class="card p-4"><button id="btnBackList" class="btn mb-3">← กลับรายการข่าว</button><article id="postDetail"></article></div>
+  </section>
+  <section id="linksView" class="view hide">
+    <div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="text-lg font-semibold">ศูนย์ลิงก์ระบบ</div><button id="btnComposeLink" class="btn btn-prim hide">+ เพิ่มลิงก์</button></div><div id="linkGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div></div>
+  </section>
+  <section id="profileView" class="view hide">
+    <div class="card p-4 space-y-3"><div class="flex items-center gap-3"><img id="pfAvatar" class="w-12 h-12 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><div><div id="pfName" class="font-semibold">ยังไม่เข้าสู่ระบบ</div><div id="pfSub" class="text-sm text-gray-500">กด “เข้าสู่ระบบด้วย LINE” มุมขวาบน</div></div></div><div class="grid grid-cols-2 gap-2"><button id="btnTheme" class="btn">ขนาดตัวอักษร/ธีม</button><button id="btnLogout2" class="btn">ออกจากระบบ</button></div></div>
+  </section>
+  <section id="scanView" class="view hide">
+    <div class="card p-0 overflow-hidden"><div id="qrReader" class="w-full"></div><div class="p-3"><div id="scanResult" class="text-sm text-gray-600 break-all"></div><div class="mt-2 flex gap-2"><a id="scanOpen" target="_blank" rel="noopener" class="btn btn-prim">เปิดลิงก์</a><button id="scanCopy" class="btn">คัดลอก</button></div></div></div>
+  </section>
+</main>
+<nav class="tabbar"><div class="container grid grid-cols-4">
+  <button class="iconbtn navbtn active" data-nav="#home"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V9h6v12"/></svg><span class="text-xs">หน้าแรก</span></button>
+  <button class="iconbtn navbtn" data-nav="#news"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 4h18"/><path d="M3 10h18"/><path d="M3 16h18"/></svg><span class="text-xs">ข่าว</span></button>
+  <button class="iconbtn navbtn" data-nav="#links"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span class="text-xs">ลิงก์</span></button>
+  <button class="iconbtn navbtn" data-nav="#profile"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg><span class="text-xs">โปรไฟล์</span></button>
+</div></nav>
+<button id="fabScan" class="fab" title="สแกน/ตรวจ" aria-label="สแกน/ตรวจ"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="28" height="28"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg></button>
+<div id="sheet"><div class="panel"><div class="mx-auto h-1.5 w-10 rounded-full bg-gray-300 mb-3"></div><div id="sheet-body"></div></div></div>
+<div id="toast" class="hide"></div>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script type="module" src="./ui.js"></script>
+<script type="module" src="./liff-ui-only.js"></script>
+<script type="module" src="./app.js"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+</body></html>
