@@ -3,6 +3,4 @@ export const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 export const LIFF_ID="2006490627-nERN5a26";
 export const PUBLIC_BASE="/APPWD/";
 export const PUBLIC_URL="https://infobwd.github.io/APPWD/";
-export const VAPID_PUBLIC_KEY="1234";
-export const PUSH_FUNCTION_URL="https://jxebbwfofurrpchxzlqd.supabase.co/functions/v1/push";
 try{ localStorage.setItem("APPWD_PUBLIC_URL", PUBLIC_URL); }catch(e){}

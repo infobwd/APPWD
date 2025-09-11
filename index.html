@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>APPWD — v4.3 Push (A)</title>
+<title>APPWD — Mobile Polish</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#EAF2FF"/>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -38,17 +38,14 @@ html,body{height:100%;background:#F7FAFF;color:#0F172A}
 #sheet .panel{margin:0 auto;max-width:560px;border-top-left-radius:18px;border-top-right-radius:18px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.08);padding:14px}
 #sheet.show{transform:translateY(0)}
 #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
-.grid-actions .btn{justify-content:center}
-.badge{position:absolute;right:-6px;top:-6px;background:#EF4444;color:#fff;border-radius:10px;font-size:10px;line-height:1;padding:2px 5px}
 </style>
 </head>
 <body class="font-sans">
 <header class="appbar">
   <div class="container px-4 py-3 flex items-center gap-3">
     <div class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
-    <div><div class="text-base font-semibold leading-tight">APPWD</div><div class="text-[11px] text-gray-500">v4.3 Push (A)</div></div>
+    <div><div class="text-base font-semibold leading-tight">APPWD</div><div class="text-[11px] text-gray-500">Mobile • Minimal • Powerful</div></div>
     <div class="ml-auto flex items-center gap-2">
-      <button id="btnBell" class="btn relative">🔔<span id="badgeBell" class="badge hide">0</span></button>
       <button id="btnInstall" class="btn hide">ติดตั้งแอป</button>
       <div id="userBadge" class="flex items-center gap-2 hide"><img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><span id="userName" class="text-sm"></span></div>
       <button id="btnLineLogin" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
@@ -59,9 +56,7 @@ html,body{height:100%;background:#F7FAFF;color:#0F172A}
 <main class="container px-4 pb-28 pt-3">
   <section id="homeView" class="view slide-in show space-y-4">
     <div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="text-lg font-semibold">ข่าวล่าสุด</div><a class="text-brand text-sm" data-nav="#news">ดูทั้งหมด</a></div><div id="homeNews" class="grid gap-2"></div></div>
-    <div class="card p-4"><div class="text-lg font-semibold mb-2">แอป/ระบบในโรงเรียน</div><div id="homeLinks" class="grid grid-cols-4 gap-3 text-center"></div>
-      <div class="mt-3"><button id="btnEnablePush" class="btn">เปิดการแจ้งเตือน (OS Push)</button></div>
-    </div>
+    <div class="card p-4"><div class="text-lg font-semibold mb-2">แอป/ระบบในโรงเรียน</div><div id="homeLinks" class="grid grid-cols-4 gap-3 text-center"></div></div>
   </section>
   <section id="newsView" class="view hide space-y-3">
     <div class="card p-4">
@@ -76,12 +71,7 @@ html,body{height:100%;background:#F7FAFF;color:#0F172A}
     <div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="text-lg font-semibold">ศูนย์ลิงก์ระบบ</div><button id="btnComposeLink" class="btn btn-prim hide">+ เพิ่มลิงก์</button></div><div id="linkGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div></div>
   </section>
   <section id="profileView" class="view hide">
-    <div class="card p-4 space-y-3"><div class="flex items-center gap-3"><img id="pfAvatar" class="w-12 h-12 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><div><div id="pfName" class="font-semibold">ยังไม่เข้าสู่ระบบ</div><div id="pfSub" class="text-sm text-gray-500">กด “เข้าสู่ระบบด้วย LINE” มุมขวาบน</div></div></div>
-      <div class="grid grid-cols-2 gap-2">
-        <button id="btnTheme" class="btn">ขนาดตัวอักษร/ธีม</button>
-        <button id="btnLogout2" class="btn">ออกจากระบบ</button>
-      </div>
-    </div>
+    <div class="card p-4 space-y-3"><div class="flex items-center gap-3"><img id="pfAvatar" class="w-12 h-12 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><div><div id="pfName" class="font-semibold">ยังไม่เข้าสู่ระบบ</div><div id="pfSub" class="text-sm text-gray-500">กด “เข้าสู่ระบบด้วย LINE” มุมขวาบน</div></div></div><div class="grid grid-cols-2 gap-2"><button id="btnTheme" class="btn">ขนาดตัวอักษร/ธีม</button><button id="btnLogout2" class="btn">ออกจากระบบ</button></div></div>
   </section>
   <section id="scanView" class="view hide">
     <div class="card p-0 overflow-hidden"><div id="qrReader" class="w-full"></div><div class="p-3"><div id="scanResult" class="text-sm text-gray-600 break-all"></div><div class="mt-2 flex gap-2"><a id="scanOpen" target="_blank" rel="noopener" class="btn btn-prim">เปิดลิงก์</a><button id="scanCopy" class="btn">คัดลอก</button></div></div></div>
@@ -93,7 +83,7 @@ html,body{height:100%;background:#F7FAFF;color:#0F172A}
   <button class="iconbtn navbtn" data-nav="#links"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span class="text-xs">ลิงก์</span></button>
   <button class="iconbtn navbtn" data-nav="#profile"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg><span class="text-xs">โปรไฟล์</span></button>
 </div></nav>
-<button id="fabMain" class="fab" title="เมนูด่วน" aria-label="เมนูด่วน"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="28" height="28"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg></button>
+<button id="fabScan" class="fab" title="สแกน/ตรวจ" aria-label="สแกน/ตรวจ"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="28" height="28"><path d="M4 7V4h3"/><path d="M20 7V4h-3"/><path d="M4 17v3h3"/><path d="M20 17v3h-3"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg></button>
 <div id="sheet"><div class="panel"><div class="mx-auto h-1.5 w-10 rounded-full bg-gray-300 mb-3"></div><div id="sheet-body"></div></div></div>
 <div id="toast" class="hide"></div>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
