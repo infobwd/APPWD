@@ -1,11 +1,14 @@
--- Add cover_url support and storage tips
-create table if not exists public.post_editors (
-  user_id uuid primary key
-);
-alter table public.post_editors enable row level security;
-create policy if not exists "read own membership" on public.post_editors for select using (auth.uid() = user_id);
 
-create table if not exists public.posts (
+-- RESET (Danger: drops existing tables)
+drop table if exists public.app_links cascade;
+drop table if exists public.posts cascade;
+drop table if exists public.editors cascade;
+
+create table public.editors ( user_id uuid primary key );
+alter table public.editors enable row level security;
+create policy "read own editor row" on public.editors for select using (auth.uid() = user_id);
+
+create table public.posts (
   id bigserial primary key,
   title text not null,
   body text,
@@ -16,49 +19,38 @@ create table if not exists public.posts (
   updated_at timestamptz
 );
 alter table public.posts enable row level security;
-create policy if not exists "read posts" on public.posts for select using (true);
-create policy if not exists "insert by editors" on public.posts for insert with check (exists (select 1 from public.post_editors e where e.user_id = auth.uid()));
-create policy if not exists "update by editors or owners" on public.posts for update using (auth.uid() = created_by or exists (select 1 from public.post_editors e where e.user_id = auth.uid()));
-create policy if not exists "delete by editors or owners" on public.posts for delete using (auth.uid() = created_by or exists (select 1 from public.post_editors e where e.user_id = auth.uid()));
+create policy "read posts" on public.posts for select using (true);
+create policy "insert posts by editors" on public.posts for insert with check (exists (select 1 from public.editors e where e.user_id = auth.uid()));
+create policy "update posts by editors or owners" on public.posts for update using (auth.uid() = created_by or exists (select 1 from public.editors e where e.user_id = auth.uid()));
+create policy "delete posts by editors or owners" on public.posts for delete using (auth.uid() = created_by or exists (select 1 from public.editors e where e.user_id = auth.uid()));
 
-create table if not exists public.app_links (
+create table public.app_links (
   id bigserial primary key,
   title text not null,
   url text not null,
-  icon text,
-  category text
+  image_url text,
+  category text,
+  sort_order int default 100,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  created_by uuid references auth.users(id),
+  updated_at timestamptz
 );
 alter table public.app_links enable row level security;
-create policy if not exists "read applinks" on public.app_links for select using (true);
+create policy "read links" on public.app_links for select using (true);
+create policy "insert links by editors" on public.app_links for insert with check (exists (select 1 from public.editors e where e.user_id = auth.uid()));
+create policy "update links by editors or owners" on public.app_links for update using (auth.uid() = created_by or exists (select 1 from public.editors e where e.user_id = auth.uid()));
+create policy "delete links by editors or owners" on public.app_links for delete using (auth.uid() = created_by or exists (select 1 from public.editors e where e.user_id = auth.uid()));
 
-create table if not exists public.leave_requests (
-  id bigserial primary key,
-  user_id uuid not null,
-  type text not null,
-  start_date date,
-  end_date date,
-  reason text,
-  status text default 'pending' check (status in ('pending','approved','rejected')),
-  created_at timestamptz default now()
-);
-alter table public.leave_requests enable row level security;
-create policy if not exists "insert own leave" on public.leave_requests for insert with check (auth.uid() = user_id);
-create policy if not exists "select own leave" on public.leave_requests for select using (auth.uid() = user_id);
+-- Seeds
+insert into public.posts (title, category, body, cover_url, published_at)
+values
+  ('ประกาศเปิดภาคเรียน 2/2568', 'ประกาศ',
+   'เปิดเรียนวันจันทร์หน้า เวลา 08:00 น.\n\n- แต่งกายให้เรียบร้อย\n- มาให้ตรงเวลา', null, now() - interval '1 day'),
+  ('อบรมครู Coding', 'วิชาการ', 'อบรม **JS/Python** สำหรับครูผู้สอน', null, now() - interval '2 days');
 
-create table if not exists public.checkins (
-  id bigserial primary key,
-  user_id uuid not null,
-  type text not null check (type in ('in','out')),
-  ts timestamptz default now(),
-  lat double precision,
-  lng double precision,
-  photo_path text
-);
-alter table public.checkins enable row level security;
-create policy if not exists "insert own checkin" on public.checkins for insert with check (auth.uid() = user_id);
-create policy if not exists "select own checkin" on public.checkins for select using (auth.uid() = user_id);
-
--- Recommended storage buckets (create via Dashboard):
---   news-covers (Public)
---   news-images (Public)
---   checkin-photos (Public or Signed URL)
+insert into public.app_links (title,url,image_url,category,sort_order) values
+  ('ลงเวลา (Check-in)','https://infobwd.github.io/checkin/','https://cdn-icons-png.flaticon.com/512/992/992700.png','งานบุคคล',10),
+  ('ระบบลาออนไลน์','https://infobwd.github.io/leave/','https://cdn-icons-png.flaticon.com/512/1828/1828673.png','งานบุคคล',20),
+  ('Google Classroom','https://classroom.google.com/','https://ssl.gstatic.com/classroom/favicon.png','การเรียนการสอน',30),
+  ('คู่มือครู','https://example.com/guide','https://cdn-icons-png.flaticon.com/512/942/942748.png','เอกสาร',40);
