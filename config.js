@@ -4,5 +4,7 @@ export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const LIFF_ID = "2006490627-nERN5a26";
 export const PUBLIC_BASE = "/APPWD/";
 export const PUBLIC_URL  = "https://infobwd.github.io/APPWD/";
+// persist PUBLIC_URL for early canonical script
+try{ localStorage.setItem("APPWD_PUBLIC_URL", PUBLIC_URL); }catch(e){}
 // After setting, commit to GitHub (anon key is safe for client use with RLS).
 // For GitHub Pages, ensure your redirect URL is allowed in Supabase Auth settings.
