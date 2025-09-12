@@ -2,11 +2,11 @@
 <html lang="th" data-theme="light">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1.0"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <title>APPWD — v5.3.6</title>
+  <title>APPWD — v5.4.1</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
   <meta name="theme-color" content="#EAF2FF"/>
@@ -49,10 +49,9 @@
     #sheet .panel{margin:0 auto;max-width:560px;border-top-left-radius:18px;border-top-right-radius:18px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.08);padding:14px}
     #sheet.show{transform:translateY(0)}
     #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
-    html[data-theme='dark'] .prose h1, html[data-theme='dark'] .prose h2, html[data-theme='dark'] .prose h3,
-    html[data-theme='dark'] .prose p, html[data-theme='dark'] .prose li { color:#E7ECF5 }
-    html[data-theme='dark'] .prose a { color:#93C5FD }
-    .news-card{border:1px solid #E6EAF0;border-radius:14px;overflow:hidden;background:#fff;position:relative}
+    #homeNewsCards.slider{display:grid;grid-auto-flow:column;grid-auto-columns:100%;overflow:auto;scroll-snap-type:x mandatory;gap:0;border-radius:14px}
+    #homeNewsCards.slider > *{scroll-snap-align:center}
+    .news-card{border:1px solid #E6EAF0;border-radius:14px;overflow:hidden;background:#fff;position:relative;margin-right:12px}
     html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
     .news-card .thumb{width:100%;aspect-ratio:16/9;object-fit:cover}
     .badge{position:absolute;right:8px;top:8px;background:#2563EB;color:#fff;border-radius:999px;padding:.15rem .5rem;font-size:11px}
@@ -62,7 +61,7 @@
 <header class="appbar">
   <div class="container px-4 py-3 flex items-center gap-3">
     <div id="brandBox" class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
-    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">v5.3.6 • Mobile • Powerful</div></div>
+    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">v5.4.1 • Mobile • Powerful</div></div>
     <div class="ml-auto flex items-center gap-2">
       <button id="btnInstall" class="btn hide">ติดตั้งแอป</button>
       <div id="userBadge" class="flex items-center gap-2 hide"><img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><span id="userName" class="text-sm"></span></div>
@@ -84,6 +83,11 @@
         <div class="text-sm font-semibold mb-1">การ์ดเด่น</div>
         <div id="homeNewsCards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
       </div>
+    </div>
+
+    <div class="card p-4">
+      <div class="text-lg font-semibold mb-2">สรุปการมาปฏิบัติงาน</div>
+      <div id="homeSummary" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
     </div>
 
     <div class="card p-4">
@@ -134,21 +138,38 @@
   </section>
 
   <section id="checkinView" class="view hide">
-    <div class="card p-0 overflow-hidden">
+    <div class="card p-4 space-y-3">
+      <div class="text-sm text-gray-700">เช็คอินด้วย 2 วิธี: <b>ตำแหน่ง (GPS)</b> หรือ <b>สแกน QR</b> (ใช้กล้อง).<br>การสแกนใช้สำหรับลงทะเบียนจุด/กิจกรรมเฉพาะที่กำหนด</div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btnGpsOnly" class="btn btn-prim">เช็คอินด้วยตำแหน่ง</button>
+        <button id="btnOpenScanner" class="btn">เปิดกล้องสแกน QR</button>
+      </div>
+    </div>
+
+    <div id="scanPanel" class="card p-0 overflow-hidden hide">
       <div id="qrReader" class="w-full"></div>
+    </div>
+
+    <div class="card p-0 overflow-hidden">
       <div id="map" style="height:220px"></div>
       <div class="p-3 space-y-2">
         <div id="geoState" class="text-sm text-gray-600"></div>
         <div id="scanResult" class="text-sm text-gray-600 break-all"></div>
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnCheckin" class="btn btn-prim">เช็คอิน</button>
-          <button id="btnGpsOnly" class="btn">ใช้ตำแหน่งอย่างเดียว</button>
+          <button id="btnCheckin" class="btn btn-prim">เช็คอิน (QR+GPS)</button>
+          <button id="btnRefreshGeo" class="btn">อ่านตำแหน่งอีกครั้ง</button>
         </div>
       </div>
     </div>
+
     <div class="card p-4 mt-3">
       <div class="text-base font-semibold mb-1">ประวัติวันนี้</div>
       <div id="todayList" class="grid gap-2"></div>
+    </div>
+
+    <div class="card p-4 mt-3">
+      <div class="text-base font-semibold mb-2">สรุปผล — สัปดาห์ / เดือน / ปี</div>
+      <div id="checkinSummary" class="grid grid-cols-1 md:grid-cols-3 gap-2"></div>
     </div>
   </section>
 </main>
@@ -174,9 +195,9 @@
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-<script type="module" src="./ui.js?v=536"></script>
-<script type="module" src="./liff.js?v=536"></script>
-<script type="module" src="./app.js?v=536"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=536'));}</script>
+<script type="module" src="./ui.js?v=541"></script>
+<script type="module" src="./liff.js?v=541"></script>
+<script type="module" src="./app.js?v=541"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=541'));}</script>
 </body>
 </html>
