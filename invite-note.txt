@@ -1,0 +1,4 @@
+
+-- NOTE: การเชิญผู้ใช้ให้มีบัญชีใน Auth ควรทำผ่าน Auth -> Users -> Invite (Magic Link)
+-- ถ้าทดสอบชั่วคราว สามารถใช้แอป (supabase-js) เรียก signInWithOtp(email) โดยตั้ง redirect ไปที่ auth-bridge.html
+-- จากนั้นรัน grant-editor-by-email.sql อีกครั้ง

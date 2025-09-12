@@ -1,6 +1,6 @@
 import { supabase } from '../api.js';
 import { SCHOOL_LAT, SCHOOL_LNG, SCHOOL_RADIUS_METERS } from '../config.js';
-import { toast } from '../ui.js';
+import { toast, skel, esc } from '../ui.js';
 
 let scanner=null, lastText=null, lastGeo=null;
 
@@ -22,6 +22,25 @@ export async function render(){
   btnC.onclick = async ()=> doCheckin('qr+gps');
   btnG.onclick = async ()=> doCheckin('gps');
   await loadToday();
+}
+
+export async function renderHomeRecent(){
+  const box = document.getElementById('homeCheckins'); if(!box) return;
+  box.innerHTML = skel(5, '52px');
+  const { data, error } = await supabase.from('checkins')
+    .select('id,line_display_name,line_picture_url,created_at,distance_m,within_radius,method,text')
+    .order('created_at',{ascending:false}).limit(5);
+  if(error){ box.innerHTML = '<div class="text-gray-500">โหลดเช็คอินไม่สำเร็จ</div>'; return; }
+  box.innerHTML = (data||[]).map(row=>`
+    <div class="p-2 border border-[#E6EAF0] rounded-lg flex items-center gap-2 bg-white">
+      <img src="${row.line_picture_url||''}" class="w-8 h-8 rounded-full border border-[#E6EAF0]" onerror="this.style.display='none'">
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate">${esc(row.line_display_name||'ไม่ระบุ')}</div>
+        <div class="text-[12px] text-gray-500">${new Date(row.created_at).toLocaleString('th-TH',{hour:'2-digit',minute:'2-digit'})} • ${row.method}${row.text? ' • '+esc(row.text):''}</div>
+      </div>
+      <div class="${row.within_radius?'text-green-600':'text-red-600'} text-[12px]">${row.distance_m} m</div>
+    </div>
+  `).join('') || '<div class="text-gray-500">ยังไม่มีรายการ</div>';
 }
 
 function getGeo(outEl){

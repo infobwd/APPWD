@@ -17,7 +17,7 @@ export async function renderList(){
   const editor = await isEditor();
   const btn = document.getElementById('btnComposePost');
   if(btn){ btn.classList.toggle('hide', !editor); btn.onclick = ()=> openComposeSheet(); }
-  const { data } = await supabase.from('posts').select('id,title,category,published_at,cover_url').order('published_at',{ascending:false}).limit(50);
+  const { data } = await supabase.from('posts').select('id,title,category,published_at,cover_url').order('published_at',{ascending:false}).limit(100);
   listBox().innerHTML = (data||[]).map(card).join('') || '<div class="text-gray-500">ยังไม่มีข่าว</div>';
 }
 

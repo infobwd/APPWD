@@ -8,7 +8,7 @@ function parseHash(){ const raw=location.hash||'#home'; const [path,qs]=raw.spli
 
 async function route(){
   const {path,params}=parseHash(); const h=path||'#home'; setActive(h);
-  if(h==='#home'){ goto('#home'); await News.renderHome(); await Links.renderHome(); }
+  if(h==='#home'){ goto('#home'); await News.renderHome(); await Checkin.renderHomeRecent(); await Links.renderHome(); }
   else if(h==='#news'){ goto('#news'); await News.renderList(); }
   else if(h==='#post'){ goto('#post'); await News.renderDetail(params.id); }
   else if(h==='#links'){ goto('#links'); await Links.render(); }
@@ -21,7 +21,7 @@ function bindUI(){
   if(backBtn) backBtn.addEventListener('click', ()=> location.hash = '#news');
   const fab = document.getElementById('fabScan');
   if(fab) fab.addEventListener('click', ()=> { location.hash = '#checkin'; });
-  document.querySelectorAll('.navbtn').forEach(el=>{
+  document.querySelectorAll('.navbtn,[data-nav]').forEach(el=>{
     el.addEventListener('click', (e)=>{ e.preventDefault(); const to=el.getAttribute('data-nav'); if(to) location.hash=to; });
   });
   let deferredPrompt=null;
