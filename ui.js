@@ -1,9 +1,28 @@
 // Minimal, safe UI helpers (re-written clean)
-export function toast(m){
-  const b = document.getElementById('toast');
-  if(!b) return;
-  b.classList.remove('hide');
-  b.innerHTML = `<div class="rounded-xl px-3 py-2 shadow bg-white border" style="border-color:var(--bd);color:var(--ink)">${m}</div>`;
+export function toast(m, type='info'){
+  let host = document.getElementById('toast');
+  if(!host){
+    host = document.createElement('div');
+    host.id='toast';
+    document.body.appendChild(host);
+  }
+  host.style.position='fixed';
+  host.style.left='50%';
+  host.style.bottom='calc(16px + env(safe-area-inset-bottom, 0px))';
+  host.style.transform='translateX(-50%)';
+  host.style.zIndex='70';
+  host.style.display='grid';
+  host.style.gap='8px';
+  const el = document.createElement('div');
+  el.className='rounded-2xl px-3 py-2 shadow text-sm';
+  el.style.border='1px solid var(--bd)';
+  el.style.background = (type==='error') ? '#fee2e2' : (type==='ok' ? '#dcfce7' : 'var(--card)');
+  el.style.color = 'var(--ink)';
+  el.textContent = m;
+  host.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .25s'; }, 2000);
+  setTimeout(()=>{ el.remove(); }, 2400);
+}</div>`;
   clearTimeout(window.__t);
   window.__t = setTimeout(()=> b.classList.add('hide'), 2600);
 }
