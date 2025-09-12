@@ -10,7 +10,7 @@ export function esc(s){
     .replace(/&/g,'&amp;')
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
+    .replace(/\"/g,'&quot;')
     .replace(/'/g,'&#39;');
-}[m]);}
+}
 export function openPrefs(){ openSheet(`<div class='space-y-3 text-sm'><div class='font-semibold'>การแสดงผล</div><label>ขนาดตัวอักษร <input id='fsRange' type='range' min='0.85' max='1.4' step='0.05' value='1' class='w-full'></label><label>ขนาดไอคอน <input id='icRange' type='range' min='0.9' max='1.6' step='0.05' value='1' class='w-full'></label><div>ธีม <select id='thSel' class='border rounded p-1 ml-2'><option value='light'>สว่าง</option><option value='dark'>มืด</option><option value='system'>ตามระบบ</option></select></div><div class='flex gap-2'><button id='okPref' class='btn btn-prim'>บันทึก</button><button id='cancelPref' class='btn'>ยกเลิก</button></div></div>`); document.getElementById('okPref').onclick=()=>closeSheet(); document.getElementById('cancelPref').onclick=closeSheet; }
