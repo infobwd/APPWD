@@ -2,14 +2,13 @@
 import * as News from './modules/news.js';
 import * as Links from './modules/links.js';
 import * as Checkin from './modules/checkin.js';
-import { goto } from './ui.js';
+import { goto, openPrefs } from './ui.js';
 
 function setActive(hash){
   document.querySelectorAll('.navbtn').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-nav')===hash);
   });
 }
-
 function parseHash(){
   const raw = location.hash || '#home';
   const parts = raw.split('?');
@@ -26,7 +25,6 @@ function parseHash(){
   }
   return { path, params };
 }
-
 async function route(){
   const { path, params } = parseHash();
   const h = path || '#home';
@@ -38,12 +36,13 @@ async function route(){
   else if (h === '#profile'){ goto('#profile'); }
   else if (h === '#checkin'){ goto('#checkin'); await Checkin.render(); }
 }
-
 function bindUI(){
   const back = document.getElementById('btnBackList');
   if (back) back.onclick = () => { location.hash = '#news'; };
   const fab = document.getElementById('fabScan');
   if (fab) fab.onclick = () => { location.hash = '#checkin'; };
+  const btnTheme = document.getElementById('btnTheme');
+  if (btnTheme) btnTheme.onclick = () => openPrefs();
   document.querySelectorAll('.navbtn,[data-nav]').forEach(el=>{
     el.addEventListener('click', e=>{
       e.preventDefault();
@@ -67,6 +66,5 @@ function bindUI(){
     };
   });
 }
-
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });

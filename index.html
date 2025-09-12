@@ -1,66 +1,68 @@
-
 <!DOCTYPE html>
 <html lang="th" data-theme="light">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>APPWD — v5.3.4</title>
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icons/icon-192.png" sizes="192x192">
-<meta name="theme-color" content="#EAF2FF"/>
-<script>(function(){try{var href=location.href;if(/\/APPWD$/.test(href))location.replace(href+'/');}catch(e){}})();</script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#2563EB',brandSoft:'#EAF2FF',border:'#E6EAF0',ink:'#0F172A'},boxShadow:{card:'0 10px 24px rgba(37,99,235,.12)',soft:'0 6px 18px rgba(15,23,42,.08)'}}}};
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<style>
-:root{ --safe-b: env(safe-area-inset-bottom); --safe-t: env(safe-area-inset-top); --fs: 1; --icon: 1; --bg: #F7FAFF; --ink: #0F172A; }
-html[data-theme='dark']{ --bg:#0B1220; --ink:#E7ECF5; }
-html,body{height:100%; background:var(--bg); color:var(--ink)}
-body{ font-size: calc(16px * var(--fs)) }
-.card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
-html[data-theme='dark'] .card{ background:#0F172A; border-color:#1F2937 }
-.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
-.btn-prim{background:#2563EB;color:#fff;border-color:#2563EB;box-shadow:0 10px 18px rgba(37,99,235,.25)}
-.hide{display:none!important}
-.appbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#EAF2FF 0%,#FFFFFF 100%);border-bottom:1px solid #E6EAF0;padding-top:calc(10px + var(--safe-t));}
-.tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6EAF0;padding-bottom:calc(8px + var(--safe-b));height:calc(66px + var(--safe-b));z-index:40}
-.iconbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.5rem 0;min-width:64px}
-.iconbtn svg{width:calc(24px * var(--icon));height:calc(24px * var(--icon));stroke:#6B7280}
-.iconbtn.active svg{stroke:#111827}
-.iconbtn span{display:none}
-.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(33px + var(--safe-b));z-index:45;width:calc(68px * var(--icon));height:calc(68px * var(--icon));border-radius:20px;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 36px rgba(37,99,235,.35);}
-@media (min-width:1024px){.container{max-width:980px;margin:0 auto}}
-.cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0}
-.skeleton{position:relative;overflow:hidden;background:#EEF2F7;border-radius:12px}
-.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:sh 1.2s infinite}
-@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-.view{transition:transform .25s ease,opacity .2s ease}
-.view.hide{display:none}
-.slide-in{transform:translateX(12px);opacity:0}.slide-in.show{transform:translateX(0);opacity:1}
-#sheet{position:fixed;left:0;right:0;bottom:0;transform:translateY(100%);transition:transform .3s ease;z-index:60}
-#sheet .panel{margin:0 auto;max-width:560px;border-top-left-radius:18px;border-top-right-radius:18px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.08);padding:14px}
-#sheet.show{transform:translateY(0)}
-#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
-html[data-theme='dark'] .prose h1, html[data-theme='dark'] .prose h2, html[data-theme='dark'] .prose h3,
-html[data-theme='dark'] .prose p, html[data-theme='dark'] .prose li { color:#E7ECF5 }
-html[data-theme='dark'] .prose a { color:#93C5FD }
-.news-card{border:1px solid #E6EAF0;border-radius:14px;overflow:hidden;background:#fff;position:relative}
-html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
-.news-card .thumb{width:100%;aspect-ratio:16/9;object-fit:cover}
-.badge{position:absolute;right:8px;top:8px;background:#2563EB;color:#fff;border-radius:999px;padding:.15rem .5rem;font-size:11px}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>APPWD — v5.3.5</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+  <meta name="theme-color" content="#EAF2FF"/>
+  <script>(function(){try{var href=location.href;if(/\/APPWD$/.test(href))location.replace(href+'/');}catch(e){}})();</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#2563EB',brandSoft:'#EAF2FF',border:'#E6EAF0',ink:'#0F172A'},boxShadow:{card:'0 10px 24px rgba(37,99,235,.12)',soft:'0 6px 18px rgba(15,23,42,.08)'}}}};
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    :root{ --safe-b: env(safe-area-inset-bottom); --safe-t: env(safe-area-inset-top); --fs: 1; --icon: 1; --bg: #F7FAFF; --ink: #0F172A; }
+    html[data-theme='dark']{ --bg:#0B1220; --ink:#E7ECF5; }
+    html,body{height:100%; background:var(--bg); color:var(--ink)}
+    body{ font-size: calc(16px * var(--fs)) }
+    .card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
+    html[data-theme='dark'] .card{ background:#0F172A; border-color:#1F2937 }
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:12px;border:1px solid #E6EAF0;background:#fff}
+    .btn-prim{background:#2563EB;color:#fff;border-color:#2563EB;box-shadow:0 10px 18px rgba(37,99,235,.25)}
+    .hide{display:none!important}
+    .appbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#EAF2FF 0%,#FFFFFF 100%);border-bottom:1px solid #E6EAF0;padding-top:calc(10px + var(--safe-t));}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E6EAF0;padding-bottom:calc(8px + var(--safe-b));height:calc(66px + var(--safe-b));z-index:40}
+    .iconbtn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:.5rem 0;min-width:64px}
+    .iconbtn svg{width:calc(24px * var(--icon));height:calc(24px * var(--icon));stroke:#6B7280}
+    .iconbtn.active svg{stroke:#111827}
+    .iconbtn span{display:none}
+    .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(33px + var(--safe-b));z-index:45;width:calc(68px * var(--icon));height:calc(68px * var(--icon));border-radius:20px;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 36px rgba(37,99,235,.35);}
+    @media (min-width:1024px){.container{max-width:980px;margin:0 auto}}
+    .cover{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;border:1px solid #E6EAF0}
+    .skeleton{position:relative;overflow:hidden;background:#EEF2F7;border-radius:12px}
+    .skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:sh 1.2s infinite}
+    @keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+    .view{transition:transform .25s ease,opacity .2s ease}
+    .view.hide{display:none}
+    .slide-in{transform:translateX(12px);opacity:0}.slide-in.show{transform:translateX(0);opacity:1}
+    #sheet{position:fixed;left:0;right:0;bottom:0;transform:translateY(100%);transition:transform .3s ease;z-index:60}
+    #sheet .panel{margin:0 auto;max-width:560px;border-top-left-radius:18px;border-top-right-radius:18px;background:#fff;box-shadow:0 -10px 30px rgba(0,0,0,.08);padding:14px}
+    #sheet.show{transform:translateY(0)}
+    #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60}
+    html[data-theme='dark'] .prose h1, html[data-theme='dark'] .prose h2, html[data-theme='dark'] .prose h3,
+    html[data-theme='dark'] .prose p, html[data-theme='dark'] .prose li { color:#E7ECF5 }
+    html[data-theme='dark'] .prose a { color:#93C5FD }
+    .news-card{border:1px solid #E6EAF0;border-radius:14px;overflow:hidden;background:#fff;position:relative}
+    html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
+    .news-card .thumb{width:100%;aspect-ratio:16/9;object-fit:cover}
+    .badge{position:absolute;right:8px;top:8px;background:#2563EB;color:#fff;border-radius:999px;padding:.15rem .5rem;font-size:11px}
+  </style>
 </head>
 <body class="font-sans">
 <header class="appbar">
   <div class="container px-4 py-3 flex items-center gap-3">
     <div id="brandBox" class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
-    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">บ้านวังด้ง</div></div>
+    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">v5.3.5 • Mobile • Powerful</div></div>
     <div class="ml-auto flex items-center gap-2">
       <button id="btnInstall" class="btn hide">ติดตั้งแอป</button>
       <div id="userBadge" class="flex items-center gap-2 hide"><img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><span id="userName" class="text-sm"></span></div>
@@ -172,9 +174,9 @@ html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-<script type="module" src="./ui.js?v=534"></script>
-<script type="module" src="./liff.js?v=534"></script>
-<script type="module" src="./app.js?v=534"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=534'));}</script>
+<script type="module" src="./ui.js?v=535"></script>
+<script type="module" src="./liff.js?v=535"></script>
+<script type="module" src="./app.js?v=535"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=535'));}</script>
 </body>
 </html>

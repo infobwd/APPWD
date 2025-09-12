@@ -112,7 +112,6 @@ export async function renderDetail(id){
   setTimeout(async()=>{ const s2=await supabase.from('post_stats').select('view_count').eq('post_id',p.id).maybeSingle(); if(s2.data&&document.getElementById('viewCount')) document.getElementById('viewCount').textContent=s2.data.view_count; },1200);
   const btnShare=document.getElementById('btnShare'); if(btnShare){ btnShare.onclick=()=>sharePost(p.id); }
 }
-
 function listItemWithStats(p, s){
   const d=new Date(p.published_at||new Date()).toLocaleDateString('th-TH');
   const img=p.cover_url?`<img class="w-16 h-16 object-cover rounded-lg border border-[#E6EAF0]" src="${p.cover_url}" alt="cover">`:`<div class="w-16 h-16 rounded-lg bg-brandSoft grid place-items-center text-brand">📰</div>`;
