@@ -1,34 +1,50 @@
 import { supabase } from '../api.js';
 import { openSheet, closeSheet, toast, skel, esc } from '../ui.js';
 const listBox=()=>document.getElementById('newsList');
+const PAGE_SIZE=10; let page=1; let total=0;
+
 export async function renderHome(){
   const listEl=document.getElementById('homeNewsList'); const cardsEl=document.getElementById('homeNewsCards');
   if(!listEl||!cardsEl)return; listEl.innerHTML=skel(2); cardsEl.innerHTML=skel(3,'180px');
-  const { data: latest } = await supabase.from('posts').select('id,title,category,published_at,cover_url,is_featured').lte('published_at', new Date().toISOString()).order('published_at',{ascending:false}).limit(5);
-  const top2=(latest||[]).slice(0,2); const top2Ids=new Set(top2.map(x=>x.id));
-  listEl.innerHTML = top2.map(listItem).join('') || '<div class="text-gray-500">ยังไม่มีข่าว</div>';
-  const { data: featured } = await supabase.from('posts').select('id,title,category,published_at,cover_url,is_featured').eq('is_featured',true).order('published_at',{ascending:false}).limit(6);
-  const pool=[...(featured||[]),...((latest||[]).filter(p=>!top2Ids.has(p.id)))];
-  const picked=[]; const pickedIds=new Set();
-  for(const p of pool){ if(picked.length>=3) break; if(top2Ids.has(p.id)||pickedIds.has(p.id)) continue; picked.push(p); pickedIds.add(p.id); }
-  cardsEl.innerHTML = picked.map(card).join('') || '<div class="text-gray-500">ยังไม่มีการ์ดเด่น</div>';
+  const { data: latest=[] } = await supabase.from('posts').select('id,title,category,published_at,cover_url,is_featured').lte('published_at', new Date().toISOString()).order('published_at',{ascending:false}).limit(8);
+  const { data: featured=[] } = await supabase.from('posts').select('id,title,category,published_at,cover_url,is_featured').eq('is_featured',true).order('published_at',{ascending:false}).limit(12);
+  const top2=latest.slice(0,2); const top2Ids=new Set(top2.map(x=>x.id));
+  const pool=[...featured, ...latest.filter(p=>!top2Ids.has(p.id))];
+  const picked=[]; const seen=new Set();
+  for(const p of pool){ if(picked.length>=3) break; if(top2Ids.has(p.id) || seen.has(p.id)) continue; picked.push(p); seen.add(p.id); }
+  listEl.innerHTML = top2.map(p=>withStatsRow(p)).join('') || '<div class="text-gray-500">ยังไม่มีข่าว</div>';
+  cardsEl.innerHTML = await withStatsCards(picked);
 }
+
 export async function renderList(){
-  if(!listBox()) return; listBox().innerHTML=skel(8,'72px');
+  if(!listBox()) return;
   const editor=await isEditor(); const btn=document.getElementById('btnComposePost'); if(btn){ btn.classList.toggle('hide',!editor); btn.onclick=()=>openComposeSheet(); }
-  const { data } = await supabase.from('posts').select('id,title,category,published_at,cover_url').order('published_at',{ascending:false}).limit(100);
-  listBox().innerHTML=(data||[]).map(listItem).join('')||'<div class="text-gray-500">ยังไม่มีข่าว</div>';
+  await loadPage(1);
+  const prev=document.getElementById('btnPrev'), next=document.getElementById('btnNext');
+  if(prev) prev.onclick=()=>{ if(page>1) loadPage(page-1); };
+  if(next) next.onclick=()=>{ const max=Math.ceil(total/PAGE_SIZE)||1; if(page<max) loadPage(page+1); };
 }
+
+async function loadPage(p){
+  page=p; listBox().innerHTML=skel(PAGE_SIZE,'72px');
+  const from=(page-1)*PAGE_SIZE, to=from+PAGE_SIZE-1;
+  const { data=[], count } = await supabase.from('posts').select('id,title,category,published_at,cover_url', { count:'exact' }).order('published_at',{ascending:false}).range(from,to);
+  total = count||0;
+  const ids=data.map(x=>x.id); const statMap=await fetchStats(ids);
+  listBox().innerHTML = data.map(p=>listItemWithStats(p, statMap.get(p.id)||{views:0,likes:0})).join('') || '<div class="text-gray-500">ยังไม่มีข่าว</div>';
+  const info=document.getElementById('pageInfo'); if(info){ const max=Math.ceil(total/PAGE_SIZE)||1; info.textContent=`หน้า ${page} / ${max} • ทั้งหมด ${total} ข่าว`; }
+}
+
 export async function renderDetail(id){
   const box=document.getElementById('postDetail'); if(!box)return; box.innerHTML=skel(4,'80px');
   const { data: p, error }=await supabase.from('posts').select('id,title,category,body,cover_url,published_at,created_by,is_featured').eq('id',id).maybeSingle();
   if(error||!p){ box.innerHTML='<div class="text-gray-500">ไม่พบข่าว</div>'; return; }
+  try{ await supabase.rpc('increment_view',{p_post_id:p.id}); }catch(_){}
   const { data: stat }=await supabase.from('post_stats').select('view_count,like_count').eq('post_id',p.id).maybeSingle();
-  const views=stat?.view_count||0; const likes=stat?.like_count||0;
+  const views=stat?.view_count||0, likes=stat?.like_count||0;
   const prof=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const lineId=prof?.userId||null;
   const { data: likedRow } = lineId ? await supabase.from('post_likes').select('post_id').eq('post_id',p.id).eq('line_user_id',lineId).maybeSingle() : { data:null };
   const liked=!!likedRow;
-  try{ await supabase.rpc('increment_view',{p_post_id:p.id}); }catch(e){}
   const cover=p.cover_url?`<img class="cover mb-3" src="${p.cover_url}" alt="cover">`:'';
   const md=window.marked?window.marked.parse(p.body||''):(p.body||''); const safe=window.DOMPurify?window.DOMPurify.sanitize(md):md;
   const d=p.published_at?new Date(p.published_at).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}):'';
@@ -48,16 +64,55 @@ export async function renderDetail(id){
            }else{ const { data: cnt }=await supabase.rpc('like_post',{p_post_id:p.id,p_line_user_id:lineId}); likeBtn.setAttribute('aria-pressed','true'); likeBtn.firstChild.nodeValue='❤️'; document.getElementById('likeCount').textContent=(cnt||0);} }
       catch(e){ toast('ดำเนินการไม่สำเร็จ'); } }; }
   setTimeout(async()=>{ const { data: s2 }=await supabase.from('post_stats').select('view_count').eq('post_id',p.id).maybeSingle(); if(s2&&document.getElementById('viewCount')) document.getElementById('viewCount').textContent=s2.view_count; },1200);
-  const btnShare=document.getElementById('btnShare');
-  if(btnShare){ btnShare.onclick=async()=>{ const base=(localStorage.getItem('APPWD_PUBLIC_URL')||'./'); const url=base+`index.html#post?id=${p.id}`;
-      const bubble={type:'bubble',hero:p.cover_url?{type:'image',url:p.cover_url,size:'full',aspectRatio:'16:9',aspectMode:'cover'}:undefined,body:{type:'box',layout:'vertical',contents:[{type:'text',text:p.title||'ข่าว',weight:'bold',size:'md',wrap:true},{type:'text',text:(p.category||'ทั่วไป'),size:'xs',color:'#6B7280',wrap:true,margin:'sm'}]},footer:{type:'box',layout:'vertical',spacing:'sm',contents:[{type:'button',style:'primary',height:'sm',action:{type:'uri',label:'อ่านข่าว',uri:url}}]}};
-      try{ if(window.liff&&window.liff.isApiAvailable&&window.liff.isApiAvailable('shareTargetPicker')){ await window.liff.shareTargetPicker([{type:'flex',altText:`แชร์ข่าว: ${p.title}`,contents:bubble}]); } else { await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์แล้ว'); } }
-      catch(e){ toast('แชร์ไม่สำเร็จ'); } }; }
+  const btnShare=document.getElementById('btnShare'); if(btnShare){ btnShare.onclick=()=>sharePost(p.id); }
 }
-function listItem(p){ const d=new Date(p.published_at||new Date()).toLocaleDateString('th-TH'); const img=p.cover_url?`<img class="w-16 h-16 object-cover rounded-lg border border-[#E6EAF0]" src="${p.cover_url}" alt="cover">`:`<div class="w-16 h-16 rounded-lg bg-brandSoft grid place-items-center text-brand">📰</div>`;
-  return `<article class="p-3 border border-[#E6EAF0] rounded-xl bg-white flex items-center gap-3 cursor-pointer" onclick="location.hash='#post?id=${p.id}'">${img}<div class="flex-1"><div class="font-semibold line-clamp-2">${esc(p.title)}</div><div class="text-[12px] text-gray-500">${esc(p.category||'ทั่วไป')} • ${d}</div></div><div class="text-brand text-sm">อ่านต่อ ›</div></article>`;}
-function card(p){ const d=new Date(p.published_at||new Date()).toLocaleDateString('th-TH'); const img=p.cover_url?`<img class="thumb" src="${p.cover_url}" alt="cover">`:`<div class="thumb grid place-items-center bg-brandSoft text-brand">📰</div>`;
-  return `<div class="news-card cursor-pointer" onclick="location.hash='#post?id=${p.id}'">${img}<div class="p-3"><div class="text-[12px] text-gray-500 mb-1">${esc(p.category||'ทั่วไป')} • ${d}</div><div class="font-semibold leading-snug line-clamp-2">${esc(p.title)}</div></div></div>`;}
+
+function listItemWithStats(p, s){ const d=new Date(p.published_at||new Date()).toLocaleDateString('th-TH'); const img=p.cover_url?`<img class="w-16 h-16 object-cover rounded-lg border border-[#E6EAF0]" src="${p.cover_url}" alt="cover">`:`<div class="w-16 h-16 rounded-lg bg-brandSoft grid place-items-center text-brand">📰</div>`;
+  return `<article class="p-3 border border-[#E6EAF0] rounded-xl bg-white flex items-center gap-3">
+    <a class="flex-shrink-0" href="#post?id=${p.id}">${img}</a>
+    <div class="flex-1"><a href="#post?id=${p.id}" class="font-semibold line-clamp-2">${esc(p.title)}</a><div class="text-[12px] text-gray-500">${esc(p.category||'ทั่วไป')} • ${d}</div>
+      <div class="flex items-center gap-3 mt-1 text-[12px] text-gray-600">
+        <span>👁️ ${s.views||0}</span><span>❤️ ${s.likes||0}</span><button onclick="sharePost(${p.id})" class="underline">แชร์</button>
+      </div>
+    </div>
+  </article>`;
+}
+function withStatsRow(p){ return listItemWithStats(p, { views:0, likes:0 }); }
+async function withStatsCards(list){
+  if(!list || list.length===0) return '<div class="text-gray-500">ยังไม่มีการ์ดเด่น</div>';
+  const ids=list.map(p=>p.id); const statMap=await fetchStats(ids);
+  return list.map(p=>{
+    const s=statMap.get(p.id)||{views:0,likes:0};
+    const d=new Date(p.published_at||new Date()).toLocaleDateString('th-TH');
+    const img=p.cover_url?`<img class="thumb" src="${p.cover_url}" alt="cover">`:`<div class="thumb grid place-items-center bg-brandSoft text-brand">📰</div>`;
+    return `<div class="news-card">
+      <a href="#post?id=${p.id}" aria-label="${esc(p.title)}">${img}</a>
+      <div class="badge">เด่น</div>
+      <div class="p-3">
+        <div class="text-[12px] text-gray-500 mb-1">${esc(p.category||'ทั่วไป')} • ${d}</div>
+        <a class="font-semibold leading-snug line-clamp-2 block" href="#post?id=${p.id}">${esc(p.title)}</a>
+        <div class="flex items-center gap-3 mt-2 text-[12px] text-gray-600">
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span>
+          <button onclick="sharePost(${p.id})" class="underline">แชร์</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function fetchStats(ids){
+  const map=new Map(); if(!ids||ids.length===0) return map;
+  const { data=[] } = await supabase.from('post_stats').select('post_id,view_count,like_count').in('post_id', ids);
+  data.forEach(r=>map.set(r.post_id, { views:r.view_count||0, likes:r.like_count||0 }));
+  return map;
+}
+window.sharePost = async function(id){
+  const base=(localStorage.getItem('APPWD_PUBLIC_URL')||'./'); const { data: p }=await supabase.from('posts').select('id,title,category,cover_url').eq('id',id).maybeSingle();
+  if(!p){ toast('ไม่พบน้ำใจแชร์'); return; }
+  const url=base+`index.html#post?id=${p.id}`;
+  const bubble={type:'bubble',hero:p.cover_url?{type:'image',url:p.cover_url,size:'full',aspectRatio:'16:9',aspectMode:'cover'}:undefined,body:{type:'box',layout:'vertical',contents:[{type:'text',text:p.title||'ข่าว',weight:'bold',size:'md',wrap:true},{type:'text',text:(p.category||'ทั่วไป'),size:'xs',color:'#6B7280',wrap:true,margin:'sm'}]},footer:{type:'box',layout:'vertical',spacing:'sm',contents:[{type:'button',style:'primary',height:'sm',action:{type:'uri',label:'อ่านข่าว',uri:url}}]}};
+  try{ if(window.liff&&window.liff.isApiAvailable&&window.liff.isApiAvailable('shareTargetPicker')){ await window.liff.shareTargetPicker([{type:'flex',altText:`แชร์ข่าว: ${p.title}`,contents:bubble}]); } else { await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์แล้ว'); } }
+  catch(e){ toast('แชร์ไม่สำเร็จ'); }
+};
 async function isEditor(created_by){ const { data: session }=await supabase.auth.getUser(); const u=session.user; if(!u)return false; if(created_by && created_by===u.id) return true; const { data }=await supabase.from('editors').select('user_id').eq('user_id',u.id).maybeSingle(); return !!data; }
 function openComposeSheet(){ openSheet(`<form id="composePostForm" class="grid gap-2 text-sm"><input name="title" placeholder="หัวข้อข่าว" class="border border-[#E6EAF0] rounded p-2" required><input name="category" placeholder="หมวด" class="border border-[#E6EAF0] rounded p-2"><input name="cover_url" placeholder="ลิงก์ภาพปก (cover_url)" class="border border-[#E6EAF0] rounded p-2"><label class="text-sm flex items-center gap-2"><input type="checkbox" name="is_featured"> ปักหมุด/สติกเกอร์</label><textarea name="body" rows="8" placeholder="เนื้อหา (Markdown)" class="border border-[#E6EAF0] rounded p-2"></textarea><label class="text-sm">เผยแพร่: <input type="datetime-local" name="published_at" class="border border-[#E6EAF0] rounded p-1"></label><div class="flex gap-2"><button class="btn btn-prim">บันทึก</button><button type="button" id="cancelSheet" class="btn">ยกเลิก</button></div></form>`);
   const cancel=document.getElementById('cancelSheet'); if(cancel) cancel.onclick=closeSheet; const form=document.getElementById('composePostForm');
