@@ -23,7 +23,7 @@ export async function render(){
   if(error){ grid.innerHTML = `<div class='text-ink3'>โหลดรายการลิงก์ไม่สำเร็จ</div>`; return; }
 
   const canEdit = await canManageLinks();
-  grid.innerHTML = (data||[]).map(r => linkCard(r, canEdit)).join('') or '<div class="text-ink3">ยังไม่มีลิงก์</div>';
+  grid.innerHTML = (data && data.length ? data.map(r => linkCard(r, canEdit)).join('') : '<div class="text-ink3">ยังไม่มีลิงก์</div>');
 
   // attach edit handlers (delegation-friendly for simplicity)
   grid.querySelectorAll('[data-edit]').forEach(el=>{
