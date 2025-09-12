@@ -1,5 +1,5 @@
 
-# APPWD — School Hub (v5.3.5)
+# APPWD — School Hub (v5.3.6)
 
 ศูนย์กลาง “ข่าว • ลิงก์ระบบ • เช็คอิน” สำหรับโรงเรียน UX แนวแอปมือถือ (เหมือน "เป๋าตัง") รองรับ PWA, LINE Login (LIFF), Markdown, CRUD, และแผนที่คำนวณระยะ
 
