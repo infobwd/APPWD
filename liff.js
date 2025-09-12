@@ -1,8 +1,9 @@
+
 import { LIFF_ID,PUBLIC_URL } from './config.js'; import { initBrand,applyPrefs } from './ui.js';
 const badge=document.getElementById('userBadge'), avatar=document.getElementById('userAvatar'), nameEl=document.getElementById('userName');
 const pfAvatar=document.getElementById('pfAvatar'), pfName=document.getElementById('pfName');
 const btnLogin=document.getElementById('btnLineLogin'), btnLogout=document.getElementById('btnLogout'), btnLogout2=document.getElementById('btnLogout2');
-function ensureSlash(u){return u.endsWith('/')?u:u+'/';}
+function ensureSlash(u){return u && u.endsWith('/')?u:u+'/';}
 function saveProfile(p){try{localStorage.setItem('LINE_PROFILE',JSON.stringify(p||{}));}catch(e){}}
 function loadProfile(){try{return JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');}catch(e){return null;}}
 function renderProfile(p){if(!p)return;if(badge)badge.classList.remove('hide');if(avatar)avatar.src=p?.pictureUrl||'';if(nameEl)nameEl.textContent=p?.displayName||'LINE User';if(pfAvatar)pfAvatar.src=p?.pictureUrl||'';if(pfName)pfName.textContent=p?.displayName||'LINE User';if(btnLogin)btnLogin.classList.add('hide');if(btnLogout)btnLogout.classList.remove('hide');}

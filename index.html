@@ -1,18 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="th" data-theme="light">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>APPWD — v5.3.2</title>
+<title>APPWD — v5.3.4</title>
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192">
 <meta name="theme-color" content="#EAF2FF"/>
 <script>(function(){try{var href=location.href;if(/\/APPWD$/.test(href))location.replace(href+'/');}catch(e){}})();</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-tailwind.config={theme:{extend:{
-  fontFamily:{sans:['Kanit','system-ui','sans-serif']},
-  colors:{brand:'#2563EB',brandSoft:'#EAF2FF',border:'#E6EAF0',ink:'#0F172A'},
-  boxShadow:{card:'0 10px 24px rgba(37,99,235,.12)',soft:'0 6px 18px rgba(15,23,42,.08)'} }}};
+tailwind.config={theme:{extend:{fontFamily:{sans:['Kanit','system-ui','sans-serif']},colors:{brand:'#2563EB',brandSoft:'#EAF2FF',border:'#E6EAF0',ink:'#0F172A'},boxShadow:{card:'0 10px 24px rgba(37,99,235,.12)',soft:'0 6px 18px rgba(15,23,42,.08)'}}}};
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,8 +19,8 @@ tailwind.config={theme:{extend:{
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
-:root{ --safe-b: env(safe-area-inset-bottom); --safe-t: env(safe-area-inset-top); --fs: 1; --icon: 1; --bg: #F7FAFF; --ink: #0F172A;}
-html[data-theme='dark']{ --bg:#0B1220; --ink:#E7ECF5;}
+:root{ --safe-b: env(safe-area-inset-bottom); --safe-t: env(safe-area-inset-top); --fs: 1; --icon: 1; --bg: #F7FAFF; --ink: #0F172A; }
+html[data-theme='dark']{ --bg:#0B1220; --ink:#E7ECF5; }
 html,body{height:100%; background:var(--bg); color:var(--ink)}
 body{ font-size: calc(16px * var(--fs)) }
 .card{background:#fff;border:1px solid #E6EAF0;border-radius:18px}
@@ -61,7 +60,7 @@ html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
 <header class="appbar">
   <div class="container px-4 py-3 flex items-center gap-3">
     <div id="brandBox" class="w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold shadow-soft">WD</div>
-    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">v5.3.2 • Mobile • Powerful</div></div>
+    <div><div class="text-base font-semibold leading-tight" id="brandTitle">APPWD</div><div class="text-[11px] text-gray-500">v5.3.4 • Mobile • Powerful</div></div>
     <div class="ml-auto flex items-center gap-2">
       <button id="btnInstall" class="btn hide">ติดตั้งแอป</button>
       <div id="userBadge" class="flex items-center gap-2 hide"><img id="userAvatar" class="w-8 h-8 rounded-full border border-[#E6EAF0]" src="" alt="avatar"><span id="userName" class="text-sm"></span></div>
@@ -173,9 +172,9 @@ html[data-theme='dark'] .news-card{background:#0F172A;border-color:#1F2937}
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-<script type="module" src="./ui.js"></script>
-<script type="module" src="./liff.js"></script>
-<script type="module" src="./app.js"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}</script>
+<script type="module" src="./ui.js?v=534"></script>
+<script type="module" src="./liff.js?v=534"></script>
+<script type="module" src="./app.js?v=534"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=534'));}</script>
 </body>
 </html>
