@@ -11,32 +11,14 @@ export function toast(m){
 const sheet = document.getElementById('sheet');
 export const body  = document.getElementById('sheet-body');
 
-export function openSheet(html, opts={}){
-  const sheet = document.getElementById('sheet');
-  const titleEl = document.getElementById('sheet-title');
-  const bodyEl  = document.getElementById('sheet-body');
-  const actEl   = document.getElementById('sheet-actions');
-  if(!sheet||!bodyEl||!titleEl||!actEl) return;
-  titleEl.textContent = opts.title || '';
-  bodyEl.innerHTML = html || '';
-  actEl.innerHTML  = opts.actions || '';
+export function openSheet(html){
+  if(!sheet || !body) return;
+  body.innerHTML = html;
   sheet.classList.add('show');
-  document.body.style.overflow='hidden';
-  const closer = ()=> closeSheet();
-  const closeBtn = document.getElementById('sheet-close');
-  if(closeBtn) closeBtn.onclick = closer;
-  sheet.addEventListener('click', (e)=>{ if(e.target===sheet) closer(); }, {once:true});
-  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closer(); }, {once:true});
 }
 export function closeSheet(){
-  const sheet = document.getElementById('sheet');
   if(!sheet) return;
   sheet.classList.remove('show');
-  document.body.style.overflow='';
-  const bodyEl = document.getElementById('sheet-body');
-  const actEl  = document.getElementById('sheet-actions');
-  if(bodyEl) bodyEl.innerHTML = '';
-  if(actEl) actEl.innerHTML   = '';
 }
 
 export function goto(hash){
