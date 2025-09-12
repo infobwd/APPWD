@@ -80,22 +80,22 @@ export async function renderHome(){
     </div>`;
   }).join('');
 
-  // small screens: auto slide
-  const isSmall = (typeof matchMedia!=='undefined') && matchMedia('(max-width: 640px)').matches;
-  if(isSmall){
-    cardsEl.classList.add('slider');
-    const ms = 4000;
-    clearInterval(sliderTimer);
-    sliderTimer = setInterval(()=>{
-      try{
-        const w = cardsEl.clientWidth;
-        const next = Math.round((cardsEl.scrollLeft + w)/w);
-        const max = cardsEl.children.length - 1;
-        const to = (next>max?0:next)*w;
-        cardsEl.scrollTo({left:to, behavior:'smooth'});
-      }catch(_){}
-    }, ms);
-  }else{
+// เมื่อประกอบ DOM เสร็จ
+const isSmall = (typeof matchMedia!=='undefined') && matchMedia('(max-width: 640px)').matches;
+const st = JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}');
+const ms = Number(st.SLIDER_AUTO_MS || 4000);
+
+// ใช้คลาส slider-x + การ์ดมี class 'slide'
+cardsEl.classList.add('slider-x');
+
+clearInterval(sliderTimer);
+if(isSmall && cardsEl.children.length > 1){
+  sliderTimer = setInterval(()=>{
+    const w = cardsEl.clientWidth;
+    const to = Math.round((cardsEl.scrollLeft + w) / w) * w;
+    cardsEl.scrollTo({ left: (to >= w * cardsEl.children.length) ? 0 : to, behavior: 'smooth' });
+  }, ms);
+}else{
     if(sliderTimer) clearInterval(sliderTimer);
   }
 }
