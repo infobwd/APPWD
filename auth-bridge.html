@@ -1,1 +1,17 @@
-<!doctype html><meta charset=utf-8><title>Auth Bridge</title><script>location.replace('./index.html#profile');</script>
+<!DOCTYPE html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>กำลังกลับสู่แอป…</title>
+<style>body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#F7FAFF;color:#0F172A;display:grid;place-items:center;height:100vh;margin:0}
+.box{background:#fff;border:1px solid #E6EAF0;border-radius:16px;padding:18px;max-width:460px;box-shadow:0 10px 24px rgba(37,99,235,.12)}a.btn{display:inline-block;margin-top:8px;padding:.6rem 1rem;border:1px solid #E6EAF0;border-radius:12px;text-decoration:none}</style>
+<div class="box">
+  <div id="msg">กำลังยืนยันและกลับสู่แอป…</div>
+  <a class="btn" href="./index.html#profile">เปิด APPWD</a>
+</div>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+(async function(){
+  try{ await liff.init({ liffId: "2006490627-nERN5a26" });
+       if(liff.isLoggedIn()){ const p=await liff.getProfile(); localStorage.setItem('LINE_PROFILE', JSON.stringify(p)); } }catch(e){}
+  try{ const bc = new BroadcastChannel('appwd-auth'); bc.postMessage({ ok:true, t:Date.now() }); }catch(e){}
+  location.replace('./index.html#profile');
+})();
+</script>
