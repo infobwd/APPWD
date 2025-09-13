@@ -56,7 +56,7 @@ export async function renderSummaryCards(){
 }
 
 
-// Override window.editOffsite safely (avoid null .onclick)
+// Override window.editOffsite safely (no null .onclick)
 window.editOffsite = async function(id){
   try{
     const { data:row, error } = await supabase.from('checkins').select('id,category,note').eq('id', id).maybeSingle();
