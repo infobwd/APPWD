@@ -10,9 +10,7 @@ async function route(){ const {path,params}=parseHash(); const h=path||'#home'; 
   else if(h==='#news'){ goto('#news'); await News.renderList(); }
   else if(h==='#post'){ goto('#post'); await News.renderDetail(params.id); }
   else if(h==='#links'){ goto('#links'); await Links.render(); }
-  else if(h==='#profile'){ goto('#profile'); await Admin.render(); 
-try{ const S = await import('./settings.js'); S.wireProfileSettings?.(); }catch(_){ }
-}
+  else if(h==='#profile'){ goto('#profile'); await Admin.render(); }
   else if(h==='#checkin'){ goto('#checkin'); await Checkin.render(); } }
 function bindUI(){ const back=document.getElementById('btnBackList'); if(back) back.onclick=()=>{ location.hash='#news'; };
   const fab=document.getElementById('fabScan'); if(fab) fab.onclick=()=>{ location.hash='#checkin'; };
@@ -21,22 +19,3 @@ function bindUI(){ const back=document.getElementById('btnBackList'); if(back) b
   document.querySelectorAll('[data-ci-tab]').forEach(el=>{ el.addEventListener('click',()=>{ const p=el.getAttribute('data-ci-tab'); Checkin.renderHomeRecent(p); }); }); }
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });
-
-// Partial refresh after CRUD
-document.addEventListener('appwd:postSaved', async (ev)=>{
-  try{
-    const News = await import('./modules/news.js');
-    const {path,params} = parseHash();
-    if(path==='#post' && ev?.detail?.id){ await News.renderDetail(ev.detail.id); }
-    else if(path==='#news'){ await News.renderList(); }
-    await News.renderHome(); // home strip
-  }catch(_){}
-});
-document.addEventListener('appwd:linkSaved', async ()=>{
-  try{
-    const Links = await import('./modules/links.js');
-    const {path} = parseHash();
-    if(path==='#links') await Links.render();
-    await Links.renderHome();
-  }catch(_){}
-});
