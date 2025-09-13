@@ -35,10 +35,11 @@ async function loadToday(){
   box.innerHTML = (data||[]).map(r=>{
     const t=new Date(r.created_at); const hm=`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
     const c=(r.category||'work').toLowerCase();
-    const off = c.includes('meet')||c.includes('ประชุม')||c.includes('train')||c.includes('อบรม')||c.includes('official')||c.includes('ราชการ');
+    const st=classifyStatus(r);
     let distNote=''; if(off && r.lat!=null && r.lng!=null){ const km=haversineKm(baseLat,baseLng, Number(r.lat),Number(r.lng)); distNote = `ระยะทางไป-กลับ ~ ${(km*2).toFixed(km<50?2:1)} กม.`; }
     return `<div class="p-3 border rounded-xl mb-2" style="border-color:var(--bd)">
-      <div class="flex items-center justify-between text-sm opacity-80"><div>${hm}</div><div>${esc(r.category||'')}</div></div>
+      <div class=\"flex items-center justify-between text-sm opacity-80\"><div>${hm}</div><div>${esc(r.category||'')}</div></div>
+      <div class=\"mt-1\">${pill(st)}</div>
       <div class="text-xs mt-1">${esc(r.note||'')}</div>
       ${distNote? `<div class="text-xs mt-1">${distNote}</div>`:''}
     </div>`;
@@ -92,3 +93,46 @@ async function renderSummary(){
   box.innerHTML = tile('สัปดาห์นี้',w) + tile('เดือนนี้',m) + tile('ปีนี้',y);
 }
 ), supabase.rpc('summary_counts',{p_since:monthStart.toISOString()}), supabase.rpc('summary_counts',{p_since:yearStart.toISOString()}) ]); function card(title,obj){ const o=obj.data||{}; return `<div class='p-3 border rounded-xl bg-[var(--card)]' style='border-color:var(--bd)'><div class='text-sm font-semibold mb-2'>${title}</div><div class='grid grid-cols-2 gap-2 text-[13px]'><div>มาทำงาน</div><div class='text-right font-semibold'>${o.work||0}</div><div>ประชุม</div><div class='text-right font-semibold'>${o.meeting||0}</div><div>อบรม</div><div class='text-right font-semibold'>${o.training||0}</div><div>ไปราชการ</div><div class='text-right font-semibold'>${o.official||0}</div></div></div>`; } box.innerHTML=card('สัปดาห์นี้',w)+card('เดือนนี้',m)+card('ปีนี้',y); }
+
+function parseHM(s){ if(!s||typeof s!=='string') return null; const m=s.match(/^([0-2]?\d):([0-5]\d)$/); if(!m) return null; return {h:+m[1],m:+m[2]}; }
+function getCheckinWindows(){
+  const st = JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}');
+  const A = parseHM(st.CHECKIN_START) || {h:7,m:30};
+  const B = parseHM(st.CHECKIN_ON_TIME_UNTIL) || {h:8,m:30};
+  return {A,B};
+}
+function classifyStatus(row){
+  const cat=(row.category||'work').toLowerCase();
+  if(cat.includes('meet')||cat.includes('ประชุม')||cat.includes('train')||cat.includes('อบรม')||cat.includes('official')||cat.includes('ราชการ')){
+    return {key:'off', label:'นอกสถานที่'};
+  }
+  const {A,B}=getCheckinWindows(); const t=new Date(row.created_at); const mins=t.getHours()*60+t.getMinutes();
+  const a=A.h*60+A.m, b=B.h*60+B.m;
+  if(mins<=b) return {key:'on', label:'ตรงเวลา'};
+  return {key:'late', label:'สาย'};
+}
+function pill(status){ return `<span class="badge ${status.key}">${status.label}</span>`; }
+
+
+function applyHomeSlider(){
+  const box=document.getElementById('homeCheckins'); if(!box) return;
+  const small=(typeof matchMedia!=='undefined') && matchMedia('(max-width:640px)').matches;
+  box.classList.toggle('slider-x', small);
+}
+let homeSliderTimer=null;
+function startHomeAutoScroll(){
+  const box=document.getElementById('homeCheckins'); if(!box) return;
+  clearInterval(homeSliderTimer);
+  const st=JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}'); const ms=Number(st.SLIDER_AUTO_MS||4000);
+  const small=(typeof matchMedia!=='undefined') && matchMedia('(max-width:640px)').matches;
+  if(small && box.children.length>1){
+    homeSliderTimer=setInterval(()=>{
+      const w=box.clientWidth; const next=Math.round((box.scrollLeft+w)/w);
+      const max=box.children.length-1; const to=(next>max?0:next)*w;
+      box.scrollTo({left:to,behavior:'smooth'});
+    },ms);
+  }
+}
+document.addEventListener('DOMContentLoaded', ()=>{ applyHomeSlider(); startHomeAutoScroll(); });
+document.addEventListener('appwd:checkinSaved', ()=>{ applyHomeSlider(); startHomeAutoScroll(); });
+window.addEventListener('resize', ()=>{ applyHomeSlider(); startHomeAutoScroll(); });

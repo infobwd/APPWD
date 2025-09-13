@@ -23,7 +23,7 @@ export async function render(){
   if(error){ grid.innerHTML = `<div class='text-ink3'>โหลดรายการลิงก์ไม่สำเร็จ</div>`; return; }
 
   const canEdit = await canManageLinks();
-  grid.innerHTML = (data||[]).map(r => linkCard(r, canEdit)).join('') or '<div class="text-ink3">ยังไม่มีลิงก์</div>';
+  grid.innerHTML = (data||[]).map(r => linkCard(r, canEdit)).join('') || '<div class="text-ink3">ยังไม่มีลิงก์</div>';
 
   // attach edit handlers (delegation-friendly for simplicity)
   grid.querySelectorAll('[data-edit]').forEach(el=>{
@@ -153,5 +153,21 @@ window.editLink = async function(id){
 window.deleteLink = async function(id){
   if(!confirm('ลบรายการนี้?')) return;
   await supabase.from('app_links').delete().eq('id', id);
-  toast('ลบแล้ว'); await import('./links.js').then(m=>m.render());
+  toast('ลบแล้ว');
+    document.dispatchEvent(new CustomEvent('appwd:linkSaved')); await import('./links.js').then(m=>m.render());
 };
+
+export async function renderHome(){
+  const box = document.getElementById('homeLinks'); if(!box) return;
+  box.innerHTML = `<div class="skeleton h-[68px]"></div>`;
+  const { data, error } = await supabase.from('app_links').select('id,title,url,desc,image_url').order('rank', { ascending: true }).limit(8);
+  if(error){ box.innerHTML = `<div class="text-ink3">โหลดลิงก์ไม่สำเร็จ</div>`; return; }
+  box.innerHTML = (data||[]).map(r => `
+    <div class="p-3 border rounded-xl bg-[var(--card)] text-center" style="border-color:var(--bd)">
+      ${r.image_url
+        ? `<img src="${esc(r.image_url)}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-2 border" style="border-color:var(--bd)" onerror="this.remove()">`
+        : `<div class="w-12 h-12 rounded-xl grid place-items-center mx-auto mb-2 bg-brandSoft text-brand">🔗</div>`}
+      <div class="text-sm font-semibold line-clamp-2" style="color:var(--ink)">${esc(r.title)}</div>
+      <a class="btn btn-prim mt-2 text-xs" href="${esc(r.url)}" target="_blank" rel="noopener">เปิด</a>
+    </div>`).join('') || `<div class="text-ink3">ยังไม่มีลิงก์</div>`;
+}
