@@ -14,7 +14,7 @@ async function route(){ const {path,params}=parseHash(); const h=path||'#home'; 
 try{ const Settings = await import('./settings.js'); Settings.wireProfileSettings(); }catch(_){ }
 }
   else if(h==='#checkin'){ goto('#checkin'); await Checkin.render(); 
-if(document.getElementById('checkinSummaryCards')){ try{ const Checkin = await import('./modules/checkin.js'); await Checkin.renderSummaryCards(); }catch(_){ } }
+if(document.getElementById('checkinSummaryCards')){ try{ const CK = await import('./modules/checkin.js'); await CK.renderSummaryCards(); await CK.augmentTodayHistory(); }catch(_){ } }
 } }
 function bindUI(){ const back=document.getElementById('btnBackList'); if(back) back.onclick=()=>{ location.hash='#news'; };
   const fab=document.getElementById('fabScan'); if(fab) fab.onclick=()=>{ location.hash='#checkin'; };
@@ -24,8 +24,8 @@ function bindUI(){ const back=document.getElementById('btnBackList'); if(back) b
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });
 
-// Auto refresh views after post save
-document.addEventListener('appwd:postSaved', async (ev)=>{
+// Auto refresh after post save (no full reload)
+document.addEventListener('appwd:postSaved', async ()=>{
   try{
     const News = await import('./modules/news.js');
     const base = (location.hash.split('?')[0] || '#home');
@@ -40,7 +40,13 @@ document.addEventListener('appwd:postSaved', async (ev)=>{
   }catch(_){}
 });
 
-// Apply UI immediately after settings saved
 document.addEventListener('appwd:settingsSaved', ()=>{
   requestAnimationFrame(()=>{ try{ window.scrollBy(0,1); window.scrollBy(0,-1); }catch(_){}});
+});
+
+document.addEventListener('appwd:checkinSaved', async ()=>{
+  try{
+    const CK = await import('./modules/checkin.js');
+    await CK.renderSummaryCards(); await CK.augmentTodayHistory();
+  }catch(_){}
 });

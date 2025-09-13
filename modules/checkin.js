@@ -25,23 +25,30 @@ async function renderSummary(){ const box=document.getElementById('checkinSummar
 function startOfWeek(d=new Date()){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setHours(0,0,0,0); x.setDate(x.getDate()-day); return x; }
 function startOfMonth(d=new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(1); return x; }
 function startOfYear(d=new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setMonth(0,1); return x; }
-async function currentUserFilter(){ const auth=await supabase.auth.getUser(); const user=auth.data&&auth.data.user; const prof=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const lineId=prof?.userId||null; return { userId:user?user.id:null, lineId }; }
+async function currentUserFilter(){ const auth=await supabase.auth.getUser(); const user=auth.data&&auth.data.user; const prof=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const lineId=prof?.userId||null; return { userId:user?user.id:null, lineId, isLogged:!!(user||lineId) }; }
+function haversineKm(lat1,lon1,lat2,lon2){ const toRad=d=>d*Math.PI/180; const R=6371; const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1); const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
 
 export async function renderSummaryCards(){
-  const box = document.getElementById('checkinSummaryCards'); if(!box) return;
+  const box=document.getElementById('checkinSummaryCards'); if(!box) return;
   box.innerHTML = `<div class="skeleton" style="height:88px"></div>`;
-  const who = await currentUserFilter(); const now = new Date();
-  async function count(from){
-    let q = supabase.from('checkins').select('id,category', {head:false}).gte('created_at', from.toISOString()).lte('created_at', now.toISOString());
-    const ors=[]; if(who.userId) ors.push(`created_by.eq.${who.userId}`); if(who.lineId) ors.push(`line_user_id.eq.${who.lineId}`);
-    if(ors.length) q = q.or(ors.join(','));
-    const {data,error} = await q; if(error||!data) return {total:0,work:0,meeting:0,training:0,official:0};
-    const s={total:data.length,work:0,meeting:0,training:0,official:0};
-    for(const r of data){ const c=(r.category||'work').toLowerCase(); if(c.startsWith('work')) s.work++; else if(c.startsWith('meet')||c.includes('ประชุม')) s.meeting++; else if(c.startsWith('train')||c.includes('อบรม')) s.training++; else s.official++; }
-    return s;
+  const who=await currentUserFilter(); const now=new Date();
+  async function collect(from){
+    let q=supabase.from('checkins').select('id,category,created_by,line_user_id',{head:false}).gte('created_at',from.toISOString()).lte('created_at',now.toISOString());
+    if(who.isLogged){
+      const ors=[]; if(who.userId) ors.push(`created_by.eq.${who.userId}`); if(who.lineId) ors.push(`line_user_id.eq.${who.lineId}`);
+      if(ors.length) q=q.or(ors.join(','));
+    }
+    const {data,error}=await q; if(error||!data) return {list:[],people:0};
+    const ppl=new Set(); data.forEach(r=>{ if(r.line_user_id) ppl.add('L:'+r.line_user_id); else if(r.created_by) ppl.add('U:'+r.created_by); });
+    return {list:data, people:ppl.size};
   }
-  const [w,m,y] = await Promise.all([count(startOfWeek()), count(startOfMonth()), count(startOfYear())]);
-  function card(t,s){ return `<div class="card p-3 border rounded-xl" style="border-color:var(--bd)">
+  const stat=(rows)=>{ const s={total:rows.length,work:0,meeting:0,training:0,official:0};
+    for(const r of rows){ const c=(r.category||'work').toLowerCase();
+      if(c.startsWith('work')) s.work++; else if(c.startsWith('meet')||c.includes('ประชุม')) s.meeting++;
+      else if(c.startsWith('train')||c.includes('อบรม')) s.training++; else s.official++; } return s; };
+  const [W,M,Y]=await Promise.all([collect(startOfWeek()),collect(startOfMonth()),collect(startOfYear())]);
+  const note=(rec)=> !who.isLogged ? `<div class="text-xs mt-1 opacity-80">ข้อมูลภาพรวม (เกี่ยวข้อง ${rec.people} คน)</div>`:'';
+  const card=(t,rec)=>{ const s=stat(rec.list); return `<div class="card p-3 border rounded-xl" style="border-color:var(--bd)">
     <div class="font-semibold mb-1">สรุปผล — ${t}</div>
     <div class="grid grid-cols-2 gap-2 text-sm">
       <div>รวม</div><div class="text-right">${s.total}</div>
@@ -49,40 +56,61 @@ export async function renderSummaryCards(){
       <div>ประชุม</div><div class="text-right">${s.meeting}</div>
       <div>อบรม</div><div class="text-right">${s.training}</div>
       <div>ราชการ</div><div class="text-right">${s.official}</div>
-    </div></div>`; }
-  box.innerHTML = `<div class="grid gap-3 sm:grid-cols-3">${card('สัปดาห์',w)}${card('เดือน',m)}${card('ปี',y)}</div>`;
+    </div>${note(rec)}</div>`; };
+  box.innerHTML = `<div class="grid gap-3 sm:grid-cols-3">${card('สัปดาห์',W)}${card('เดือน',M)}${card('ปี',Y)}</div>`;
 }
 
-window.editOffsite = async function(id){
-  try{
-    const { data:row, error } = await supabase.from('checkins').select('id,category,note').eq('id', id).maybeSingle();
-    if(error){ toast('โหลดข้อมูลไม่สำเร็จ','error'); return; }
-    const form = `<form id="offsiteForm" class="form-grid">
-      <div><label>ประเภท</label>
-        <select name="category">
-          <option value="work" ${ (row?.category==='work')?'selected':'' }>ลงชื่อปฏิบัติงาน</option>
-          <option value="meeting" ${ (row?.category==='meeting')?'selected':'' }>ประชุม</option>
-          <option value="training" ${ (row?.category==='training')?'selected':'' }>อบรม</option>
-          <option value="official" ${ (row?.category==='official')?'selected':'' }>ไปราชการ</option>
-        </select>
-      </div>
-      <div><label>รายละเอียด</label><textarea name="note" rows="3">${(row?.note||'')}</textarea></div>
-    </form>`;
-    openSheet(form, { title:'แก้ไขรายละเอียดนอกสถานที่', actions:`
-      <div class="flex gap-2 justify-between">
-        <button class="btn" id="offsiteCancel">ยกเลิก</button>
-        <button class="btn btn-prim" id="offsiteSave">บันทึก</button>
-      </div>`
-    });
-    const formEl = document.getElementById('offsiteForm');
-    document.getElementById('offsiteCancel')?.addEventListener('click', closeSheet);
-    document.getElementById('offsiteSave')?.addEventListener('click', async ()=>{
-      const fd = new FormData(formEl);
-      const upd = { category: fd.get('category'), note: fd.get('note') };
-      const res = await supabase.from('checkins').update(upd).eq('id', id);
-      if(res.error){ toast('บันทึกไม่สำเร็จ','error'); return; }
-      toast('บันทึกแล้ว','ok'); closeSheet();
-      document.dispatchEvent(new CustomEvent('appwd:checkinSaved'));
-    });
-  }catch(e){ console.error(e); toast('เกิดข้อผิดพลาด','error'); }
-};
+// require login for FAB scan/check-in
+document.addEventListener('click', async (e)=>{
+  const t=e.target.closest('#fabScan'); if(!t) return;
+  const auth=await supabase.auth.getUser();
+  const prof=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
+  const logged=!!(auth?.data?.user || prof?.userId);
+  if(!logged){ e.preventDefault(); e.stopPropagation();
+    openSheet(`<div class="space-y-2 text-sm"><div class="font-semibold">ต้องเข้าสู่ระบบก่อนเช็คอิน</div><div>กรุณาเข้าสู่ระบบด้วย LINE แล้วลองใหม่อีกครั้ง</div></div>`, { title:'ต้องเข้าสู่ระบบ' });
+  }
+}, true);
+
+export async function augmentTodayHistory(){
+  const box=document.getElementById('checkinToday'); if(!box) return;
+  const baseLat=parseFloat(localStorage.getItem('APPWD_BASE_LAT')||'14.301442009490573');
+  const baseLng=parseFloat(localStorage.getItem('APPWD_BASE_LNG')||'101.30579513744982');
+  const d0=new Date(); d0.setHours(0,0,0,0); const d1=new Date(); d1.setHours(23,59,59,999);
+  const {data,error}=await supabase.from('checkins').select('id,category,lat,lng,created_at').gte('created_at',d0.toISOString()).lte('created_at',d1.toISOString()).order('created_at',{ascending:false});
+  if(error||!data) return;
+  if(!box.children.length){
+    box.innerHTML=data.map(r=>{ const t=new Date(r.created_at); const hh=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+      return `<div class="card p-3 border rounded-xl mb-2 slide" style="border-color:var(--bd)">
+        <div class="flex items-center justify-between text-sm opacity-80"><div>${hh}</div><div>${esc(r.category||'work')}</div></div>
+        <div class="text-xs mt-1" data-id="${r.id}" data-role="dist-note"></div>
+      </div>`; }).join('');
+  }
+  for(const r of data){
+    const c=(r.category||'').toLowerCase();
+    const off=c.includes('meet')||c.includes('ประชุม')||c.includes('train')||c.includes('อบรม')||c.includes('official')||c.includes('ราชการ');
+    if(off && r.lat!=null && r.lng!=null){
+      const km=haversineKm(baseLat,baseLng,Number(r.lat),Number(r.lng));
+      const el=box.querySelector(`[data-role="dist-note"][data-id="${r.id}"]`);
+      if(el) el.textContent=`ระยะทางไป-กลับ ~ ${(km*2).toFixed(km<50?2:1)} กม.`;
+    }
+  }
+}
+
+function applyCheckinLatestSlider(){
+  const box=document.getElementById('checkinLatest'); if(!box) return;
+  const small=(typeof matchMedia!=='undefined') && matchMedia('(max-width:640px)').matches;
+  box.classList.toggle('slider-x', small);
+}
+let chkTimer=null;
+function startCheckinAutoScroll(){
+  const box=document.getElementById('checkinLatest'); if(!box) return;
+  clearInterval(chkTimer);
+  const st=JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}'); const ms=Number(st.SLIDER_AUTO_MS||4000);
+  const small=(typeof matchMedia!=='undefined') && matchMedia('(max-width:640px)').matches;
+  if(small && box.children.length>1){
+    chkTimer=setInterval(()=>{ const w=box.clientWidth; const next=Math.round((box.scrollLeft+w)/w); const max=box.children.length-1; const to=(next>max?0:next)*w; box.scrollTo({left:to,behavior:'smooth'}); }, ms);
+  }
+}
+document.addEventListener('DOMContentLoaded', ()=>{applyCheckinLatestSlider();startCheckinAutoScroll();});
+document.addEventListener('appwd:checkinSaved', ()=>{applyCheckinLatestSlider();startCheckinAutoScroll();});
+window.addEventListener('resize', ()=>{applyCheckinLatestSlider();startCheckinAutoScroll();});
