@@ -3,7 +3,7 @@ export const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 export const LIFF_ID="2006490627-nERN5a26";
 export const PUBLIC_URL="https://infobwd.github.io/APPWD/";
 export const BRAND_TITLE="APPWD"; export const BRAND_LOGO_URL="";
-export const SCHOOL_LAT=14.221816, SCHOOL_LNG=99.472859, SCHOOL_RADIUS_METERS=200;
+export const SCHOOL_LAT=14.301442009490573, SCHOOL_LNG=101.30579513744982, SCHOOL_RADIUS_METERS=200;
 export const CHECKIN_START="07:30"; export const CHECKIN_ON_TIME_UNTIL="08:00";
 export const SUMMARY_DEFAULT_RANGE_DAYS=30; export const SLIDER_AUTO_MS=4000;
 export const DEFAULT_FONT_SCALE=1, DEFAULT_ICON_SCALE=1, DEFAULT_THEME="light";
@@ -12,8 +12,8 @@ export function setLocalSettings(obj){ try{localStorage.setItem('APPWD_SETTINGS'
 try{ localStorage.setItem("APPWD_PUBLIC_URL", PUBLIC_URL.endsWith('/')?PUBLIC_URL:(PUBLIC_URL+'/')); }catch(e){}
 
 // === DEV/PROD toggle (injected) ===
-export const APP_VERSION = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v5.6.1';
-export const DEFAULT_ENABLE_SW = typeof DEFAULT_ENABLE_SW !== 'undefined' ? DEFAULT_ENABLE_SW : false;
+export const APP_VERSION = (typeof globalThis !== 'undefined' && 'APP_VERSION' in globalThis) ? globalThis.APP_VERSION : 'v5.6.1';
+export const DEFAULT_ENABLE_SW = (typeof globalThis !== 'undefined' && 'DEFAULT_ENABLE_SW' in globalThis) ? globalThis.DEFAULT_ENABLE_SW : false;
 export function getEnableSW(){
   const v = localStorage.getItem('APPWD_ENABLE_SW');
   return v ? v === '1' : DEFAULT_ENABLE_SW;
@@ -21,4 +21,3 @@ export function getEnableSW(){
 export function setEnableSW(flag){
   localStorage.setItem('APPWD_ENABLE_SW', flag ? '1' : '0');
 }
-
