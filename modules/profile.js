@@ -1,51 +1,27 @@
-// modules/profile.js
+// === SW toggle UI (injected) ===
 import { getEnableSW, setEnableSW } from '../config.js';
 
-/* ====== Helper: ตรวจสิทธิ์แอดมิน ======
-   - ถ้ามีระบบ role จาก Supabase/LIFF ให้แทนในฟังก์ชันนี้
-   - Fallback: ใช้ localStorage.APPWD_IS_ADMIN = '1'
-*/
-function isAdmin(){
-  try{
-    const r = localStorage.getItem('APPWD_ROLE');
-    if (r && r.toLowerCase() === 'admin') return true;
-  }catch(e){}
-  return localStorage.getItem('APPWD_IS_ADMIN') === '1';
-}
-
-/* ====== Helper: ตรวจว่าหน้าปัจจุบันคือ Profile ====== */
-function isProfileRoute(){
-  const hash = (location.hash || '#').replace('#','').split('?')[0];
-  return hash === 'profile' || hash === 'tab-profile';
-}
-
-/* ====== Render สวิตช์ SW เฉพาะแอดมิน + หน้าโปรไฟล์ ====== */
-export function mountProfileAdvanced(){
-  if (!isAdmin() || !isProfileRoute()) return;
-
+export function initProfileSWToggle() {
   let container =
     document.querySelector('#profile-advanced') ||
     document.querySelector('#profileContent') ||
     document.querySelector('#tab-profile') ||
-    document.querySelector('[data-tab="profile"]');
+    document.querySelector('[data-tab="profile"]') ||
+    document.body;
 
-  if (!container) return;
-
-  // ถ้ายังไม่มี section ให้สร้าง
   let section = document.getElementById('profile-advanced');
-  if (!section){
+  if (!section) {
     section = document.createElement('section');
     section.id = 'profile-advanced';
-    section.className = 'mt-6';
+    section.style.marginTop = '1.5rem';
     section.innerHTML = `
-      <h3 class="text-lg font-semibold">Advanced</h3>
-      <div class="mt-3 flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-900/40">
+      <div style="font-weight:600;font-size:1.125rem;line-height:1.75rem;margin-bottom:.25rem">Advanced</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border-radius:.75rem;border:1px solid #334155;background:rgba(15,23,42,.5)">
         <div>
-          <div class="font-medium">Service Worker (PWA)</div>
-          <p class="text-sm text-slate-400" id="swStatusText">กำลังตรวจสอบ…</p>
+          <div style="font-weight:500">Service Worker (PWA)</div>
+          <p id="swStatusText" style="font-size:.875rem;color:#94a3b8">กำลังตรวจสอบ…</p>
         </div>
-        <button id="swToggleBtn"
-          class="px-4 py-2 rounded-lg border border-slate-600 hover:bg-slate-800 transition">
+        <button id="swToggleBtn" style="padding:.5rem 1rem;border-radius:.5rem;border:1px solid #475569;background:transparent;color:#e2e8f0;cursor:pointer">
           …
         </button>
       </div>`;
@@ -65,7 +41,7 @@ export function mountProfileAdvanced(){
 
   refreshUI();
 
-  btn?.addEventListener('click', async () => {
+  btn && btn.addEventListener('click', async () => {
     const currentlyOn = getEnableSW();
     if (currentlyOn) {
       setEnableSW(false);
@@ -80,7 +56,7 @@ export function mountProfileAdvanced(){
         }
       } catch(e){}
       refreshUI();
-      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nกรุณา Reload หน้า');
+      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nขอให้ Reload หน้าเพื่อให้ผลมีผลเต็มที่');
       location.reload();
     } else {
       setEnableSW(true);
@@ -90,27 +66,16 @@ export function mountProfileAdvanced(){
           await navigator.serviceWorker.register(window.__APPWD_SW_URL__ || './sw.js?v=561');
         }
       } catch(e){}
-      alert('เปิด SW แล้ว\nกรุณา Reload หน้า');
+      alert('เปิด SW แล้ว\nขอให้ Reload หน้าเพื่อให้ SW คุมเนื้อหาทั้งหมด');
       location.reload();
     }
   });
 }
 
-/* ====== Hook: เรียกเฉพาะเมื่อเข้า Profile ====== */
-function onRoute(){
-  // ลบ Advanced ออกก่อน (ป้องกันทับซ้อน) ถ้าไม่ใช่โปรไฟล์/ไม่ใช่แอดมิน
-  if (!isProfileRoute() || !isAdmin()){
-    document.getElementById('profile-advanced')?.remove();
-    return;
+(function autoInit(){
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initProfileSWToggle, 0);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initProfileSWToggle, 0));
   }
-  mountProfileAdvanced();
-}
-
-if (document.readyState === 'complete' || document.readyState === 'interactive'){
-  setTimeout(onRoute, 0);
-} else {
-  document.addEventListener('DOMContentLoaded', () => setTimeout(onRoute, 0));
-}
-
-// ทำงานเมื่อเปลี่ยนแท็บ/route
-window.addEventListener('hashchange', onRoute);
+})();
