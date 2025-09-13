@@ -1,33 +1,62 @@
-// === SW toggle UI (injected) ===
+// modules/profile.js
+import { isAdmin } from './profile_admin.js';     // <-- ใช้ตัวนี้เป็นแหล่งความจริง
 import { getEnableSW, setEnableSW } from '../config.js';
 
-export function initProfileSWToggle() {
-  let container =
-    document.querySelector('#profile-advanced') ||
-    document.querySelector('#profileContent') ||
-    document.querySelector('#tab-profile') ||
-    document.querySelector('[data-tab="profile"]') ||
-    document.body;
+function isProfileRoute(){
+  const hash = (location.hash || '#').replace('#','').split('?')[0];
+  return hash === 'profile' || hash === 'tab-profile';
+}
 
+function removeAdvanced(){
+  document.getElementById('profile-advanced')?.remove();
+}
+
+function ensureAdvancedSection(parent){
   let section = document.getElementById('profile-advanced');
-  if (!section) {
+  if (!section){
     section = document.createElement('section');
     section.id = 'profile-advanced';
-    section.style.marginTop = '1.5rem';
+    section.className = 'mt-6';
     section.innerHTML = `
-      <div style="font-weight:600;font-size:1.125rem;line-height:1.75rem;margin-bottom:.25rem">Advanced</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border-radius:.75rem;border:1px solid #334155;background:rgba(15,23,42,.5)">
+      <h3 class="text-lg font-semibold">Advanced</h3>
+      <div class="mt-3 flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-900/40">
         <div>
-          <div style="font-weight:500">Service Worker (PWA)</div>
-          <p id="swStatusText" style="font-size:.875rem;color:#94a3b8">กำลังตรวจสอบ…</p>
+          <div class="font-medium">Service Worker (PWA)</div>
+          <p class="text-sm text-slate-400" id="swStatusText">กำลังตรวจสอบ…</p>
         </div>
-        <button id="swToggleBtn" style="padding:.5rem 1rem;border-radius:.5rem;border:1px solid #475569;background:transparent;color:#e2e8f0;cursor:pointer">
+        <button id="swToggleBtn"
+          class="px-4 py-2 rounded-lg border border-slate-600 hover:bg-slate-800 transition">
           …
         </button>
       </div>`;
-    container.appendChild(section);
+    parent.appendChild(section);
+  }
+  return section;
+}
+
+async function renderAdvancedIfAllowed(){
+  // เงื่อนไขอนุญาต = เป็นแอดมิน + อยู่หน้าโปรไฟล์
+  let allowed = false;
+  try {
+    // รองรับทั้ง isAdmin() แบบ sync หรือ async
+    allowed = await Promise.resolve(isAdmin());
+  } catch(e){ allowed = false; }
+
+  if (!allowed || !isProfileRoute()){
+    removeAdvanced();
+    return;
   }
 
+  // parent container ของหน้าโปรไฟล์ (เลือกตัวที่ตรงกับโค้ดจริงของพี่ที่รัก)
+  const parent =
+    document.querySelector('#profileContent') ||
+    document.querySelector('#tab-profile')   ||
+    document.querySelector('[data-tab="profile"]') ||
+    document.body;
+
+  if (!parent) return;
+
+  const section = ensureAdvancedSection(parent);
   const btn = section.querySelector('#swToggleBtn');
   const txt = section.querySelector('#swStatusText');
 
@@ -41,9 +70,10 @@ export function initProfileSWToggle() {
 
   refreshUI();
 
-  btn && btn.addEventListener('click', async () => {
-    const currentlyOn = getEnableSW();
-    if (currentlyOn) {
+  btn?.addEventListener('click', async () => {
+    const on = getEnableSW();
+    if (on){
+      // Turn OFF (DEV)
       setEnableSW(false);
       try {
         if ('serviceWorker' in navigator) {
@@ -56,9 +86,10 @@ export function initProfileSWToggle() {
         }
       } catch(e){}
       refreshUI();
-      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nขอให้ Reload หน้าเพื่อให้ผลมีผลเต็มที่');
+      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nกรุณา Reload หน้า');
       location.reload();
     } else {
+      // Turn ON (PROD)
       setEnableSW(true);
       refreshUI();
       try {
@@ -66,16 +97,16 @@ export function initProfileSWToggle() {
           await navigator.serviceWorker.register(window.__APPWD_SW_URL__ || './sw.js?v=561');
         }
       } catch(e){}
-      alert('เปิด SW แล้ว\nขอให้ Reload หน้าเพื่อให้ SW คุมเนื้อหาทั้งหมด');
+      alert('เปิด SW แล้ว\nกรุณา Reload หน้า');
       location.reload();
     }
   });
 }
 
-(function autoInit(){
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(initProfileSWToggle, 0);
-  } else {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(initProfileSWToggle, 0));
-  }
-})();
+// เรียกตอนโหลด และเมื่อสลับแท็บ/route
+if (document.readyState === 'complete' || document.readyState === 'interactive'){
+  setTimeout(renderAdvancedIfAllowed, 0);
+} else {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(renderAdvancedIfAllowed, 0));
+}
+window.addEventListener('hashchange', renderAdvancedIfAllowed);
