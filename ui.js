@@ -1,4 +1,6 @@
-// Minimal, safe UI helpers (re-written clean)
+
+// ui.js — safe, no stray HTML outside strings
+
 export function toast(m, type='info'){
   let host = document.getElementById('toast');
   if(!host){
@@ -18,17 +20,11 @@ export function toast(m, type='info'){
   el.style.border='1px solid var(--bd)';
   el.style.background = (type==='error') ? '#fee2e2' : (type==='ok' ? '#dcfce7' : 'var(--card)');
   el.style.color = 'var(--ink)';
-  el.textContent = m;
+  el.textContent = String(m||'');
   host.appendChild(el);
   setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .25s'; }, 2000);
-  setTimeout(()=>{ el.remove(); }, 2400);
-}</div>`;
-  clearTimeout(window.__t);
-  window.__t = setTimeout(()=> b.classList.add('hide'), 2600);
+  setTimeout(()=>{ if(el && el.parentNode) el.parentNode.removeChild(el); }, 2400);
 }
-
-const sheet = document.getElementById('sheet');
-export const body  = document.getElementById('sheet-body');
 
 export function openSheet(html, opts={}){
   const sheet = document.getElementById('sheet');
@@ -47,6 +43,7 @@ export function openSheet(html, opts={}){
   sheet.addEventListener('click', (e)=>{ if(e.target===sheet) closer(); }, {once:true});
   window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closer(); }, {once:true});
 }
+
 export function closeSheet(){
   const sheet = document.getElementById('sheet');
   if(!sheet) return;
@@ -70,41 +67,43 @@ export function goto(hash){
 
 export function skel(n=3, h='56px'){
   let out = '';
-  for(let i=0;i<n;i++) out += `<div class="skeleton" style="height:${h}"></div>`;
+  for(let i=0;i<n;i++) out += '<div class=\"skeleton\" style=\"height:'+h+'\"></div>';
   return out;
 }
 
 export function esc(s){
-  s = (s || '');
-  return s
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
+  s = (s==null ? '' : String(s));
+  return s.replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/\"/g,'&quot;')
+          .replace(/'/g,'&#39;');
 }
 
 export function openPrefs(){
-  openSheet(`<div class='space-y-3 text-sm'>
-    <div class='font-semibold'>การแสดงผล</div>
-    <label>ขนาดตัวอักษร
-      <input id='fsRange' type='range' min='0.85' max='1.4' step='0.05' value='1' class='w-full'>
-    </label>
-    <label>ขนาดไอคอน
-      <input id='icRange' type='range' min='0.9' max='1.6' step='0.05' value='1' class='w-full'>
-    </label>
-    <div>ธีม
-      <select id='thSel' class='border rounded p-1 ml-2'>
-        <option value='light'>สว่าง</option>
-        <option value='dark'>มืด</option>
-        <option value='system'>ตามระบบ</option>
-      </select>
-    </div>
-    <div class='flex gap-2'>
-      <button id='okPref' class='btn btn-prim'>บันทึก</button>
-      <button id='cancelPref' class='btn'>ยกเลิก</button>
-    </div>
-  </div>`);
+  const html = [
+    "<div class='space-y-3 text-sm'>",
+    "  <div class='font-semibold'>การแสดงผล</div>",
+    "  <label>ขนาดตัวอักษร",
+    "    <input id='fsRange' type='range' min='0.85' max='1.4' step='0.05' value='1' class='w-full'>",
+    "  </label>",
+    "  <label>ขนาดไอคอน",
+    "    <input id='icRange' type='range' min='0.9' max='1.6' step='0.05' value='1' class='w-full'>",
+    "  </label>",
+    "  <div>ธีม",
+    "    <select id='thSel' class='border rounded p-1 ml-2'>",
+    "      <option value='light'>สว่าง</option>",
+    "      <option value='dark'>มืด</option>",
+    "      <option value='system'>ตามระบบ</option>",
+    "    </select>",
+    "  </div>",
+    "  <div class='flex gap-2'>",
+    "    <button id='okPref' class='btn btn-prim'>บันทึก</button>",
+    "    <button id='cancelPref' class='btn'>ยกเลิก</button>",
+    "  </div>",
+    "</div>"
+  ].join('');
+  openSheet(html, { title:'การแสดงผล' });
   const ok = document.getElementById('okPref');
   const cancel = document.getElementById('cancelPref');
   if(ok) ok.onclick = ()=> closeSheet();
