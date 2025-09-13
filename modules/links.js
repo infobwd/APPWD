@@ -23,7 +23,7 @@ export async function render(){
   if(error){ grid.innerHTML = `<div class='text-ink3'>โหลดรายการลิงก์ไม่สำเร็จ</div>`; return; }
 
   const canEdit = await canManageLinks();
-  grid.innerHTML = (data && data.length ? data.map(r => linkCard(r, canEdit)).join('') : '<div class="text-ink3">ยังไม่มีลิงก์</div>');
+  grid.innerHTML = (data||[]).map(r => linkCard(r, canEdit)).join('') or '<div class="text-ink3">ยังไม่มีลิงก์</div>';
 
   // attach edit handlers (delegation-friendly for simplicity)
   grid.querySelectorAll('[data-edit]').forEach(el=>{
@@ -155,6 +155,3 @@ window.deleteLink = async function(id){
   await supabase.from('app_links').delete().eq('id', id);
   toast('ลบแล้ว'); await import('./links.js').then(m=>m.render());
 };
-
-
-export async function renderHome(){ return render(); }

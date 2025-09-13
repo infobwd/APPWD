@@ -349,7 +349,6 @@ function openComposeSheet(){
     if(ins.error){ toast('บันทึกข่าวไม่สำเร็จ'); return; }
     closeSheet();
     location.hash = `#post?id=${ins.data.id}`;
-    const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){}}
   };
 }
 
@@ -393,7 +392,6 @@ function openEditSheet(p){
     const up = await supabase.from('posts').update(upd).eq('id',p.id);
     if(up.error){ toast('บันทึกไม่สำเร็จ'); return; }
     toast('บันทึกแล้ว'); closeSheet(); location.hash = `#post?id=${p.id}`;
-    const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){}}
   };
 }
 
