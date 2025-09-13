@@ -348,7 +348,7 @@ function openComposeSheet(){
     const ins = await supabase.from('posts').insert(payload).select('id').single();
     if(ins.error){ toast('บันทึกข่าวไม่สำเร็จ'); return; }
     closeSheet();
-    document.dispatchEvent(new CustomEvent('appwd:postSaved',{detail:{id:ins.data.id}})); location.hash = `#post?id=${ins.data.id}`;
+    location.hash = `#post?id=${ins.data.id}`;
   };
 }
 
@@ -391,7 +391,7 @@ function openEditSheet(p){
     };
     const up = await supabase.from('posts').update(upd).eq('id',p.id);
     if(up.error){ toast('บันทึกไม่สำเร็จ'); return; }
-    toast('บันทึกแล้ว'); closeSheet(); document.dispatchEvent(new CustomEvent('appwd:postSaved',{detail:{id:p.id}})); location.hash = `#post?id=${p.id}`;
+    toast('บันทึกแล้ว'); closeSheet(); location.hash = `#post?id=${p.id}`;
   };
 }
 
