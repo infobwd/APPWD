@@ -155,3 +155,6 @@ window.deleteLink = async function(id){
   await supabase.from('app_links').delete().eq('id', id);
   toast('ลบแล้ว'); await import('./links.js').then(m=>m.render());
 };
+
+
+export async function renderHome(){ return render(); }
