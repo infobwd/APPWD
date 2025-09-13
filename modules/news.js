@@ -38,3 +38,43 @@ function openComposeSheet(){ openSheet(`<form id='composePostForm' class='grid g
 function openEditSheet(p){ openSheet(`<form id='editPostForm' class='grid gap-2 text-sm'><input name='title' class='border rounded p-2' value='${esc(p.title||'')}'><input name='category' class='border rounded p-2' value='${esc(p.category||'')}'><input name='cover_url' class='border rounded p-2' value='${esc(p.cover_url||'')}' placeholder='ลิงก์ภาพปก'><label class='text-sm flex items-center gap-2'><input type='checkbox' name='is_featured' ${p.is_featured?'checked':''}> ปักหมุด/สติกเกอร์</label><textarea name='body' rows='10' class='border rounded p-2'>${esc(p.body||'')}</textarea><label class='text-sm'>เผยแพร่: <input type='datetime-local' name='published_at' class='border rounded p-1' value='${p.published_at? new Date(p.published_at).toISOString().slice(0,16):''}'></label><div class='flex gap-2'><button class='btn btn-prim'>บันทึก</button><button type='button' id='cancelSheet' class='btn'>ยกเลิก</button></div></form>`); const cancel=document.getElementById('cancelSheet'); if(cancel) cancel.onclick=closeSheet; const form=document.getElementById('editPostForm'); if(form){ form.onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(form); const upd={ title:fd.get('title'), category:fd.get('category')||null, body:fd.get('body')||null, cover_url:fd.get('cover_url')||null, is_featured:!!fd.get('is_featured'), published_at:fd.get('published_at')?new Date(fd.get('published_at')).toISOString():null, updated_at:new Date().toISOString() }; const up=await supabase.from('posts').update(upd).eq('id',p.id); if(up.error){ toast('บันทึกไม่สำเร็จ'); return; } toast('บันทึกแล้ว'); closeSheet(); location.hash=`#post?id=${p.id}`; }; } }
 window.editPost=async function(id){ const { data }=await supabase.from('posts').select('*').eq('id',id).maybeSingle(); if(!data) return; openEditSheet(data); }
 window.deletePost=async function(id){ if(!confirm('ลบข่าวนี้?')) return; const del=await supabase.from('posts').delete().eq('id',id); if(del.error){toast('ลบไม่สำเร็จ');return;} toast('ลบแล้ว'); await import('./news.js').then(m=>m.renderList()); }
+
+// Bottom Sheet editor for post (create/update)
+export async function openPostEditor(id){
+  let row = { title:'', category:'ประกาศ', cover_url:'', body:'' };
+  if(id){
+    const res = await supabase.from('posts').select('*').eq('id', id).maybeSingle();
+    if(!res.error && res.data) row = res.data;
+  }
+  const form = `
+    <form id="editPostForm" class="form-grid">
+      <label>หัวข้อ<input name="title" value="${esc(row.title||'')}" /></label>
+      <label>หมวดหมู่<input name="category" value="${esc(row.category||'ประกาศ')}" /></label>
+      <label>ภาพปก (URL)<input name="cover_url" value="${esc(row.cover_url||'')}" /></label>
+      <label>เนื้อหา (Markdown)<textarea rows="10" name="body">${esc(row.body||'')}</textarea></label>
+    </form>`;
+  openSheet(form, { title: id?'แก้ไขข่าว':'เพิ่มข่าว', actions:`
+    <div class="flex gap-2 justify-between">
+      <button class="btn" id="postCancel">ยกเลิก</button>
+      <button class="btn btn-prim" id="postSave">บันทึก</button>
+    </div>`
+  });
+  document.getElementById('postCancel')?.addEventListener('click', closeSheet);
+  document.getElementById('postSave')?.addEventListener('click', async ()=>{
+    const fd = new FormData(document.getElementById('editPostForm'));
+    const payload = {
+      title: (fd.get('title')||'').trim(),
+      category: (fd.get('category')||'').trim(),
+      cover_url: String(fd.get('cover_url')||'').trim() || null,
+      body: fd.get('body')||'',
+      updated_at: new Date().toISOString()
+    };
+    let ret;
+    if(id) ret = await supabase.from('posts').update(payload).eq('id', id);
+    else ret = await supabase.from('posts').insert([payload]).select().maybeSingle();
+    if(ret.error){ toast('บันทึกไม่สำเร็จ','error'); return; }
+    toast('บันทึกแล้ว','ok'); closeSheet();
+    document.dispatchEvent(new CustomEvent('appwd:postSaved', { detail: { id: id || ret?.data?.id } }));
+  });
+}
+window.editPost = openPostEditor;

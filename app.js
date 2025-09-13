@@ -23,3 +23,24 @@ function bindUI(){ const back=document.getElementById('btnBackList'); if(back) b
   document.querySelectorAll('[data-ci-tab]').forEach(el=>{ el.addEventListener('click',()=>{ const p=el.getAttribute('data-ci-tab'); Checkin.renderHomeRecent(p); }); }); }
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });
+
+// Auto refresh views after post save
+document.addEventListener('appwd:postSaved', async (ev)=>{
+  try{
+    const News = await import('./modules/news.js');
+    const base = (location.hash.split('?')[0] || '#home');
+    if(base === '#post'){
+      const id = new URL(location.href).searchParams.get('id');
+      await News.renderDetail(id);
+    }else if(base === '#news'){
+      await News.renderList();
+    }else if(base === '#home'){
+      await News.renderHome();
+    }
+  }catch(_){}
+});
+
+// Apply UI immediately after settings saved
+document.addEventListener('appwd:settingsSaved', ()=>{
+  requestAnimationFrame(()=>{ try{ window.scrollBy(0,1); window.scrollBy(0,-1); }catch(_){}});
+});

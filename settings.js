@@ -23,24 +23,20 @@ document.addEventListener('appwd:settingsSaved', applyLocalSettings);
 window.addEventListener('DOMContentLoaded', applyLocalSettings);
 
 export function wireProfileSettings(){
-  const fs=document.getElementById('fsRange'), ic=document.getElementById('icRange'), th=document.getElementById('thSel');
-  const save=document.getElementById('btnSaveSettings')||document.getElementById('savePrefs');
-  const obj=JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}');
-  if(fs) fs.value = obj.FONT_SCALE || 1;
-  if(ic) ic.value = obj.ICON_SCALE || 1;
-  if(th) th.value = obj.THEME || 'light';
-  function saveNow(){
-    const cur=JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}');
-    if(fs) cur.FONT_SCALE = parseFloat(fs.value||1);
-    if(ic) cur.ICON_SCALE = parseFloat(ic.value||1);
-    if(th) cur.THEME = th.value||'light';
-    localStorage.setItem('APPWD_SETTINGS', JSON.stringify(cur));
-    document.dispatchEvent(new CustomEvent('appwd:settingsSaved'));
-    if(window.toast) toast('บันทึกการแสดงผลแล้ว','ok');
+  const $ = (id)=>document.getElementById(id);
+  const fs = $('fsRange')  || $('prefFont')  || document.querySelector('[data-role="font-scale"]');
+  const ic = $('icRange')  || $('prefIcon')  || document.querySelector('[data-role="icon-scale"]');
+  const th = $('thSel')    || $('prefTheme') || document.querySelector('[data-role="theme"]');
+  let save = $('btnSaveSettings') || $('savePrefs') || document.querySelector('[data-role="save-settings"]');
+  if(!save){
+    const host = th?.parentElement || fs?.parentElement || document.querySelector('#profileView') || document.body;
+    const btn = document.createElement('button'); btn.id='btnSaveSettings'; btn.dataset.role='save-settings';
+    btn.className='btn btn-prim'; btn.textContent='บันทึก'; host.appendChild(btn); save=btn;
   }
-  if(save) save.onclick = saveNow;
-  if(fs) fs.addEventListener('input', saveNow);
-  if(ic) ic.addEventListener('input', saveNow);
-  if(th) th.addEventListener('change', saveNow);
+  const read = ()=>JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}');
+  const write=(obj)=>{ localStorage.setItem('APPWD_SETTINGS', JSON.stringify(obj)); document.dispatchEvent(new CustomEvent('appwd:settingsSaved')); };
+  const cur = read(); if(fs) fs.value = cur.FONT_SCALE ?? 1; if(ic) ic.value = cur.ICON_SCALE ?? 1; if(th) th.value = cur.THEME ?? 'light';
+  const saveNow=()=>{ const obj=read(); if(fs) obj.FONT_SCALE=parseFloat(fs.value||1); if(ic) obj.ICON_SCALE=parseFloat(ic.value||1); if(th) obj.THEME=th.value||'light'; write(obj); toast?.('บันทึกการแสดงผลแล้ว','ok'); };
+  save?.addEventListener('click',saveNow); fs?.addEventListener('input',saveNow); ic?.addEventListener('input',saveNow); th?.addEventListener('change',saveNow);
   document.dispatchEvent(new CustomEvent('appwd:settingsLoaded'));
 }

@@ -22,12 +22,10 @@ async function saveCheckin({method,within,purpose,note,distance}){ const profile
 async function loadToday(){ const profile=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const box=document.getElementById('todayList'); if(!box)return; box.innerHTML=''; if(!profile){ box.innerHTML='<div class="text-ink3">ยังไม่เข้าสู่ระบบ</div>'; return; } const start=new Date(); start.setHours(0,0,0,0); const resp=await supabase.from('checkins').select('*').eq('line_user_id',profile.userId).gte('created_at',start.toISOString()).order('created_at',{ascending:false}).limit(50); const data=resp.data||[]; box.innerHTML=data.map(r=>{ const canEdit=(!r.within_radius); const editBtn=canEdit?`<button class='btn text-xs' onclick='editOffsite(${r.id}, "${r.purpose||''}", ${JSON.stringify(r.note||'').replace(/"/g,'&quot;')})'>แก้ไข</button>`:''; return `<div class='p-2 border rounded-lg flex items-center gap-2 text-sm bg-[var(--card)]' style='border-color:var(--bd)'><img src='${r.line_picture_url||''}' class='w-8 h-8 rounded-full border' onerror="this.style.display='none'"><div class='flex-1'>${new Date(r.created_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} — ${purposeLabel(r.purpose)}${r.note?' • '+r.note:''} ${r.status ? ' • ' + (r.status==='on_time'?'ตรงเวลา': (r.status==='late'?'สาย':'นอกสถานที่')) : ''}</div><div class='${r.within_radius?'text-green-600':'text-red-600'}'>${fmtDist(r.distance_m||0)}</div>${editBtn}</div>`; }).join('')||'<div class="text-ink3">ยังไม่มีรายการวันนี้</div>'; }
 window.editOffsite=function(id,purpose,note){ openSheet(`<div class='text-sm space-y-2'><div class='font-semibold'>แก้ไขภารกิจนอกสถานที่ (วันนี้)</div><label class='flex items-center gap-2'><input type='radio' name='p' value='meeting' ${purpose==='meeting'?'checked':''}> ประชุม</label><label class='flex items-center gap-2'><input type='radio' name='p' value='training' ${purpose==='training'?'checked':''}> อบรม</label><label class='flex items-center gap-2'><input type='radio' name='p' value='official' ${purpose==='official'?'checked':''}> ไปราชการ</label><input id='pNote' class='border rounded p-2 w-full' placeholder='รายละเอียดงาน' value='${note?String(note).replace(/"/g,'&quot;'):''}'><div class='text-ink3'>* ไม่สามารถแก้ไขเวลาเช็คอินได้</div><div class='grid grid-cols-2 gap-2'><button id='okEditOff' class='btn btn-prim'>บันทึก</button><button id='cancelEditOff' class='btn'>ยกเลิก</button></div></div>`); document.getElementById('cancelEditOff').onclick=closeSheet; document.getElementById('okEditOff').onclick=async()=>{ const sel=document.querySelector('input[name="p"]:checked'); const desc=document.getElementById('pNote').value.trim(); if(!sel){ toast('กรุณาเลือกเหตุผล'); return; } const upd={ purpose:sel.value, note:desc||null }; const res=await supabase.from('checkins').update(upd).eq('id',id); if(res.error){ toast('บันทึกไม่สำเร็จ'); return; } closeSheet(); toast('อัปเดตแล้ว'); await loadToday(); }; }
 async function renderSummary(){ const box=document.getElementById('checkinSummary'); if(!box) return; box.innerHTML=skel(3,'64px'); const now=new Date(); const weekStart=new Date(now); weekStart.setDate(now.getDate()-now.getDay()); weekStart.setHours(0,0,0,0); const monthStart=new Date(now.getFullYear(),now.getMonth(),1); const yearStart=new Date(now.getFullYear(),0,1); const [w,m,y]=await Promise.all([ supabase.rpc('summary_counts',{p_since:weekStart.toISOString()}), supabase.rpc('summary_counts',{p_since:monthStart.toISOString()}), supabase.rpc('summary_counts',{p_since:yearStart.toISOString()}) ]); function card(title,obj){ const o=obj.data||{}; return `<div class='p-3 border rounded-xl bg-[var(--card)]' style='border-color:var(--bd)'><div class='text-sm font-semibold mb-2'>${title}</div><div class='grid grid-cols-2 gap-2 text-[13px]'><div>มาทำงาน</div><div class='text-right font-semibold'>${o.work||0}</div><div>ประชุม</div><div class='text-right font-semibold'>${o.meeting||0}</div><div>อบรม</div><div class='text-right font-semibold'>${o.training||0}</div><div>ไปราชการ</div><div class='text-right font-semibold'>${o.official||0}</div></div></div>`; } box.innerHTML=card('สัปดาห์นี้',w)+card('เดือนนี้',m)+card('ปีนี้',y); }
-
 function startOfWeek(d=new Date()){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setHours(0,0,0,0); x.setDate(x.getDate()-day); return x; }
 function startOfMonth(d=new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(1); return x; }
 function startOfYear(d=new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setMonth(0,1); return x; }
 async function currentUserFilter(){ const auth=await supabase.auth.getUser(); const user=auth.data&&auth.data.user; const prof=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const lineId=prof?.userId||null; return { userId:user?user.id:null, lineId }; }
-
 
 export async function renderSummaryCards(){
   const box = document.getElementById('checkinSummaryCards'); if(!box) return;
@@ -55,13 +53,11 @@ export async function renderSummaryCards(){
   box.innerHTML = `<div class="grid gap-3 sm:grid-cols-3">${card('สัปดาห์',w)}${card('เดือน',m)}${card('ปี',y)}</div>`;
 }
 
-
-// Override window.editOffsite safely (no null .onclick)
 window.editOffsite = async function(id){
   try{
     const { data:row, error } = await supabase.from('checkins').select('id,category,note').eq('id', id).maybeSingle();
     if(error){ toast('โหลดข้อมูลไม่สำเร็จ','error'); return; }
-    const html = `<form id="offsiteForm" class="form-grid">
+    const form = `<form id="offsiteForm" class="form-grid">
       <div><label>ประเภท</label>
         <select name="category">
           <option value="work" ${ (row?.category==='work')?'selected':'' }>ลงชื่อปฏิบัติงาน</option>
@@ -70,20 +66,18 @@ window.editOffsite = async function(id){
           <option value="official" ${ (row?.category==='official')?'selected':'' }>ไปราชการ</option>
         </select>
       </div>
-      <div><label>รายละเอียด</label><textarea name="note" rows="3">${esc(row?.note||'')}</textarea></div>
+      <div><label>รายละเอียด</label><textarea name="note" rows="3">${(row?.note||'')}</textarea></div>
     </form>`;
-    openSheet(html, { title:'แก้ไขรายละเอียดนอกสถานที่', actions:`
+    openSheet(form, { title:'แก้ไขรายละเอียดนอกสถานที่', actions:`
       <div class="flex gap-2 justify-between">
         <button class="btn" id="offsiteCancel">ยกเลิก</button>
         <button class="btn btn-prim" id="offsiteSave">บันทึก</button>
       </div>`
     });
-    const form = document.getElementById('offsiteForm');
-    const btnSave = document.getElementById('offsiteSave');
-    const btnCancel = document.getElementById('offsiteCancel');
-    if(btnCancel) btnCancel.addEventListener('click', closeSheet);
-    if(btnSave) btnSave.addEventListener('click', async ()=>{
-      const fd = new FormData(form);
+    const formEl = document.getElementById('offsiteForm');
+    document.getElementById('offsiteCancel')?.addEventListener('click', closeSheet);
+    document.getElementById('offsiteSave')?.addEventListener('click', async ()=>{
+      const fd = new FormData(formEl);
       const upd = { category: fd.get('category'), note: fd.get('note') };
       const res = await supabase.from('checkins').update(upd).eq('id', id);
       if(res.error){ toast('บันทึกไม่สำเร็จ','error'); return; }
