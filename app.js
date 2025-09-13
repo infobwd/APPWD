@@ -10,7 +10,9 @@ async function route(){ const {path,params}=parseHash(); const h=path||'#home'; 
   else if(h==='#news'){ goto('#news'); await News.renderList(); }
   else if(h==='#post'){ goto('#post'); await News.renderDetail(params.id); }
   else if(h==='#links'){ goto('#links'); await Links.render(); }
-  else if(h==='#profile'){ goto('#profile'); await Admin.render(); }
+  else if(h==='#profile'){ goto('#profile'); await Admin.render(); 
+try{ const S = await import('./settings.js'); S.wireProfileSettings?.(); }catch(_){ }
+}
   else if(h==='#checkin'){ goto('#checkin'); await Checkin.render(); } }
 function bindUI(){ const back=document.getElementById('btnBackList'); if(back) back.onclick=()=>{ location.hash='#news'; };
   const fab=document.getElementById('fabScan'); if(fab) fab.onclick=()=>{ location.hash='#checkin'; };
