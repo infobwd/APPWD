@@ -83,8 +83,8 @@ export async function renderHome(){
   // small screens: auto slide
   const isSmall = (typeof matchMedia!=='undefined') && matchMedia('(max-width: 640px)').matches;
   if(isSmall){
-    cardsEl.classList.add('slider');
-    const ms = 4000;
+    cardsEl.classList.add('slider-x');
+    const st = JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}'); const ms = Number(st.SLIDER_AUTO_MS || 4000);
     clearInterval(sliderTimer);
     sliderTimer = setInterval(()=>{
       try{
@@ -348,7 +348,8 @@ function openComposeSheet(){
     const ins = await supabase.from('posts').insert(payload).select('id').single();
     if(ins.error){ toast('บันทึกข่าวไม่สำเร็จ'); return; }
     closeSheet();
-    document.dispatchEvent(new CustomEvent('appwd:postSaved',{detail:{id:ins.data?.id}})); location.hash = `#post?id=${ins.data.id}`;
+    location.hash = `#post?id=${ins.data.id}`;
+    const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){}}
   };
 }
 
@@ -391,7 +392,7 @@ function openEditSheet(p){
     };
     const up = await supabase.from('posts').update(upd).eq('id',p.id);
     if(up.error){ toast('บันทึกไม่สำเร็จ'); return; }
-    toast('บันทึกแล้ว'); closeSheet(); document.dispatchEvent(new CustomEvent('appwd:postSaved')); location.hash = `#post?id=${p.id}`;
+    toast('บันทึกแล้ว','ok'); closeSheet(); const detail=document.getElementById('postDetail'); if(detail){ try{ await import('./news.js').then(m=>m.renderDetail(p.id)); }catch(_){}} else { location.hash = `#post?id=${p.id}`; } const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){} }
   };
 }
 

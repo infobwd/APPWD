@@ -1,174 +1,65 @@
 
 import { supabase } from '../api.js';
-import { openSheet, closeSheet, toast, esc, skel } from '../ui.js';
 
-// Public render API (used by router and refresh after CRUD)
+function el(html){
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+function iconFor(x){
+  return x.icon || '🔗';
+}
+function sanitize(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
 export async function render(){
-  const grid = document.getElementById('linksGrid') || document.getElementById('linksList');
-  if(!grid) return;
-  grid.innerHTML = skel(6,'68px');
+  const host = document.getElementById('tab-links');
+  if (!host) return;
+  host.innerHTML = '<div class="p-4 text-slate-400">กำลังโหลดลิงก์…</div>';
 
-  const btn = document.getElementById('btnComposeLink');
-  const can = await canManageLinks();
-  if(btn){ btn.classList.toggle('hide', !can); btn.onclick = () => openComposeSheet(); }
+  let rows = [];
+  try{
+    const q = await supabase.from('links').select('id,title,url,category,description,icon,active,ord').order('ord', { ascending:true }).order('title', { ascending:true });
+    rows = (q?.data || []).filter(r => r.active !== false);
+  }catch(e){
+    // fallback: try settings.APPS or localStorage
+    try{
+      const cfg = await supabase.from('settings').select('value').eq('key','LINKS_LIST').maybeSingle();
+      rows = JSON.parse(cfg?.data?.value || '[]');
+    }catch{ rows = []; }
+  }
 
-  const { data, error } = await supabase
-    .from('app_links')
-    .select('id,title,url,image_url,category,sort_order,is_active')
-    .eq('is_active', true)
-    .order('category', {ascending:true})
-    .order('sort_order', {ascending:true})
-    .order('title', {ascending:true});
+  if (!rows.length){
+    host.innerHTML = '<div class="p-4 text-slate-400">ยังไม่มีรายการลิงก์</div>';
+    return;
+  }
 
-  if(error){ grid.innerHTML = `<div class='text-ink3'>โหลดรายการลิงก์ไม่สำเร็จ</div>`; return; }
+  // group by category
+  const groups = {};
+  rows.forEach(r => {
+    const k = r.category || 'ทั่วไป';
+    (groups[k] ||= []).push(r);
+  });
 
-  const canEdit = await canManageLinks();
-  grid.innerHTML = (data||[]).map(r => linkCard(r, canEdit)).join('') || '<div class="text-ink3">ยังไม่มีลิงก์</div>';
-
-  // attach edit handlers (delegation-friendly for simplicity)
-  grid.querySelectorAll('[data-edit]').forEach(el=>{
-    el.addEventListener('click', async (e)=>{
-      const id = Number(e.currentTarget.getAttribute('data-id'));
-      const row = (await supabase.from('app_links').select('*').eq('id', id).maybeSingle()).data;
-      if(row) openEditSheet(row);
+  host.innerHTML = '';
+  Object.keys(groups).sort().forEach(cat => {
+    const sec = el(`<section class="mb-6">
+      <h3 class="text-base font-semibold mb-2">${sanitize(cat)}</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-cat="${sanitize(cat)}"></div>
+    </section>`);
+    host.appendChild(sec);
+    const grid = sec.querySelector('div.grid');
+    groups[cat].forEach(r => {
+      const item = el(`<a class="block p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow transition bg-white"
+                         href="${sanitize(r.url)}" target="_blank" rel="noopener">
+          <div class="text-2xl mb-1">${sanitize(iconFor(r))}</div>
+          <div class="font-medium">${sanitize(r.title||'ไม่ระบุชื่อ')}</div>
+          ${r.description ? `<div class="text-xs text-slate-500 mt-0.5">${sanitize(r.description)}</div>` : ''}
+        </a>`);
+      grid.appendChild(item);
     });
   });
 }
-
-function linkCard(r, canEdit){
-  const img = r.image_url
-    ? `<img class='w-12 h-12 rounded-xl object-cover border' style='border-color:var(--bd)' src='${r.image_url}' alt=''>`
-    : `<div class='w-12 h-12 rounded-xl grid place-items-center bg-brandSoft text-brand'>🔗</div>`;
-  const tools = canEdit
-    ? `<div class='ml-auto'><button class='btn text-xs' data-edit data-id='${r.id}'>แก้ไข</button></div>`
-    : '';
-  return `<a class='p-3 border rounded-xl bg-[var(--card)] flex items-center gap-3' style='border-color:var(--bd)' href='${r.url}' target='_blank' rel='noopener'>
-    ${img}
-    <div class='flex-1'>
-      <div class='font-semibold leading-snug' style='color:var(--ink)'>${esc(r.title)}</div>
-      <div class='text-[12px] text-ink3'>${esc(r.category||'ทั่วไป')}</div>
-    </div>
-    ${tools}
-  </a>`;
-}
-
-// ----------------- PERMISSION -----------------
-async function canManageLinks(){
-  // same rule as news: editor/admin or in editors table
-  const auth = await supabase.auth.getUser();
-  const user = auth.data && auth.data.user;
-  if(user){
-    const ed = await supabase.from('editors').select('user_id').eq('user_id', user.id).maybeSingle();
-    if(ed.data) return true;
-  }
-  const prof = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
-  const lineId = prof?.userId || null;
-  if(lineId){
-    const u = await supabase.from('users').select('role').eq('line_user_id', lineId).maybeSingle();
-    if(u.data && (u.data.role==='admin'||u.data.role==='editor')) return true;
-  }
-  return false;
-}
-
-// ----------------- SHEETS -----------------
-function openComposeSheet(){
-  const form = `<form id='composeLinkForm' class='form-grid'>
-    <div><label>ชื่อแอป/ระบบ</label><input name='title' required></div>
-    <div><label>URL</label><input name='url' required placeholder='https://...'></div>
-    <div><label>รูปแอป (image_url)</label><input name='image_url' placeholder='https://...'></div>
-    <div class='grid grid-cols-2 gap-2'>
-      <div><label>หมวด</label><input name='category' placeholder='ทั่วไป'></div>
-      <div><label>ลำดับแสดง</label><input type='number' name='sort_order' value='100'></div>
-    </div>
-    <label class='text-sm flex items-center gap-2'><input type='checkbox' name='is_active' checked> แสดงผล</label>
-  </form>`;
-  openSheet(form, { title:'เพิ่มลิงก์', actions:`<div class='flex gap-2 justify-end'>
-    <button class='btn' id='cancelLink'>ยกเลิก</button>
-    <button class='btn btn-prim' id='okLink'>บันทึก</button>
-  </div>` });
-  const cancel=document.getElementById('cancelLink'); if(cancel) cancel.onclick=closeSheet;
-  const ok=document.getElementById('okLink');
-  if(ok) ok.onclick = async ()=>{
-    const fd = new FormData(document.getElementById('composeLinkForm'));
-    const payload = {
-      title: fd.get('title'),
-      url: fd.get('url'),
-      image_url: fd.get('image_url') || null,
-      category: fd.get('category') || null,
-      sort_order: Number(fd.get('sort_order') || 100),
-      is_active: !!fd.get('is_active')
-    };
-    const ins = await supabase.from('app_links').insert(payload);
-    if(ins.error){ toast('บันทึกไม่สำเร็จ'); return; }
-    toast('เพิ่มลิงก์แล้ว'); closeSheet(); await import('./links.js').then(m=>m.render());
-  };
-}
-
-function openEditSheet(r){
-  const form = `<form id='editLinkForm' class='form-grid'>
-    <div><label>ชื่อแอป/ระบบ</label><input name='title' value='${esc(r.title||"")}'></div>
-    <div><label>URL</label><input name='url' value='${esc(r.url||"")}'></div>
-    <div><label>รูปแอป (image_url)</label><input name='image_url' value='${esc(r.image_url||"")}'></div>
-    <div class='grid grid-cols-2 gap-2'>
-      <div><label>หมวด</label><input name='category' value='${esc(r.category||"")}'></div>
-      <div><label>ลำดับแสดง</label><input type='number' name='sort_order' value='${(r.sort_order!=null)?r.sort_order:100}'></div>
-    </div>
-    <label class='text-sm flex items-center gap-2'><input type='checkbox' name='is_active' ${r.is_active?'checked':''}> แสดงผล</label>
-  </form>`;
-  openSheet(form, { title:'แก้ไขลิงก์', actions:`<div class='flex gap-2 justify-between'>
-    <button class='btn' id='cancelLink'>ยกเลิก</button>
-    <div class='flex gap-2'>
-      <button class='btn' id='delLink'>ลบ</button>
-      <button class='btn btn-prim' id='okLink'>บันทึก</button>
-    </div>
-  </div>` });
-  const cancel=document.getElementById('cancelLink'); if(cancel) cancel.onclick=closeSheet;
-  const del=document.getElementById('delLink'); if(del) del.onclick=async()=>{
-    if(!confirm('ลบรายการนี้?')) return;
-    await supabase.from('app_links').delete().eq('id', r.id);
-    closeSheet(); await import('./links.js').then(m=>m.render());
-  };
-  const ok=document.getElementById('okLink');
-  if(ok) ok.onclick=async()=>{
-    const fd = new FormData(document.getElementById('editLinkForm'));
-    const upd = {
-      title: fd.get('title'),
-      url: fd.get('url'),
-      image_url: fd.get('image_url') || null,
-      category: fd.get('category') || null,
-      sort_order: Number(fd.get('sort_order') || 100),
-      is_active: !!fd.get('is_active')
-    };
-    const up = await supabase.from('app_links').update(upd).eq('id', r.id);
-    if(up.error){ toast('บันทึกไม่สำเร็จ'); return; }
-    toast('อัปเดตแล้ว'); closeSheet(); await import('./links.js').then(m=>m.render());
-  };
-}
-
-// expose for buttons created in templates (if any legacy)
-window.editLink = async function(id){
-  const row = (await supabase.from('app_links').select('*').eq('id', id).maybeSingle()).data;
-  if(row) openEditSheet(row);
-};
-window.deleteLink = async function(id){
-  if(!confirm('ลบรายการนี้?')) return;
-  await supabase.from('app_links').delete().eq('id', id);
-  toast('ลบแล้ว'); await import('./links.js').then(m=>m.render());
-};
-
-export async function renderHome(){
-  const box = document.getElementById('homeLinks'); if(!box) return;
-  box.innerHTML = `<div class="skeleton h-[68px]"></div>`;
-  const { data, error } = await supabase.from('app_links').select('id,title,url,desc,image_url,sort_order,is_active').eq('is_active',true).order('sort_order',{ascending:true}).order('title',{ascending:true}).limit(8);
-  if(error){ box.innerHTML = `<div class="text-ink3">โหลดลิงก์ไม่สำเร็จ</div>`; return; }
-  box.innerHTML = (data||[]).map(r => `
-    <div class="p-3 border rounded-xl bg-[var(--card)] text-center" style="border-color:var(--bd)">
-      ${r.image_url
-        ? `<img src="${esc(r.image_url)}" class="w-12 h-12 rounded-xl object-cover mx-auto mb-2 border" style="border-color:var(--bd)" onerror="this.remove()">`
-        : `<div class="w-12 h-12 rounded-xl grid place-items-center mx-auto mb-2 bg-brandSoft text-brand">🔗</div>`}
-      <div class="text-sm font-semibold line-clamp-2" style="color:var(--ink)">${esc(r.title)}</div>
-      <a class="btn btn-prim mt-2 text-xs" href="${esc(r.url)}" target="_blank" rel="noopener">เปิด</a>
-    </div>`).join('') || `<div class="text-ink3">ยังไม่มีลิงก์</div>`;
-}
-
-document.addEventListener('appwd:linkSaved',()=>{});
