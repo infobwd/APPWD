@@ -10,12 +10,8 @@ async function route(){ const {path,params}=parseHash(); const h=path||'#home'; 
   else if(h==='#news'){ goto('#news'); await News.renderList(); }
   else if(h==='#post'){ goto('#post'); await News.renderDetail(params.id); }
   else if(h==='#links'){ goto('#links'); await Links.render(); }
-  else if(h==='#profile'){ goto('#profile'); await Admin.render(); 
-try{ const Settings = await import('./settings.js'); Settings.wireProfileSettings(); }catch(_){ }
-}
-  else if(h==='#checkin'){ goto('#checkin'); await Checkin.render(); 
-if(document.getElementById('checkinSummaryCards')){ try{ const CK = await import('./modules/checkin.js'); await CK.renderSummaryCards(); await CK.augmentTodayHistory(); }catch(_){ } }
-} }
+  else if(h==='#profile'){ goto('#profile'); await Admin.render(); }
+  else if(h==='#checkin'){ goto('#checkin'); await Checkin.render(); } }
 function bindUI(){ const back=document.getElementById('btnBackList'); if(back) back.onclick=()=>{ location.hash='#news'; };
   const fab=document.getElementById('fabScan'); if(fab) fab.onclick=()=>{ location.hash='#checkin'; };
   const btnTheme=document.getElementById('btnTheme'); if(btnTheme) btnTheme.onclick=()=>openPrefs();
@@ -23,30 +19,3 @@ function bindUI(){ const back=document.getElementById('btnBackList'); if(back) b
   document.querySelectorAll('[data-ci-tab]').forEach(el=>{ el.addEventListener('click',()=>{ const p=el.getAttribute('data-ci-tab'); Checkin.renderHomeRecent(p); }); }); }
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });
-
-// Auto refresh after post save (no full reload)
-document.addEventListener('appwd:postSaved', async ()=>{
-  try{
-    const News = await import('./modules/news.js');
-    const base = (location.hash.split('?')[0] || '#home');
-    if(base === '#post'){
-      const id = new URL(location.href).searchParams.get('id');
-      await News.renderDetail(id);
-    }else if(base === '#news'){
-      await News.renderList();
-    }else if(base === '#home'){
-      await News.renderHome();
-    }
-  }catch(_){}
-});
-
-document.addEventListener('appwd:settingsSaved', ()=>{
-  requestAnimationFrame(()=>{ try{ window.scrollBy(0,1); window.scrollBy(0,-1); }catch(_){}});
-});
-
-document.addEventListener('appwd:checkinSaved', async ()=>{
-  try{
-    const CK = await import('./modules/checkin.js');
-    await CK.renderSummaryCards(); await CK.augmentTodayHistory();
-  }catch(_){}
-});
