@@ -1,9 +1,8 @@
-// modules/profile_admin.js
+
 import { supabase } from '../api.js';
 import { toast } from '../ui.js';
 import { getEnableSW, setEnableSW } from '../config.js';
 
-// ---------- helpers ----------
 const $id = (id) => document.getElementById(id);
 const isProfileRoute = () => {
   const hash = (location.hash || '#').replace('#','').split('?')[0];
@@ -16,7 +15,6 @@ const getLineId = () => {
   } catch { return null; }
 };
 
-// cache role 10 นาที ลด query
 let _roleCache = null, _roleAt = 0;
 const ROLE_TTL = 10 * 60 * 1000;
 
@@ -30,11 +28,8 @@ export async function isAdmin(){
   return role === 'admin';
 }
 
-// ---------- mount Advanced (เฉพาะแอดมิน + หน้าโปรไฟล์) ----------
 function mountAdvanced() {
   if (!isProfileRoute()) { $id('profile-advanced')?.remove(); return; }
-
-  // ซ่อนส่วน “ตั้งค่าตัวอักษร/ธีม” ตามที่ขอ
   $id('profile-font-settings')?.remove();
   $id('profile-theme-settings')?.remove();
 
@@ -83,7 +78,6 @@ function mountAdvanced() {
   btn?.addEventListener('click', async () => {
     const on = getEnableSW();
     if (on) {
-      // ➜ ปิด (DEV)
       setEnableSW(false);
       try {
         if ('serviceWorker' in navigator) {
@@ -99,7 +93,6 @@ function mountAdvanced() {
       alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nกรุณา Reload หน้า');
       location.reload();
     } else {
-      // ➜ เปิด (PROD)
       setEnableSW(true);
       refreshUI();
       try {
@@ -113,9 +106,8 @@ function mountAdvanced() {
   });
 }
 
-// ---------- main render (คงฟังก์ชันเดิม + เรียก mountAdvanced) ----------
 export async function render(){
-  const card = $id('adminCard');
+  const card = document.getElementById('adminCard');
   if (!card) return;
 
   const lineId = getLineId();
@@ -123,12 +115,11 @@ export async function render(){
 
   const admin = await isAdmin();
   card.classList.toggle('hide', !admin);
-  if (!admin) { $id('profile-advanced')?.remove(); return; }
+  if (!admin) { document.getElementById('profile-advanced')?.remove(); return; }
 
-  // แสดง Advanced สำหรับแอดมินบนหน้าโปรไฟล์เท่านั้น
+  // mount Advanced on profile
   mountAdvanced();
 
-  // ===== load settings (เหมือนโค้ดเดิม) =====
   const { data } = await supabase.from('settings').select('key,value');
   const map = {};
   (data || []).forEach(r => {
@@ -136,21 +127,22 @@ export async function render(){
     catch { map[r.key] = r.value; }
   });
 
-  $id('set_CHECKIN_START').value              = map.CHECKIN_START || '07:30';
-  $id('set_CHECKIN_ON_TIME_UNTIL').value      = map.CHECKIN_ON_TIME_UNTIL || '08:00';
-  $id('set_SUMMARY_DEFAULT_RANGE_DAYS').value = map.SUMMARY_DEFAULT_RANGE_DAYS ?? 30;
-  $id('set_SLIDER_AUTO_MS').value             = map.SLIDER_AUTO_MS ?? 4000;
-  $id('set_BRAND_TITLE').value                = map.BRAND_TITLE || 'APPWD';
-  $id('set_BRAND_LOGO_URL').value             = map.BRAND_LOGO_URL || '';
+  const byId = (id)=>document.getElementById(id);
+  byId('set_CHECKIN_START').value              = map.CHECKIN_START || '07:30';
+  byId('set_CHECKIN_ON_TIME_UNTIL').value      = map.CHECKIN_ON_TIME_UNTIL || '08:00';
+  byId('set_SUMMARY_DEFAULT_RANGE_DAYS').value = map.SUMMARY_DEFAULT_RANGE_DAYS ?? 30;
+  byId('set_SLIDER_AUTO_MS').value             = map.SLIDER_AUTO_MS ?? 4000;
+  byId('set_BRAND_TITLE').value                = map.BRAND_TITLE || 'APPWD';
+  byId('set_BRAND_LOGO_URL').value             = map.BRAND_LOGO_URL || '';
 
-  $id('btnSaveSettings').onclick = async () => {
+  byId('btnSaveSettings').onclick = async () => {
     const payload = {
-      CHECKIN_START: $id('set_CHECKIN_START').value || '07:30',
-      CHECKIN_ON_TIME_UNTIL: $id('set_CHECKIN_ON_TIME_UNTIL').value || '08:00',
-      SUMMARY_DEFAULT_RANGE_DAYS: Number($id('set_SUMMARY_DEFAULT_RANGE_DAYS').value || 30),
-      SLIDER_AUTO_MS: Number($id('set_SLIDER_AUTO_MS').value || 4000),
-      BRAND_TITLE: $id('set_BRAND_TITLE').value || 'APPWD',
-      BRAND_LOGO_URL: $id('set_BRAND_LOGO_URL').value || ''
+      CHECKIN_START: byId('set_CHECKIN_START').value || '07:30',
+      CHECKIN_ON_TIME_UNTIL: byId('set_CHECKIN_ON_TIME_UNTIL').value || '08:00',
+      SUMMARY_DEFAULT_RANGE_DAYS: Number(byId('set_SUMMARY_DEFAULT_RANGE_DAYS').value || 30),
+      SLIDER_AUTO_MS: Number(byId('set_SLIDER_AUTO_MS').value || 4000),
+      BRAND_TITLE: byId('set_BRAND_TITLE').value || 'APPWD',
+      BRAND_LOGO_URL: byId('set_BRAND_LOGO_URL').value || ''
     };
     for (const k of Object.keys(payload)) {
       await supabase.from('settings').upsert({ key: k, value: JSON.stringify(payload[k]) });
@@ -158,11 +150,10 @@ export async function render(){
     toast('บันทึกการตั้งค่าแล้ว');
   };
 
-  $id('btnReloadSettings').onclick = () => location.reload();
+  byId('btnReloadSettings').onclick = () => location.reload();
 };
 
-// อัปเดตตามเปลี่ยนแท็บ (อยู่โปรไฟล์ค่อยโชว์ Advanced)
 window.addEventListener('hashchange', async () => {
   const admin = await isAdmin();
-  if (admin) mountAdvanced(); else $id('profile-advanced')?.remove();
+  if (admin) mountAdvanced(); else document.getElementById('profile-advanced')?.remove();
 });
