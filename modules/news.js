@@ -392,7 +392,8 @@ function openEditSheet(p){
     };
     const up = await supabase.from('posts').update(upd).eq('id',p.id);
     if(up.error){ toast('บันทึกไม่สำเร็จ'); return; }
-    toast('บันทึกแล้ว','ok'); closeSheet(); const detail=document.getElementById('postDetail'); if(detail){ try{ await import('./news.js').then(m=>m.renderDetail(p.id)); }catch(_){}} else { location.hash = `#post?id=${p.id}`; } const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){} }
+    toast('บันทึกแล้ว'); closeSheet(); location.hash = `#post?id=${p.id}`;
+    const homeList=document.getElementById('homeNewsList'); if(homeList){ try{ await import('./news.js').then(m=>m.renderHome()); }catch(_){}}
   };
 }
 
