@@ -15,6 +15,28 @@ export async function render(){
   const { data, error } = await supabase
     .from('app_links')
     .select('id,title,url,image_url,category,sort_order,is_active')
+    .order('category', {ascending:true})
+    .order('sort_order', {ascending:true})
+    .order('title', {ascending:true});
+
+  if(error){ grid.innerHTML = `<div class='text-ink3'>โหลดรายการลิงก์ไม่สำเร็จ</div>`; return; }
+
+  const rows = (data||[]).filter(r => r.is_active !== false); // null/true => แสดง
+  const canEdit = await canManageLinks();
+  grid.innerHTML = (rows.length ? rows.map(r => linkCard(r, canEdit)).join('') : '<div class="text-ink3">ยังไม่มีลิงก์</div>');
+
+  grid.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      const id = Number(e.currentTarget.getAttribute('data-id'));
+      const row = (await supabase.from('app_links').select('*').eq('id', id).maybeSingle()).data;
+      if(row) openEditSheet(row);
+    });
+  });
+}
+
+  const { data, error } = await supabase
+    .from('app_links')
+    .select('id,title,url,image_url,category,sort_order,is_active')
     .eq('is_active', true)
     .order('category', {ascending:true})
     .order('sort_order', {ascending:true})
