@@ -55,6 +55,29 @@ body{ font-size: calc(16px * var(--fs-base)); }
 body{font-size:calc(16px * var(--fs-base))}
 .navbar img,.tabbar img,.fab,.btn-icon{transform:scale(var(--ic-scale));transform-origin:center}
 
+:root { --tabbar-h: 54px; } /* ปรับตามความสูงแถบล่างของแอปพี่ที่รัก */
+
+#fabScan{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px);
+  height: clamp(56px, 16vw, 72px);
+  border-radius: 18px;
+  z-index: 60;
+  box-shadow: 0 12px 30px rgba(33, 97, 243, .35);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px){
+  #fabScan{
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+  }
+}
+/* ป้องกันการถูก parent จัดตำแหน่งใหม่ */
+.fab-wrap, .fab-container { position: static !important; }
+  
 </style>
 <!-- DEV/PROD gate for Service Worker (injected) -->
 <script>
