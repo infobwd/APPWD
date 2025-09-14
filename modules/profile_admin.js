@@ -9,10 +9,8 @@ const isProfileRoute = () => {
   return hash === 'profile' || hash === 'tab-profile';
 };
 const getLineId = () => {
-  try {
-    const prof = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
-    return prof?.userId || null;
-  } catch { return null; }
+  try { const prof = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null'); return prof?.userId || null; }
+  catch { return null; }
 };
 
 let _roleCache = null, _roleAt = 0;
@@ -39,7 +37,6 @@ function mountAdvanced() {
     $id('tab-profile') ||
     document.querySelector('[data-tab="profile"]') ||
     document.body;
-
   if (!parent) return;
 
   let section = $id('profile-advanced');
@@ -90,7 +87,7 @@ function mountAdvanced() {
         }
       } catch {}
       refreshUI();
-      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nกรุณา Reload หน้า');
+      alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\\nกรุณา Reload หน้า');
       location.reload();
     } else {
       setEnableSW(true);
@@ -100,7 +97,7 @@ function mountAdvanced() {
           await navigator.serviceWorker.register(window.__APPWD_SW_URL__ || './sw.js?v=561');
         }
       } catch {}
-      alert('เปิด SW แล้ว\nกรุณา Reload หน้า');
+      alert('เปิด SW แล้ว\\nกรุณา Reload หน้า');
       location.reload();
     }
   });
@@ -117,7 +114,7 @@ export async function render(){
   card.classList.toggle('hide', !admin);
   if (!admin) { document.getElementById('profile-advanced')?.remove(); return; }
 
-  // mount Advanced on profile
+  // mount Advanced section for admins on profile
   mountAdvanced();
 
   const { data } = await supabase.from('settings').select('key,value');

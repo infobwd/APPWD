@@ -6,13 +6,16 @@ function el(html){
   t.innerHTML = html.trim();
   return t.content.firstElementChild;
 }
-function iconFor(x){
-  return x.icon || '🔗';
-}
 function sanitize(str){
   const d = document.createElement('div');
   d.textContent = str || '';
   return d.innerHTML;
+}
+function favicon(url){
+  try {
+    const u = new URL(url);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+  } catch { return ''; }
 }
 
 export async function render(){
@@ -22,14 +25,15 @@ export async function render(){
 
   let rows = [];
   try{
-    const q = await supabase.from('links').select('id,title,url,category,description,icon,active,ord').order('ord', { ascending:true }).order('title', { ascending:true });
-    rows = (q?.data || []).filter(r => r.active !== false);
+    const q = await supabase
+      .from('app_links')
+      .select('id,title,url,image_url,category,sort_order,is_active')
+      .order('category', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .order('title', { ascending: true });
+    rows = (q?.data || []).filter(r => r.is_active !== false);
   }catch(e){
-    // fallback: try settings.APPS or localStorage
-    try{
-      const cfg = await supabase.from('settings').select('value').eq('key','LINKS_LIST').maybeSingle();
-      rows = JSON.parse(cfg?.data?.value || '[]');
-    }catch{ rows = []; }
+    rows = [];
   }
 
   if (!rows.length){
@@ -53,13 +57,16 @@ export async function render(){
     host.appendChild(sec);
     const grid = sec.querySelector('div.grid');
     groups[cat].forEach(r => {
-      const item = el(`<a class="block p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow transition bg-white"
+      const img = r.image_url || favicon(r.url);
+      const card = el(`<a class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow transition bg-white"
                          href="${sanitize(r.url)}" target="_blank" rel="noopener">
-          <div class="text-2xl mb-1">${sanitize(iconFor(r))}</div>
-          <div class="font-medium">${sanitize(r.title||'ไม่ระบุชื่อ')}</div>
-          ${r.description ? `<div class="text-xs text-slate-500 mt-0.5">${sanitize(r.description)}</div>` : ''}
+          ${img ? `<img src="${sanitize(img)}" alt="" class="w-10 h-10 rounded-lg object-cover flex-shrink-0">` : `<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500">🔗</div>`}
+          <div class="min-w-0">
+            <div class="font-medium truncate">${sanitize(r.title||'ไม่ระบุชื่อ')}</div>
+            <div class="text-xs text-slate-500 truncate">${sanitize(r.url)}</div>
+          </div>
         </a>`);
-      grid.appendChild(item);
+      grid.appendChild(card);
     });
   });
 }
