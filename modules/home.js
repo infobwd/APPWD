@@ -28,7 +28,3 @@ export async function renderAppsCard(containerId='homeLinks'){
     grid.appendChild(el);
   });
 }
-window.addEventListener('APP_LINKS_CHANGED', () => {
-  const host = document.getElementById('homeLinks');
-  if (host) { host.removeAttribute('data-rendered'); import('./home.js').then(m=>m.renderAppsCard('homeLinks')); }
-});
