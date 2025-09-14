@@ -9,7 +9,7 @@ async function loadFeaturedApps(limit=8){
     return q?.data||[];
   }catch{ return []; }
 }
-export async function renderAppsCard(containerId='homeAppsCard'){
+export async function renderAppsCard(containerId='homeLinks'){
   const host = document.getElementById(containerId); if(!host) return;
   if (host.getAttribute('data-rendered')==='1') return; host.setAttribute('data-rendered','1');
   host.innerHTML = `<div class="p-4 text-slate-400">กำลังโหลดรายการ…</div>`;
