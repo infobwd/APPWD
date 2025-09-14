@@ -32,35 +32,8 @@ export async function render(){
   const card=$id('adminCard'); if(!card) return;
   const lineId=getLineId(); if(!lineId){ card.classList.add('hide'); return; }
   const admin=await isAdmin(); card.classList.toggle('hide', !admin); if(!admin){ $id('profile-advanced')?.remove(); return; }
-  // Advanced + CRUD
   mountAdvanced();
   if(!$id('applinksAdmin')){ const panel=document.createElement('section'); panel.id='applinksAdmin'; panel.className='mt-6'; ( $id('adminCard')||$id('profileContent')||document.body ).appendChild(panel); }
   renderAppLinksAdmin('applinksAdmin').catch(()=>{});
-
-  // ===== Settings (keep original fields) =====
-  const { data } = await supabase.from('settings').select('key,value');
-  const map={}; (data||[]).forEach(r=>{ try{ map[r.key]=JSON.parse(r.value); }catch{ map[r.key]=r.value; } });
-  const byId = (id)=>document.getElementById(id);
-  try{
-    if(byId('set_CHECKIN_START')) byId('set_CHECKIN_START').value=map.CHECKIN_START||'07:30';
-    if(byId('set_CHECKIN_ON_TIME_UNTIL')) byId('set_CHECKIN_ON_TIME_UNTIL').value=map.CHECKIN_ON_TIME_UNTIL||'08:00';
-    if(byId('set_SUMMARY_DEFAULT_RANGE_DAYS')) byId('set_SUMMARY_DEFAULT_RANGE_DAYS').value=map.SUMMARY_DEFAULT_RANGE_DAYS??30;
-    if(byId('set_SLIDER_AUTO_MS')) byId('set_SLIDER_AUTO_MS').value=map.SLIDER_AUTO_MS??4000;
-    if(byId('set_BRAND_TITLE')) byId('set_BRAND_TITLE').value=map.BRAND_TITLE||'APPWD';
-    if(byId('set_BRAND_LOGO_URL')) byId('set_BRAND_LOGO_URL').value=map.BRAND_LOGO_URL||'';
-  }catch{}
-  if(byId('btnSaveSettings')) byId('btnSaveSettings').onclick=async()=>{
-    const payload={
-      CHECKIN_START: byId('set_CHECKIN_START')?.value||'07:30',
-      CHECKIN_ON_TIME_UNTIL: byId('set_CHECKIN_ON_TIME_UNTIL')?.value||'08:00',
-      SUMMARY_DEFAULT_RANGE_DAYS: Number(byId('set_SUMMARY_DEFAULT_RANGE_DAYS')?.value||30),
-      SLIDER_AUTO_MS: Number(byId('set_SLIDER_AUTO_MS')?.value||4000),
-      BRAND_TITLE: byId('set_BRAND_TITLE')?.value||'APPWD',
-      BRAND_LOGO_URL: byId('set_BRAND_LOGO_URL')?.value||''
-    };
-    for(const k of Object.keys(payload)){ await supabase.from('settings').upsert({key:k,value:JSON.stringify(payload[k])}); }
-    toast('บันทึกการตั้งค่าแล้ว');
-  };
-  if(byId('btnReloadSettings')) byId('btnReloadSettings').onclick=()=>location.reload();
 };
 window.addEventListener('hashchange', async ()=>{ const admin=await isAdmin(); if(admin) mountAdvanced(); else $id('profile-advanced')?.remove(); });
