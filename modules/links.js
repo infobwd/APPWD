@@ -1,4 +1,5 @@
 
+// Links tab — grouped by category from app_links
 import { supabase } from '../api.js';
 function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
 function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }

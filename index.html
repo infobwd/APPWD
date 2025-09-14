@@ -79,36 +79,47 @@ body{font-size:calc(16px * var(--fs-base))}
 <script>
   if (window.__APPWD_ENABLE_SW__ && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      window.__APPWD_ENABLE_SW__ && navigator.serviceWorker.register(window.__APPWD_SW_URL__).catch(()=>{});
+      navigator.serviceWorker.register(window.__APPWD_SW_URL__).catch(()=>{});
     });
   }
 </script>
 
 
 <!-- Tab: Links -->
-<div id="tab-links" class="hidden"></div>
+<section id="tab-links" class="tab-panel hidden"></section>
 
-
+<section id="homeLinks" class="mt-6"></section>
 <script type="module" src="./modules/links.js"></script>
 <script type="module" src="./modules/home.js"></script>
 <script type="module" src="./modules/applinks_admin.js"></script>
+<script type="module" src="./modules/profile_admin.js"></script>
 
 <script type="module">
 import * as Links from './modules/links.js';
 import { renderAppsCard } from './modules/home.js';
-function onRoute(){
-  const hash = (location.hash||'#').replace('#','').split('?')[0];
-  if (hash === 'links' || document.getElementById('tab-links')?.classList.contains('active')) {
-    Links.render().catch(()=>{});
-  }
-  if (hash === '' || hash === 'home' || document.getElementById('tab-home')) {
-    renderAppsCard('homeLinks').catch(()=>{});
-  }
+
+const PANELS = { home: 'tab-home', links: 'tab-links', profile: 'tab-profile' };
+
+function showTab(name){
+  Object.values(PANELS).forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  document.getElementById(PANELS[name])?.classList.remove('hidden');
+  document.querySelectorAll('[data-nav]').forEach(a=>{
+    const to = (a.getAttribute('href')||'').replace('#','');
+    a.classList.toggle('active', to===name);
+  });
 }
+
+function onRoute(){
+  const hash = (location.hash||'#home').replace('#','');
+  const tab  = PANELS[hash] ? hash : 'home';
+  showTab(tab);
+  if (tab === 'links') { Links.render().catch(()=>{}); }
+  if (tab === 'home')  { renderAppsCard('homeLinks').catch(()=>{}); }
+}
+
 window.addEventListener('hashchange', onRoute);
 document.addEventListener('DOMContentLoaded', onRoute);
 onRoute();
 </script>
 
-<section id="homeLinks" class="mt-6"></section>
 </body></html>

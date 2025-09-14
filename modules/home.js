@@ -1,7 +1,8 @@
 
+// Home apps card — uses app_links and renders into #homeLinks by default
 import { supabase } from '../api.js';
 function mk(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
-function safe(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function safe(s){ const d=document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
 function favicon(url){ try{ const u=new URL(url); return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`; }catch{ return ''; } }
 async function loadFeaturedApps(limit=8){
   try{
