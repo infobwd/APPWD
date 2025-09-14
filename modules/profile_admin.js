@@ -25,7 +25,7 @@ function mountAdvanced(){
   const btn=$id('swToggleBtn'), txt=$id('swStatusText');
   const refresh=()=>{ const on=getEnableSW(); if(btn) btn.textContent=on?'ปิด (DEV)':'เปิด (PROD)'; if(txt) txt.textContent=on?'เปิด SW: แคชเพื่อความไว (โหมด PROD)':'ปิด SW: โหลดไฟล์สดทุกครั้ง (โหมด DEV)'; };
   refresh();
-  btn?.addEventListener('click', async ()=>{ const on=getEnableSW(); if(on){ setEnableSW(false); try{ if('serviceWorker'in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); } if(window.caches&&caches.keys){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); } }catch{} toast('ปิด SW แล้ว • ล้างแคชเรียบร้อย','info'); location.reload(); } else { setEnableSW(true); refresh(); try{ if('serviceWorker'in navigator){ await navigator.serviceWorker.register(window.__APPWD_SW_URL__||'./sw.js?v=561'); } }catch{} toast('เปิด SW แล้ว','success'); location.reload(); } });
+  btn?.addEventListener('click', async ()=>{ const on=getEnableSW(); if(on){ setEnableSW(false); try{ if('serviceWorker'in navigator){ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); } if(window.caches&&caches.keys){ const keys=await caches.keys(); await Promise.all(keys.map(k=>caches.delete(k))); } }catch{} refresh(); alert('ปิด SW แล้ว และล้างแคชเรียบร้อย\nกรุณา Reload หน้า'); location.reload(); } else { setEnableSW(true); refresh(); try{ if('serviceWorker'in navigator){ await navigator.serviceWorker.register(window.__APPWD_SW_URL__||'./sw.js?v=561'); } }catch{} alert('เปิด SW แล้ว\nกรุณา Reload หน้า'); location.reload(); } });
 }
 
 export async function render(){
@@ -37,7 +37,7 @@ export async function render(){
   if(!$id('applinksAdmin')){ const panel=document.createElement('section'); panel.id='applinksAdmin'; panel.className='mt-6'; ( $id('adminCard')||$id('profileContent')||document.body ).appendChild(panel); }
   renderAppLinksAdmin('applinksAdmin').catch(()=>{});
 
-  // ===== Load & bind settings if fields exist =====
+  // ===== Settings (keep original fields) =====
   const { data } = await supabase.from('settings').select('key,value');
   const map={}; (data||[]).forEach(r=>{ try{ map[r.key]=JSON.parse(r.value); }catch{ map[r.key]=r.value; } });
   const byId = (id)=>document.getElementById(id);
@@ -59,7 +59,7 @@ export async function render(){
       BRAND_LOGO_URL: byId('set_BRAND_LOGO_URL')?.value||''
     };
     for(const k of Object.keys(payload)){ await supabase.from('settings').upsert({key:k,value:JSON.stringify(payload[k])}); }
-    toast('บันทึกการตั้งค่าแล้ว','success');
+    toast('บันทึกการตั้งค่าแล้ว');
   };
   if(byId('btnReloadSettings')) byId('btnReloadSettings').onclick=()=>location.reload();
 };

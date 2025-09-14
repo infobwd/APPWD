@@ -2,34 +2,25 @@
 
 /* ===== Floating Scan Button Center ===== */
 :root { --tabbar-h: 64px; }
-#fabScan{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom)); width:clamp(56px,16vw,72px); height:clamp(56px,16vw,72px); border-radius:18px; z-index:60; box-shadow:0 12px 30px rgba(33,97,243,.35); -webkit-tap-highlight-color:transparent; }
-@media (max-width:420px){ #fabScan{ bottom:calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius:16px; } }
-.fab-wrap,.fab-container{ position:static !important; }
+#fabScan{
+  position: fixed; left:50%; transform:translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px);
+  border-radius: 18px; z-index: 60; box-shadow: 0 12px 30px rgba(33,97,243,.35);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px){
+  #fabScan{ bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius: 16px; }
+}
+.fab-wrap, .fab-container { position: static !important; }
 
 /* ===== Check-in Tabs: Compact ===== */
 .checkin-compact{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.25rem; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
 .checkin-compact .tab{ flex:0 0 auto; padding:.375rem .75rem; font-size:.9rem; line-height:1.15; border-radius:12px; scroll-snap-align:start; box-shadow:none; }
 .checkin-compact .tab.is-active{ font-weight:600; }
-@media (max-width:420px){ .checkin-compact .tab{ padding:.35rem .6rem; font-size:.85rem; border-radius:10px; } }
-
-/* ===== Home: Featured slider ===== */
-.featured-wrap{ position:relative; overflow:hidden; border-radius:1rem; }
-.featured-track{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; transition:transform .5s ease; transform:translateX(calc(var(--i,0) * -100%)); }
-.featured-slide{ padding:.25rem; }
-.featured-dots{ display:flex; gap:.5rem; justify-content:center; margin-top:.5rem; }
-.featured-dots .dot{ width:8px; height:8px; border-radius:9999px; background:#cbd5e1; border:none; }
-.featured-dots .dot.active{ background:#2563eb; }
-.btn-line-share{ display:inline-block; font-size:.875rem; padding:.375rem .75rem; border-radius:.5rem; background:#06C755; color:#fff; }
-
-/* ===== Home: Summary card ===== */
-#homeSummaryCard .grid > div{ text-align:center; }
-#homeSummaryCard .text-2xl{ font-size:1.5rem; }
-
-/* ===== Toast (pretty) ===== */
-.app-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + env(safe-area-inset-bottom)); background:rgba(2,6,23,.9); color:#fff; padding:.75rem 1rem; border-radius:.75rem; box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:9999; }
-.app-toast[data-type="success"]{ background:rgba(6,95,70,.95); }
-.app-toast[data-type="error"]{ background:rgba(153,27,27,.95); }
-.app-toast[data-type="info"]{ background:rgba(2,6,23,.9); }
+@media (max-width:420px){
+  .checkin-compact .tab{ padding:.35rem .6rem; font-size:.85rem; border-radius:10px; }
+}
 
 /* utility */
 .hide{ display:none !important; }
