@@ -1,29 +1,13 @@
 
 // ui.js — safe, no stray HTML outside strings
 
-
 export function toast(m, type='info'){
   let host = document.getElementById('toast');
   if(!host){
     host = document.createElement('div');
-    host.id = 'toast';
+    host.id='toast';
     document.body.appendChild(host);
   }
-  // create item
-  const item = document.createElement('div');
-  item.className = `toast-item ${type}`;
-  const msg = document.createElement('div');
-  msg.className = 'toast-msg';
-  msg.textContent = (m==null?'':String(m));
-  const close = document.createElement('button');
-  close.className = 'toast-close';
-  close.textContent = '✕';
-  close.onclick = ()=> item.remove();
-  item.appendChild(msg); item.appendChild(close);
-  host.appendChild(item);
-  setTimeout(()=>{ try{ item.remove(); }catch(_){} }, 3200);
-}
-        
   host.style.position='fixed';
   host.style.left='50%';
   host.style.bottom='calc(16px + env(safe-area-inset-bottom, 0px))';
@@ -124,33 +108,4 @@ export function openPrefs(){
   const cancel = document.getElementById('cancelPref');
   if(ok) ok.onclick = ()=> closeSheet();
   if(cancel) cancel.onclick = closeSheet;
-}
-
-
-// Mobile-like confirm dialog
-export async function confirmDialog({title='ยืนยันการทำรายการ', message='โปรดยืนยัน', okText='ตกลง', cancelText='ยกเลิก'}={}){
-  return new Promise((resolve)=>{
-    const wrap = document.createElement('div');
-    wrap.className = 'app-modal';
-    wrap.innerHTML = `
-      <div class="sheet">
-        <div class="hd">${title}</div>
-        <div class="bd">${message}</div>
-        <div class="ft">
-          <button class="btn" id="dlgCancel">${cancelText}</button>
-          <button class="btn btn-prim" id="dlgOk">${okText}</button>
-        </div>
-      </div>`;
-    document.body.appendChild(wrap);
-    const ok = wrap.querySelector('#dlgOk');
-    const cancel = wrap.querySelector('#dlgCancel');
-    const done = (v)=>{ try{ wrap.remove(); }catch(_){} resolve(v); };
-    ok?.addEventListener('click', ()=>done(true));
-    cancel?.addEventListener('click', ()=>done(false));
-    wrap.addEventListener('click', (e)=>{ if(e.target===wrap) done(false); });
-  });
-}
-
-export async function alertDialog({title='แจ้งเตือน', message=''}={}){
-  await confirmDialog({ title, message, okText:'รับทราบ', cancelText:'ปิด' });
 }
