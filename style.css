@@ -24,3 +24,55 @@
 
 /* utility */
 .hide{ display:none !important; }
+
+
+/* === APPWD Additions: responsive cards & mobile polish === */
+
+/* Featured news slider for small screens */
+.slider-xs{ display:flex; gap:.75rem; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding-bottom:.25rem; }
+.slider-xs > .news-card{ flex:0 0 86%; scroll-snap-align:center; }
+@media (min-width: 640px){
+  .slider-xs{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); overflow:visible; }
+  .slider-xs > .news-card{ flex:initial; }
+}
+
+/* Apps list: horizontal slider (mobile) + grid (md+) */
+.apps-slider{ display:flex; gap:.75rem; overflow-x:auto; scroll-snap-type:x proximity; padding: .25rem .25rem 0 .25rem; }
+.apps-slider .app-card--slide{ flex:0 0 84%; scroll-snap-align:center; }
+.apps-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); gap:.75rem; padding: .25rem; }
+@media (min-width:768px){ .apps-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (min-width:1024px){ .apps-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); } }
+
+.app-card{ display:block; background:var(--card, #fff); border:1px solid var(--bd, #e5e7eb); border-radius:16px; padding:.75rem; box-shadow:0 8px 20px rgba(0,0,0,.06); transition:transform .15s ease, box-shadow .15s ease; }
+.app-card:active{ transform:scale(.98); }
+.app-card:hover{ box-shadow:0 10px 28px rgba(0,0,0,.08); }
+.app-card-body{ display:flex; gap:.75rem; align-items:center; }
+.app-icon{ width:44px; height:44px; border-radius:12px; object-fit:cover; border:1px solid var(--bd, #e5e7eb); }
+.app-icon--ph{ display:grid; place-items:center; background:var(--brandSoft, #EEF4FF); color:var(--brand, #2563eb); }
+.app-meta{ min-width:0; }
+.app-title{ font-weight:600; color:var(--ink, #0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-cat{ font-size:.78rem; color:var(--ink3, #789); margin-top:.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Skeleton */
+.appwd-skel{ background:linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size:200% 100%; animation:appwdShimmer 1.2s infinite; border-radius:16px; }
+.appwd-skel-row{ height:64px; margin:.5rem; }
+@keyframes appwdShimmer{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* Toast (mobile-like) */
+#toast{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:80; display:grid; gap:.5rem; }
+.toast-item{ min-width:240px; max-width:92vw; background:#111827; color:#f9fafb; border-radius:14px; padding:.65rem .9rem; box-shadow:0 14px 32px rgba(0,0,0,.3); display:flex; align-items:center; gap:.55rem; animation:toastIn .2s ease-out; }
+.toast-item.success{ background:#065f46; }
+.toast-item.error{ background:#7f1d1d; }
+.toast-item.info{ background:#111827; }
+.toast-msg{ line-height:1.35; font-size:.95rem; }
+.toast-close{ margin-left:auto; opacity:.7; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+@keyframes toastIn{ from{opacity:0; transform:translate(-50%,10px);} to{opacity:1; transform:translate(-50%,0);} }
+
+/* Modal dialog (centered) */
+.app-modal{ position:fixed; inset:0; z-index:90; display:grid; place-items:center; background:rgba(0,0,0,.3); }
+.app-modal .sheet{ width:min(520px, 94vw); background:var(--card, #fff); border:1px solid var(--bd, #e5e7eb); border-radius:18px; box-shadow:0 16px 40px rgba(0,0,0,.25); overflow:hidden; }
+.app-modal .sheet .hd{ padding:.9rem 1rem; font-weight:700; border-bottom:1px solid var(--bd, #e5e7eb); }
+.app-modal .sheet .bd{ padding:1rem; color:var(--ink, #111827); }
+.app-modal .sheet .ft{ padding: .8rem 1rem; display:flex; gap:.5rem; justify-content:flex-end; border-top:1px solid var(--bd, #e5e7eb); }
+.btn{ background:#fff; border:1px solid var(--bd, #e5e7eb); padding:.5rem .9rem; border-radius:12px; }
+.btn-prim{ background:#2563eb; color:#fff; border-color:#2563eb; }
