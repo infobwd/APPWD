@@ -59,6 +59,7 @@ export async function renderHome(){
   const ids = picked.map(p=>p.id);
   const statMap = await fetchStats(ids);
 
+  try{ cardsEl.classList.add('slider-xs'); }catch(_){}
   cardsEl.innerHTML = picked.map(p => {
     const s = statMap.get(p.id) || {views:0, likes:0};
     const date = p.published_at ? new Date(p.published_at).toLocaleDateString('th-TH') : '';
@@ -287,6 +288,33 @@ window.sharePost = async function(id){
       {type:'button', style:'primary', height:'sm', action:{type:'uri', label:'อ่านข่าว', uri:url}}
     ]}
   };
+  try{
+    // 1) Prefer LIFF shareTargetPicker if available
+    if(window.liff){
+      try{
+        if(!window.liff.isInit) { /* some SDKs expose isInit flag; ignore if not present */ }
+      }catch(_){}
+      if(window.liff.isApiAvailable && window.liff.isApiAvailable('shareTargetPicker')){
+        await window.liff.shareTargetPicker([{type:'flex', altText:`แชร์ข่าว: ${p.title}`, contents:bubble}]);
+        toast('ส่งไปที่ LINE แล้ว','success');
+        return;
+      }
+    }
+    // 2) Web Share API (browser share sheet)
+    if(navigator.share){
+      await navigator.share({ title: p.title, text: p.category||'ข่าว', url });
+      toast('เปิดหน้าการแชร์ของเครื่องแล้ว','info');
+      return;
+    }
+    // 3) Fallback: copy to clipboard
+    await navigator.clipboard.writeText(url);
+    toast('คัดลอกลิงก์แล้ว','success');
+  }catch(err){
+    console.warn('share error', err);
+    try{ await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์แล้ว','success'); }
+    catch(_){ toast('แชร์ไม่สำเร็จ','error'); }
+  }
+};
   try{
     if(window.liff && window.liff.isApiAvailable && window.liff.isApiAvailable('shareTargetPicker')){
       await window.liff.shareTargetPicker([{type:'flex', altText:`แชร์ข่าว: ${p.title}`, contents:bubble}]);

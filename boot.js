@@ -8,6 +8,7 @@ const News = await imp('./modules/news.js');
 const Links = await imp('./modules/links.js');
 const Checkin = await imp('./modules/checkin.js');
 const Admin = await imp('./modules/profile_admin.js');
+const Home = await imp('./modules/home.js');
 
 function setActive(hash){
   document.querySelectorAll('.navbtn').forEach(b=>{
@@ -29,6 +30,18 @@ function parseHash(){
   return { path, params };
 }
 
+
+async function loadLiffSdk(){
+  if(typeof window.liff !== 'undefined') return;
+  await new Promise((resolve)=>{
+    const s = document.createElement('script');
+    s.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+    s.onload = resolve; s.onerror = resolve;
+    document.head.appendChild(s);
+  });
+  try{ await import(`./liff.js?v=${v}`); }catch(_){}
+}
+
 async function route(){
   const {path, params} = parseHash();
   const h = path || '#home';
@@ -36,6 +49,7 @@ async function route(){
   try{
     if(h==='#home'){
       UI.goto('#home');
+      await Home.renderAppsCard('homeLinks');
       await News.renderHome();
       await Checkin.renderHomeRecent('work');
       await Checkin.renderHomeRecent('offsite');
@@ -86,4 +100,4 @@ function bindUI(){
 }
 
 window.addEventListener('hashchange', route);
-document.addEventListener('DOMContentLoaded', ()=>{ bindUI(); route(); });
+document.addEventListener('DOMContentLoaded', async ()=>{ bindUI(); await loadLiffSdk(); route(); });
