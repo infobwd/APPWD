@@ -87,3 +87,46 @@ export async function renderHome(){
     `).join('');
   }
 }
+
+export async function renderList(){
+  try{
+    const wrap = document.getElementById('newsList') || document.getElementById('tab-news') || document.querySelector('[data-tab="news"]');
+    if (!wrap) return;
+    wrap.innerHTML = `<div class="p-4 text-slate-400">กำลังโหลดข่าว…</div>`;
+    const q = await supabase.from('posts')
+      .select('id,title,category,cover_url,published_at,is_featured')
+      .order('published_at', { ascending:false })
+      .limit(30);
+    const items = q?.data || [];
+    if (!items.length){ wrap.innerHTML = `<div class="p-4 text-slate-400">ยังไม่มีข่าว</div>`; return; }
+    wrap.innerHTML = items.map(p => `
+      <a href="#news/${p.id}" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-400 transition bg-white">
+        ${p.cover_url ? `<img src="${p.cover_url}" class="w-12 h-12 rounded-lg object-cover" alt="">` : `<div class="w-12 h-12 rounded-lg bg-slate-200"></div>`}
+        <div class="min-w-0">
+          <div class="font-medium truncate">${p.title||''}</div>
+          <div class="text-xs text-slate-500 truncate">${new Date(p.published_at).toLocaleDateString('th-TH')}</div>
+        </div>
+      </a>
+    `).join('');
+  }catch(e){ /* swallow */ }
+}
+
+export async function renderDetail(id){
+  const holder = document.getElementById('newsDetail') || document.getElementById('tab-news') || document.querySelector('[data-tab="news"]');
+  if (!holder) return;
+  holder.innerHTML = `<div class="p-4 text-slate-400">กำลังโหลด…</div>`;
+  try{
+    const q = await supabase.from('posts').select('*').eq('id', id).maybeSingle();
+    const p = q?.data;
+    if (!p){ holder.innerHTML = `<div class="p-4 text-slate-400">ไม่พบบทความ</div>`; return; }
+    holder.innerHTML = `
+      <article class="prose max-w-none p-4 bg-white rounded-xl border border-slate-200">
+        <h1 class="text-xl font-bold">${p.title||''}</h1>
+        <div class="text-xs text-slate-500 mb-2">${new Date(p.published_at).toLocaleDateString('th-TH')} • ${p.category||''}</div>
+        ${p.cover_url ? `<img src="${p.cover_url}" class="w-full rounded-lg mb-3" alt="">` : ''}
+        <div>${p.content_html || p.content || ''}</div>
+      </article>`;
+  }catch(e){
+    holder.innerHTML = `<div class="p-4 text-red-600">เกิดข้อผิดพลาดในการโหลดข่าว</div>`;
+  }
+}
