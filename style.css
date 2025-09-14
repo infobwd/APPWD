@@ -1,26 +1,26 @@
 
 
-/* Slider & responsive */
-.slider-x{ display:flex; gap:.75rem; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; padding-bottom:.25rem; }
-.slider-x > *{ scroll-snap-align:start; flex:0 0 85%; }
-@media (min-width:640px){ .slider-x{ display:grid; overflow:visible; scroll-snap-type:none; gap:1rem; grid-template-columns: repeat(2, minmax(0,1fr)); } .slider-x > *{ flex:unset; } }
-@media (min-width:1024px){ .slider-x{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-.news-card-featured{ border-radius: 1rem; border:1px solid #e2e8f0; background:#fff; overflow:hidden; }
-
-/* Home Links grid responsive */
-#homeLinks .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-@media (min-width:640px){ #homeLinks .grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-@media (min-width:1024px){ #homeLinks .grid{ grid-template-columns: repeat(4, minmax(0,1fr)); } }
-
-/* FAB center & check-in tabs compact (from earlier) */
+/* ===== Floating Scan Button Center ===== */
 :root { --tabbar-h: 64px; }
-#fabScan{ position: fixed; left:50%; transform:translateX(-50%); bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom)); width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px); border-radius: 18px; z-index: 60; box-shadow: 0 12px 30px rgba(33,97,243,.35); -webkit-tap-highlight-color: transparent; }
-@media (max-width: 420px){ #fabScan{ bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius: 16px; } }
+#fabScan{
+  position: fixed; left:50%; transform:translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px);
+  border-radius: 18px; z-index: 60; box-shadow: 0 12px 30px rgba(33,97,243,.35);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px){
+  #fabScan{ bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius: 16px; }
+}
 .fab-wrap, .fab-container { position: static !important; }
+
+/* ===== Check-in Tabs: Compact ===== */
 .checkin-compact{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.25rem; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
 .checkin-compact .tab{ flex:0 0 auto; padding:.375rem .75rem; font-size:.9rem; line-height:1.15; border-radius:12px; scroll-snap-align:start; box-shadow:none; }
 .checkin-compact .tab.is-active{ font-weight:600; }
-@media (max-width:420px){ .checkin-compact .tab{ padding:.35rem .6rem; font-size:.85rem; border-radius:10px; } }
+@media (max-width:420px){
+  .checkin-compact .tab{ padding:.35rem .6rem; font-size:.85rem; border-radius:10px; }
+}
 
-/* util */
+/* utility */
 .hide{ display:none !important; }
