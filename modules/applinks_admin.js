@@ -1,6 +1,7 @@
 
 import { supabase } from '../api.js';
 import { toast } from '../ui.js';
+const $ = (sel, root=document) => root.querySelector(sel);
 const esc = s => { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; };
 async function fetchLinks(){
   const { data, error } = await supabase.from('app_links').select('id,title,url,image_url,category,sort_order,is_active').order('category',{ascending:true}).order('sort_order',{ascending:true}).order('title',{ascending:true});
