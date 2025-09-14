@@ -13,10 +13,7 @@ async function loadFeaturedApps(limit=8){
 export async function renderAppsCard(containerId='homeLinks'){
   const host = document.getElementById(containerId); if(!host) return;
   if (host.getAttribute('data-rendered')==='1') return; host.setAttribute('data-rendered','1');
-  host.innerHTML = `<div class="p-4 text-slate-400">กำลังโหลดรายการ…</div>`;
-  const apps = await loadFeaturedApps(8);
-  if(!apps.length){ host.innerHTML = `<div class="p-4 text-slate-400">ยังไม่มีรายการแอป/ระบบ</div>`; return; }
-  host.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="text-base font-semibold">แอป/ระบบในโรงเรียน</h3></div><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" id="appsGrid"></div>`;
+  host.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3" id="appsGrid"></div>`;
   const grid = host.querySelector('#appsGrid');
   apps.forEach(a=>{
     const img = a.image_url || favicon(a.url);
