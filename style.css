@@ -92,3 +92,13 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 #homeView .home-filter .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
 #homeView .home-filter .chip{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; background:var(--card) }
 #homeView .home-filter .chip.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
+
+
+/* ===== HOME (desktop): simple 3-column grid ===== */
+@media (min-width:1024px){
+  #homeView .links-grid.home-3cols{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+}

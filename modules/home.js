@@ -23,46 +23,22 @@ export async function renderAppsCard(targetId='homeLinks'){
       <a class="text-brand text-sm cursor-pointer btn-inline" href="https://infobwd.github.io/APPWD/#links">ดูทั้งหมด</a>
     </div>`;
 
-    if (isMobile()){
-      // Mobile: Tiles 4x2 slider with dots
+    
+if (isMobile()) {
       el.classList.add('mobile');
-      const pages = chunk(rows, 8);
-      const slides = pages.map(page => `<div class="tiles-slide"><div class="app-tiles">${
-        page.map(tile).join('')
-      }</div></div>`).join('');
+      const pages = chunk(rows,8);
+      const slides = pages.map(p=>`<div class="tiles-slide"><div class="app-tiles">${p.map(tile).join('')}</div></div>`).join('');
       const dots = pages.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join('');
       el.innerHTML = `${moreBtn}<div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
-      const slider = el.querySelector('.tiles-slider');
-      const dotEls = Array.from(el.querySelectorAll('.dot'));
-      slider?.addEventListener('scroll', () => {
-        const idx = Math.round(slider.scrollLeft / slider.clientWidth);
-        dotEls.forEach((d,i)=>d.classList.toggle('active', i===idx));
-      }, {passive:true});
+      const slider=el.querySelector('.tiles-slider'); const dotEls=Array.from(el.querySelectorAll('.dot'));
+      slider?.addEventListener('scroll',()=>{ const idx=Math.round(slider.scrollLeft/slider.clientWidth); dotEls.forEach((d,i)=>d.classList.toggle('active',i===idx)); },{passive:true});
     } else {
-      // Desktop: Big sticky tabs per category (like #links)
       el.classList.remove('mobile');
-      const cats = ['ทั้งหมด', ...Array.from(new Set(rows.map(r => r.category || 'อื่น ๆ')))];
-      const tabs = `<div class="cat-tabs card"><div class="row">` + 
-        cats.map((c,i)=>`<button class="cat-tab ${i===0?'active':''}" data-cat="${escAttr(c)}">${escHtml(c)}</button>`).join('')
-        + `</div></div>`;
-      const container = document.createElement('div');
-      container.innerHTML = tabs + `<div id="homeLinksContainer"></div>`;
-      el.innerHTML = container.innerHTML;
-      const listEl = el.querySelector('#homeLinksContainer');
-      function renderList(cat){
-        const filtered = (cat==='ทั้งหมด') ? rows : rows.filter(r => (r.category||'อื่น ๆ') === cat);
-        listEl.innerHTML = `<div class="links-grid">` + filtered.map(itemRow).join('') + `</div>`;
-      }
-      renderList('ทั้งหมด');
-      const tabEls = Array.from(el.querySelectorAll('.cat-tab'));
-      tabEls.forEach(btn => btn.addEventListener('click', () => {
-        tabEls.forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        renderList(btn.dataset.cat);
-      }));
+      // Desktop: simple 3-column grid (no filters)
+      el.innerHTML = `<div class="links-grid home-3cols">` + rows.map(itemRow).join('') + `</div>`;
     }
-
-  }catch(e){
+  }catch
+(e){
     el.innerHTML = '<div class="text-sm text-red-600">โหลดลิงก์ไม่สำเร็จ</div>';
   }
 }
