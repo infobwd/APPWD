@@ -85,3 +85,10 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
   #linksView .links-list .link-item .title{ font-size:16px; }
   #linksView .links-list .link-item .cat{ font-size:12px; }
 }
+
+
+/* ===== HOME desktop: simple filter chips (non-sticky) ===== */
+#homeView .home-filter{ margin-bottom:.75rem }
+#homeView .home-filter .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
+#homeView .home-filter .chip{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; background:var(--card) }
+#homeView .home-filter .chip.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
