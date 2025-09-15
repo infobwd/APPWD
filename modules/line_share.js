@@ -1,63 +1,69 @@
 
-// LINE share helper — tries LIFF shareTargetPicker, falls back to URI scheme
-import { LIFF_ID } from '../config.js';
+// Robust LINE share helpers: shareTargetPicker + Flex with graceful fallback
+import * as CFG from '../config.js';
 
-function loadScript(src){
-  return new Promise((resolve, reject)=>{
-    const s = document.createElement('script');
-    s.src = src; s.async = true;
-    s.onload = ()=> resolve();
-    s.onerror = ()=> reject(new Error('Failed to load '+src));
-    document.head.appendChild(s);
-  });
+async function ensureLiff() {
+  if (!window.liff) throw new Error('LIFF SDK not loaded');
+  if (!liff.isInitialized()) {
+    const liffId = (CFG?.LIFF_ID) || (window.LIFF_ID || '');
+    await liff.init({ liffId });
+  }
+  return liff;
 }
 
-async function ensureLIFF(){
-  if (!window.liff) {
-    await loadScript('https://static.line-scdn.net/liff/edge/2/sdk.js');
-  }
+export async function shareText(text) {
   try{
-    if (!window.__APPWD_LIFF_INIT__) {
-      await liff.init({ liffId: LIFF_ID });
-      window.__APPWD_LIFF_INIT__ = true;
+    const sdk = await ensureLiff();
+    const canPicker = sdk.isInClient() && await sdk.isApiAvailable('shareTargetPicker');
+    if (canPicker) {
+      await sdk.shareTargetPicker([{ type: 'text', text }]);
+      return;
     }
+  }catch{}
+  // Fallback: open web share URL
+  const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+export async function shareFlex(altText, bubble) {
+  const sdk = await ensureLiff();
+  const msg = { type:'flex', altText, contents:bubble };
+  const canPicker = sdk.isInClient() && await sdk.isApiAvailable('shareTargetPicker');
+  if (canPicker) {
+    await sdk.shareTargetPicker([msg]);
+  } else {
+    alert('การแชร์ Flex ต้องเปิดจากในแอป LINE');
+  }
+}
+
+export function makeFlexNewsCard({ title, desc, url, img }) {
+  return {
+    type: "bubble",
+    hero: img ? { type:"image", url: img, size:"full", aspectRatio:"20:13", aspectMode:"cover" } : undefined,
+    body: {
+      type: "box", layout: "vertical", spacing: "sm",
+      contents: [
+        { type: "text", text: title || "ข่าว", weight: "bold", size: "md", wrap: true },
+        desc ? { type: "text", text: desc, size: "sm", color: "#6b7280", wrap: true } : { type:"spacer", size:"xs" }
+      ]
+    },
+    footer: {
+      type: "box", layout: "vertical", spacing: "sm",
+      contents: [
+        { type:"button", style:"primary", action:{ type:"uri", label:"อ่านข่าว", uri: url || CFG.PUBLIC_URL || location.href } }
+      ]
+    }
+  };
+}
+
+export async function sharePost({ title, url, img, desc }){
+  try{
+    const bubble = makeFlexNewsCard({ title, desc, url, img });
+    await shareFlex(title || 'ข่าว', bubble);
   }catch(e){
-    // If init fails, we'll rely on fallback sharing
+    const text = `${title ? title + "\n" : ""}${url || CFG.PUBLIC_URL || location.href}`;
+    await shareText(text);
   }
-  return window.liff;
 }
 
-export async function shareToLINE({ text, url, title } = {}){
-  const msgText = text || (title ? `${title}\n${url||location.href}` : (url||location.href));
-  try {
-    const l = await ensureLIFF();
-    if (l && l.isApiAvailable && l.isApiAvailable('shareTargetPicker')) {
-      await l.shareTargetPicker([{ type:'text', text: msgText }]);
-      return true;
-    }
-  } catch(e) {}
-  // Fallback to URL intents
-  const payload = encodeURIComponent(msgText);
-  const intents = [
-    `line://msg/text/${payload}`,
-    `https://line.me/R/msg/text/?${payload}`
-  ];
-  for (const i of intents) {
-    try { window.open(i, '_blank'); return true; } catch(e) {}
-  }
-  return false;
-}
-
-// Auto-bind any element with [data-share-line]
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest('[data-share-line]');
-  if (!btn) return;
-  const text = btn.getAttribute('data-share-text') || document.title;
-  const url  = btn.getAttribute('data-share-url')  || location.href;
-  shareToLINE({ text, url });
-  e.preventDefault();
-});
-
-// Expose global for manual calls
-window.APPWD = window.APPWD || {};
-window.APPWD.shareLine = shareToLINE;
+window.LINE_SHARE = { shareText, shareFlex, sharePost, makeFlexNewsCard };
