@@ -1,4 +1,4 @@
-
+// modules/news.js
 import { supabase } from '../api.js';
 
 let state = {
@@ -10,18 +10,18 @@ let state = {
 };
 
 function parseHash(){
-  const hash = (location.hash||'#news').split('?')[1] || '';
+  const hash = (location.hash || '#news').split('?')[1] || '';
   const params = new URLSearchParams(hash);
   state.featuredOnly = params.get('featured') === '1';
   state.category = params.get('cat') || 'ทั้งหมด';
   state.q = params.get('q') || '';
-  const p = parseInt(params.get('page')||'1', 10);
+  const p = parseInt(params.get('page') || '1', 10);
   state.page = isNaN(p) || p < 1 ? 1 : p;
 }
 
 function pushHash(){
   const params = new URLSearchParams();
-  if (state.featuredOnly) params.set('featured','1');
+  if (state.featuredOnly) params.set('featured', '1');
   if (state.category && state.category !== 'ทั้งหมด') params.set('cat', state.category);
   if (state.q) params.set('q', state.q);
   if (state.page > 1) params.set('page', String(state.page));
@@ -38,31 +38,28 @@ export async function renderNewsList(){
 
   if (!root || !list) return;
 
-  // Build filters UI (top of card)
+  // สร้างแถบฟิลเตอร์ด้านบนของการ์ด (ครั้งเดียวต่อการเรนเดอร์)
   const card = root.querySelector('.card');
   ensureFilterBar(card);
 
   await loadAndRender();
 
-  // bind paging
+  // ปุ่มเปลี่ยนหน้า
   if (prevBtn) prevBtn.onclick = () => { if (state.page > 1) { state.page--; pushHash(); } };
   if (nextBtn) nextBtn.onclick = () => { state.page++; pushHash(); };
-
-  // watch hash change
-  }
-  }, { once:true }); // rebind per render
 }
 
 function buildQuery(){
-  let q = supabase.from('posts').select('id,title,cover_url,body,category,published_at,is_featured', { count:'exact' });
+  let q = supabase.from('posts')
+    .select('id,title,cover_url,body,category,published_at,is_featured', { count: 'exact' });
 
   if (state.featuredOnly) q = q.eq('is_featured', true);
   if (state.category && state.category !== 'ทั้งหมด') q = q.eq('category', state.category);
   if (state.q) {
-    // simple OR search on title/body
     const pattern = `%${state.q}%`;
     q = q.or(`title.ilike.${pattern},body.ilike.${pattern}`);
   }
+
   q = q.lte('published_at', new Date().toISOString())
        .order('published_at', { ascending: false });
 
@@ -76,32 +73,31 @@ async function loadAndRender(){
   const pageInfo = document.getElementById('pageInfo');
   list.innerHTML = `<div class="text-sm text-ink3">กำลังโหลดข่าว...</div>`;
 
-  // fetch categories for dropdown chips (once per render)
+  // ดึงหมวดหมู่มาเติมในดรอปดาวน์
   const cats = await fetchCategories();
 
-  // query posts
   const { q, from, to } = buildQuery();
   const { data, error, count } = await q.range(from, to);
 
   if (error) {
-    list.innerHTML = `<div class="text-sm text-red-600">โหลดข่าวไม่สำเร็จ</div>`;
     console.error(error);
+    list.innerHTML = `<div class="text-sm text-red-600">โหลดข่าวไม่สำเร็จ</div>`;
     return;
   }
+
   const rows = data || [];
   list.innerHTML = rows.map(itemCard).join('');
 
-  const total = count || rows.length;
+  const total = count ?? rows.length;
   const maxPage = Math.max(1, Math.ceil(total / state.pageSize));
-  const pageText = `หน้า ${state.page} / ${maxPage} • ทั้งหมด ${total} รายการ`;
-  if (pageInfo) pageInfo.textContent = pageText;
+  if (pageInfo) pageInfo.textContent = `หน้า ${state.page} / ${maxPage} • ทั้งหมด ${total} รายการ`;
 
   const prevBtn = document.getElementById('btnPrev');
   const nextBtn = document.getElementById('btnNext');
   if (prevBtn) prevBtn.disabled = state.page <= 1;
   if (nextBtn) nextBtn.disabled = state.page >= maxPage;
 
-  // update filters UI with categories
+  // อัปเดตตัวเลือกหมวด
   renderFilterBar(cats);
 }
 
@@ -114,8 +110,8 @@ function itemCard(r){
     <img class="thumb w-[120px] h-[80px] object-cover rounded-lg border" src="${img}" alt="">
     <div class="pr-2">
       <div class="flex items-center gap-2">
-        ${r.is_featured ? `<span class="badge">เด่น</span>` : ''}
-        ${r.category ? `<span class="text-[12px] text-ink3">${esc(r.category)}</span>` : ''}
+        ${r.is_featured ? `<span class="badge">เด่น</span>` : ``}
+        ${r.category ? `<span class="text-[12px] text-ink3">${esc(r.category)}</span>` : ``}
       </div>
       <div class="font-semibold leading-tight mt-1">${esc(r.title)}</div>
       <div class="text-xs text-ink3">${date}</div>
@@ -130,10 +126,14 @@ function itemCard(r){
 
 function makeSnippet(html){
   const txt = String(html).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  return txt.slice(0, 140) + (txt.length > 140 ? '…' : '');
+  return txt.length > 140 ? txt.slice(0,140) + '…' : txt;
 }
 
-function esc(s=''){ return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'}[ch])); }
+function esc(s=''){
+  return String(s).replace(/[&<>"']/g, ch => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'}[ch]
+  ));
+}
 
 function ensureFilterBar(card){
   if (!card) return;
@@ -153,19 +153,25 @@ function ensureFilterBar(card){
   `;
   card.insertBefore(bar, card.firstChild);
 
-  document.getElementById('fltFeatured').checked = !!state.featuredOnly;
-  document.getElementById('fltQ').value = state.q;
-  // category options will be filled later
-  document.getElementById('fltApply').onclick = () => {
-    const f = document.getElementById('fltFeatured').checked;
-    const c = document.getElementById('fltCategory').value;
-    const q = document.getElementById('fltQ').value.trim();
-    state.featuredOnly = f;
-    state.category = c;
-    state.q = q;
-    state.page = 1;
-    pushHash();
-  };
+  // set values
+  const cb = document.getElementById('fltFeatured');
+  const q  = document.getElementById('fltQ');
+  if (cb) cb.checked = !!state.featuredOnly;
+  if (q) q.value = state.q;
+
+  const apply = document.getElementById('fltApply');
+  if (apply) {
+    apply.onclick = () => {
+      const f = document.getElementById('fltFeatured').checked;
+      const c = document.getElementById('fltCategory').value;
+      const qv = document.getElementById('fltQ').value.trim();
+      state.featuredOnly = f;
+      state.category = c;
+      state.q = qv;
+      state.page = 1;
+      pushHash();
+    };
+  }
 }
 
 function renderFilterBar(cats){
@@ -177,61 +183,17 @@ function renderFilterBar(cats){
 
 async function fetchCategories(){
   try{
-    const { data, error } = await supabase.from('posts').select('category').not('category','is', null);
+    const { data, error } = await supabase.from('posts')
+      .select('category')
+      .not('category','is', null);
     if (error) return [];
-    const set = new Set(data.map(r => r.category || 'อื่น ๆ'));
+    const set = new Set((data || []).map(r => r.category || 'อื่น ๆ'));
     return Array.from(set).sort();
-  }catch{ return []; }
-}
-
-// Expose for manual refresh if needed
-window.renderNewsList = renderNewsList;
-
-
-import { renderFeaturedNews } from './home_news.js';
-
-async function renderHomeLatestList(limit=6){
-  const listEl = document.getElementById('homeNewsList');
-  if (!listEl) return;
-  listEl.innerHTML = `<div class="text-sm text-ink3">กำลังโหลดข่าวล่าสุด...</div>`;
-  try{
-    const { data, error } = await supabase
-      .from('posts')
-      .select('id,title,cover_url,body,category,published_at,is_featured')
-      .lte('published_at', new Date().toISOString())
-      .order('published_at', { ascending: false })
-      .limit(limit);
-    if (error) throw error;
-    const rows = data || [];
-    if (!rows.length){ listEl.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าว</div>`; return; }
-    listEl.innerHTML = rows.map(r=>{
-      const img = r.cover_url || './icons/icon-192.png';
-      const date = r.published_at ? new Date(r.published_at).toLocaleDateString('th-TH', { dateStyle:'medium' }) : '';
-      const snippet = (r.body || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120) + (((r.body||'').length>120)?'…':'');
-      return `
-      <article class="card p-2 grid grid-cols-[80px_1fr] gap-3">
-        <img class="w-[80px] h-[56px] object-cover rounded-lg border" src="${img}" alt="">
-        <div class="pr-1">
-          <div class="flex items-center gap-2">${r.is_featured?`<span class='badge'>เด่น</span>`:''}${r.category?`<span class='text-[12px] text-ink3'>${esc(r.category)}</span>`:''}</div>
-          <div class="font-semibold leading-tight mt-0.5">${esc(r.title)}</div>
-          <div class="text-xs text-ink3">${date}</div>
-          <div class="text-sm text-ink2 line-clamp-2 mt-0.5">${esc(snippet)}</div>
-          <div class="mt-1 flex gap-2">
-            <a class="btn" href="#news?post=${r.id}">อ่าน</a>
-            <button class="btn" onclick="window.sharePost && window.sharePost(${r.id})">แชร์</button>
-          </div>
-        </div>
-      </article>`;
-    }).join('');
-  }catch(e){
-    listEl.innerHTML = `<div class="text-sm text-red-600">โหลดข่าวล่าสุดไม่สำเร็จ</div>`;
-    console.error(e);
+  }catch{
+    return [];
   }
 }
 
-export async function renderHome(){
-  await renderHomeLatestList();
-  await renderFeaturedNews(6);
-}
-
+// ===== สำหรับ router เดิม =====
+export async function renderHome(){ /* no-op เพื่อให้ #home คงเดิม */ }
 export async function render(){ return renderNewsList(); }
