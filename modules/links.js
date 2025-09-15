@@ -1,30 +1,17 @@
 
 import { supabase } from '../api.js';
-function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
-function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
-function favicon(url){ try{ const u=new URL(url); return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`; }catch{ return ''; } }
+const isMobile=()=>matchMedia('(max-width: 640px)').matches;
 export async function render(){
-  const host = document.getElementById('tab-links'); if(!host) return;
-  host.innerHTML = '<div class="p-4 text-slate-400">กำลังโหลดลิงก์…</div>';
-  let rows=[];
+  const grid=document.getElementById('linkGrid'); if(!grid) return;
+  grid.innerHTML='<div class="text-sm text-ink3">กำลังโหลดรายการทั้งหมด...</div>';
   try{
-    const q = await supabase.from('app_links').select('id,title,url,image_url,category,sort_order,is_active').order('category',{ascending:true}).order('sort_order',{ascending:true}).order('title',{ascending:true});
-    rows = (q?.data||[]).filter(r=>r.is_active!==false);
-  }catch{ rows=[]; }
-  if(!rows.length){ host.innerHTML='<div class="p-4 text-slate-400">ยังไม่มีรายการลิงก์</div>'; return; }
-  const groups={}; rows.forEach(r=>{ const k=r.category||'ทั่วไป'; (groups[k]??=[]).push(r); });
-  host.innerHTML='';
-  Object.keys(groups).sort().forEach(cat=>{
-    const sec = el(`<section class="mb-6"><h3 class="text-base font-semibold mb-2">${esc(cat)}</h3><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div></section>`);
-    host.appendChild(sec);
-    const grid = sec.querySelector('div.grid');
-    groups[cat].forEach(r=>{
-      const img = r.image_url || favicon(r.url);
-      const card = el(`<a class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow transition bg-white" href="${esc(r.url)}" target="_blank" rel="noopener">
-        ${img?`<img src="${esc(img)}" alt="" class="w-10 h-10 rounded-lg object-cover">`:`<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500">🔗</div>`}
-        <div class="min-w-0"><div class="font-medium truncate">${esc(r.title||'ไม่ระบุชื่อ')}</div><div class="text-xs text-slate-500 truncate">${esc(r.url)}</div></div>
-      </a>`);
-      grid.appendChild(card);
-    });
-  });
+    const {data,error}=await supabase.from('app_links').select('id,title,url,image_url,category,sort_order,is_active')
+      .eq('is_active',true).order('category',{ascending:true}).order('sort_order',{ascending:true}).order('id',{ascending:true});
+    if(error) throw error; const rows=data||[]; if(!rows.length){ grid.innerHTML='<div class="text-sm text-ink3">ยังไม่มีรายการ</div>'; return; }
+    if(isMobile()){ grid.innerHTML=`<div class="links-list">`+rows.map(itemRow).join('')+`</div>`; }
+    else{ const cats=['ทั้งหมด',...Array.from(new Set(rows.map(r=>r.category||'อื่น ๆ')))]; const tabs=`<div class="cat-tabs card"><div class="row">`+cats.map((c,i)=>`<button class="cat-tab ${i===0?'active':''}" data-cat="${escAttr(c)}">${escHtml(c)}</button>`).join('')+`</div></div>`; const container=document.createElement('div'); container.innerHTML=tabs+`<div id="linksContainer"></div>`; grid.replaceWith(container); container.id='linkGrid'; const list=container.querySelector('#linksContainer'); function renderList(cat){const filtered=(cat==='ทั้งหมด')?rows:rows.filter(r=>(r.category||'อื่น ๆ')===cat); list.innerHTML=`<div class="links-grid">`+filtered.map(itemRow).join('')+`</div>`;} renderList('ทั้งหมด'); const tabEls=Array.from(container.querySelectorAll('.cat-tab')); tabEls.forEach(btn=>btn.addEventListener('click',()=>{tabEls.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderList(btn.dataset.cat);})); }
+  }catch(e){ grid.innerHTML='<div class="text-sm text-red-600">โหลดไม่สำเร็จ</div>'; }
 }
+function itemRow(r){const img=r.image_url||'./icons/icon-192.png'; const cat=r.category?`<div class="cat">${escHtml(r.category)}</div>`:''; return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener"><img src="${img}" alt="icon"><div class="meta"><div class="title">${escHtml(r.title||'รายการ')}</div>${cat}</div></a>`;}
+function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(s).replace(/[&<>"']/g,ch=>map[ch]); }
+function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
