@@ -52,3 +52,26 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 .apps-section{ margin-top:.6rem; }
 .apps-section .sect-title{ display:inline-block; background:#EAF2FF; color:#2563EB; font-weight:700; padding:.3rem .8rem; border-radius:14px; margin-bottom:.5rem }
 @media (max-width:640px){ .apps-section .sect-title{ margin-left:.25rem } }
+
+
+/* ===== Category Tabs (desktop) ===== */
+#linksView .cat-tabs{ position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--bd);
+  margin-bottom:.75rem; padding:.5rem; border-radius:14px }
+#linksView .cat-tabs .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
+#linksView .cat-tab{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; }
+#linksView .cat-tab.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
+@media (max-width:1024px){ #linksView .cat-tabs{ display:none } }
+
+/* ===== Mobile tiles slider for #links ===== */
+@media (max-width:640px){
+  #linksView .tiles-slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow-x:auto; scroll-snap-type:x mandatory; gap:0; -webkit-overflow-scrolling:touch }
+  #linksView .tiles-slide{ scroll-snap-align:center; padding:4px 2px }
+  #linksView .app-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:4px 8px }
+  #linksView .tile{ display:grid; justify-items:center; row-gap:8px; padding:12px 8px; border:1px solid var(--bd); border-radius:14px; background:var(--card) }
+  #linksView .tile .icon{ width:56px; height:56px; object-fit:cover; border-radius:12px; border:1px solid var(--bd); background:#fff }
+  #linksView .tile .label{ font-size:14px; text-align:center; line-height:1.2 }
+  #linksView .dots{ display:flex; justify-content:center; gap:8px; padding:6px 0 0 }
+  #linksView .dot{ width:8px; height:8px; border-radius:999px; background:#cfd8e3 }
+  #linksView .dot.active{ background:#2563EB }
+  #linksView .apps-head{ display:flex; justify-content:flex-end; margin-bottom:.4rem }
+}
