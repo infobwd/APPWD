@@ -18,16 +18,8 @@ export async function render(){
     if(!rows.length){ grid.innerHTML='<div class="text-sm text-ink3">ยังไม่มีรายการ</div>'; return; }
 
     if (isMobile()) {
-      // Mobile: Tiles 4x2 slider + "ดูทั้งหมด" (self link)
-      const pages = chunk(rows, 8);
-      const slides = pages.map(p => `<div class="tiles-slide"><div class="app-tiles">${p.map(tile).join('')}</div></div>`).join('');
-      const dots = pages.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join('');
-      grid.innerHTML = `<div class="apps-head">
-        <a class="text-brand text-sm cursor-pointer btn-inline" href="https://infobwd.github.io/APPWD/#links">ดูทั้งหมด</a>
-      </div>
-      <div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
-      const slider=grid.querySelector('.tiles-slider'); const dotEls=Array.from(grid.querySelectorAll('.dot'));
-      slider?.addEventListener('scroll',()=>{ const idx=Math.round(slider.scrollLeft/slider.clientWidth); dotEls.forEach((d,i)=>d.classList.toggle('active',i===idx)); },{passive:true});
+      // Mobile: vertical list like screenshot
+      grid.innerHTML = `<div class="links-list">` + rows.map(itemRow).join('') + `</div>`;
     } else {
       // Desktop: Big tabs per category; default = 'ทั้งหมด'
       const cats = ['ทั้งหมด', ...Array.from(new Set(rows.map(r=>r.category||'อื่น ๆ')))];

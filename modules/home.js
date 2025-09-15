@@ -3,43 +3,93 @@ import { supabase } from '../api.js';
 const isMobile = () => matchMedia('(max-width: 640px)').matches;
 
 export async function renderAppsCard(targetId='homeLinks'){
-  const el=document.getElementById(targetId); if(!el) return;
-  el.innerHTML='<div class="text-sm text-ink3">กำลังโหลด...</div>';
+  const el = document.getElementById(targetId); if (!el) return;
+  el.innerHTML = '<div class="text-sm text-ink3">กำลังโหลด...</div>';
   try{
-    const {data,error}=await supabase.from('app_links')
+    const { data, error } = await supabase.from('app_links')
       .select('id,title,url,image_url,category,sort_order,is_active')
-      .eq('is_active',true)
-      .order('sort_order',{ascending:true}).order('id',{ascending:true});
-    if(error) throw error; const rows=data||[];
-    if(!rows.length){ el.innerHTML='<div class="text-sm text-ink3">ยังไม่มีรายการ</div>'; return; }
+      .eq('is_active', true)
+      .order('category', { ascending:true })
+      .order('sort_order', { ascending:true })
+      .order('id', { ascending:true });
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length){
+      el.innerHTML = '<div class="text-sm text-ink3">ยังไม่มีรายการ</div>';
+      return;
+    }
 
     const moreBtn = `<div class="apps-head">
       <a class="text-brand text-sm cursor-pointer btn-inline" href="https://infobwd.github.io/APPWD/#links">ดูทั้งหมด</a>
     </div>`;
 
-    if (isMobile()) {
+    if (isMobile()){
+      // Mobile: Tiles 4x2 slider with dots
       el.classList.add('mobile');
-      const pages = chunk(rows,8);
-      const slides = pages.map(p=>`<div class="tiles-slide"><div class="app-tiles">${p.map(tile).join('')}</div></div>`).join('');
+      const pages = chunk(rows, 8);
+      const slides = pages.map(page => `<div class="tiles-slide"><div class="app-tiles">${
+        page.map(tile).join('')
+      }</div></div>`).join('');
       const dots = pages.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join('');
       el.innerHTML = `${moreBtn}<div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
-      const slider=el.querySelector('.tiles-slider'); const dotEls=Array.from(el.querySelectorAll('.dot'));
-      slider?.addEventListener('scroll',()=>{ const idx=Math.round(slider.scrollLeft/slider.clientWidth); dotEls.forEach((d,i)=>d.classList.toggle('active',i===idx)); },{passive:true});
+      const slider = el.querySelector('.tiles-slider');
+      const dotEls = Array.from(el.querySelectorAll('.dot'));
+      slider?.addEventListener('scroll', () => {
+        const idx = Math.round(slider.scrollLeft / slider.clientWidth);
+        dotEls.forEach((d,i)=>d.classList.toggle('active', i===idx));
+      }, {passive:true});
     } else {
+      // Desktop: Big sticky tabs per category (like #links)
       el.classList.remove('mobile');
-      const groups = groupBy(rows, r=>r.category||'อื่น ๆ');
-      const sections = Object.keys(groups).map(cat => {
-        const inner = groups[cat].map(itemRow).join('');
-        return `<section class="apps-section"><div class="sect-title">${escapeHtml(cat)}</div>
-          <div class="links-grid">${inner}</div></section>`;
-      }).join('');
-      el.innerHTML = `${moreBtn}${sections}`;
+      const cats = ['ทั้งหมด', ...Array.from(new Set(rows.map(r => r.category || 'อื่น ๆ')))];
+      const tabs = `<div class="cat-tabs card"><div class="row">` + 
+        cats.map((c,i)=>`<button class="cat-tab ${i===0?'active':''}" data-cat="${escAttr(c)}">${escHtml(c)}</button>`).join('')
+        + `</div></div>`;
+      const container = document.createElement('div');
+      container.innerHTML = `${moreBtn}` + tabs + `<div id="homeLinksContainer"></div>`;
+      el.innerHTML = container.innerHTML;
+      const listEl = el.querySelector('#homeLinksContainer');
+      function renderList(cat){
+        const filtered = (cat==='ทั้งหมด') ? rows : rows.filter(r => (r.category||'อื่น ๆ') === cat);
+        listEl.innerHTML = `<div class="links-grid">` + filtered.map(itemRow).join('') + `</div>`;
+      }
+      renderList('ทั้งหมด');
+      const tabEls = Array.from(el.querySelectorAll('.cat-tab'));
+      tabEls.forEach(btn => btn.addEventListener('click', () => {
+        tabEls.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        renderList(btn.dataset.cat);
+      }));
     }
-  }catch(e){ el.innerHTML='<div class="text-sm text-red-600">โหลดลิงก์ไม่สำเร็จ</div>'; }
+
+  }catch(e){
+    el.innerHTML = '<div class="text-sm text-red-600">โหลดลิงก์ไม่สำเร็จ</div>';
+  }
 }
-function chunk(a,n){const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r;}
-function groupBy(arr, keyFn){const m={}; for(const it of arr){const k=keyFn(it); (m[k]||(m[k]=[])).push(it);} return m;}
-function tile(r){const img=r.image_url||'./icons/icon-192.png';const title=escapeHtml(r.title||'รายการ');return `<a class="tile" href="${r.url}" target="_blank" rel="noopener"><img class="icon" src="${img}" alt="icon"><div class="label">${title}</div></a>`;}
-function itemRow(r){const img=r.image_url||'./icons/icon-192.png';const cat=r.category?`<div class="cat">${escapeHtml(r.category)}</div>`:'';return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener"><img src="${img}" alt="icon"><div class="meta"><div class="title">${escapeHtml(r.title||'รายการ')}</div>${cat}</div></a>`;}
-function escapeHtml(s=''){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]||c));}
-document.addEventListener('DOMContentLoaded',()=>{ if(document.getElementById('homeLinks')) renderAppsCard('homeLinks'); });
+
+function chunk(arr, size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
+function tile(r){
+  const img = r.image_url || './icons/icon-192.png';
+  const title = escHtml(r.title || 'รายการ');
+  return `<a class="tile" href="${r.url}" target="_blank" rel="noopener">
+    <img class="icon" src="${img}" alt="icon">
+    <div class="label">${title}</div>
+  </a>`;
+}
+function itemRow(r){
+  const img = r.image_url || './icons/icon-192.png';
+  const cat = r.category ? `<div class="cat">${escHtml(r.category)}</div>` : '';
+  return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener">
+    <img src="${img}" alt="icon">
+    <div class="meta">
+      <div class="title">${escHtml(r.title || 'รายการ')}</div>
+      ${cat}
+    </div>
+  </a>`;
+}
+function escHtml(s=''){ return s.replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',\"'\":'&#39;'}[c]||c)); }
+function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('homeLinks')) renderAppsCard('homeLinks');
+});
