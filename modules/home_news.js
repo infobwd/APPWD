@@ -3,7 +3,7 @@ import { supabase } from '../api.js';
 
 const isMobile = () => matchMedia('(max-width: 640px)').matches;
 
-export async function renderFeaturedNews(limit = 6){
+export async function renderFeaturedNews(limit = 3){
   const wrap = document.getElementById('homeNewsCards');
   if (!wrap) return;
 
