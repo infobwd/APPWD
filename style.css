@@ -70,3 +70,24 @@ main{ padding-bottom: calc(96px + var(--tabbar-h)); } /* กันโดน tabb
 
 /* Bottom tabbar ensure on top */
 .tabbar{ z-index: 55; }
+
+
+/* ===== Center container across widths ===== */
+.container{ margin:0 auto; width:100%; max-width:1120px; }
+
+/* Home links grid card: details */
+#homeLinks{ display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:12px; }
+.link-item{ display:flex; gap:.75rem; align-items:center; padding:.6rem .8rem; border:1px solid var(--bd);
+  border-radius:14px; background:var(--card); transition:transform .15s ease, box-shadow .15s ease; }
+.link-item:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.08); }
+.link-item img{ width:40px; height:40px; border-radius:10px; object-fit:cover; border:1px solid var(--bd); background:#fff; }
+.link-item .meta{ min-width:0 }
+.link-item .meta .title{ font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.link-item .meta .cat{ font-size:12px; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+/* Ensure homeView centered vertically spacing nice on 820x1180 */
+main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
+#homeView .card{ margin-left:auto; margin-right:auto; }
+
+/* Hide duplicate heading from any old renderers */
+#homeLinks .section-title{ display:none }
