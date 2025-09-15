@@ -49,10 +49,7 @@ export async function renderNewsList(){
   if (nextBtn) nextBtn.onclick = () => { state.page++; pushHash(); };
 
   // watch hash change
-  window.addEventListener('hashchange', () => {
-    if ((location.hash||'').startsWith('#news')) {
-      renderNewsList().catch(()=>{});
-    }
+  }
   }, { once:true }); // rebind per render
 }
 
@@ -236,3 +233,5 @@ export async function renderHome(){
   await renderHomeLatestList();
   await renderFeaturedNews(6);
 }
+
+export async function render(){ return renderNewsList(); }
