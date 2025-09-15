@@ -91,3 +91,24 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 
 /* Hide duplicate heading from any old renderers */
 #homeLinks .section-title{ display:none }
+
+
+/* --- Home center & small-screen tweaks --- */
+.container{ margin:0 auto; width:100%; max-width:1120px; }
+#homeView{ margin:0 auto; }
+#homeView .card{ margin-left:auto; margin-right:auto; }
+
+/* Home Links: responsive list */
+#homeLinks .links-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(170px,1fr)); gap:.75rem; }
+@media (max-width:480px){ #homeLinks .links-grid{ grid-template-columns:1fr; } }
+.link-item{ display:flex; gap:.75rem; align-items:center; padding:.6rem .8rem; border:1px solid var(--bd);
+  border-radius:14px; background:var(--card); transition:transform .15s ease, box-shadow .15s ease; }
+.link-item:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.08); }
+.link-item img{ width:40px; height:40px; border-radius:10px; object-fit:cover; border:1px solid var(--bd); background:#fff; }
+.link-item .meta{ min-width:0 }
+.link-item .meta .title{ font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.link-item .meta .cat{ font-size:12px; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+/* "ดูแอปทั้งหมด" button */
+.links-more{ margin-top:.5rem; display:flex; justify-content:center; }
+.links-more .btn{ padding:.55rem 1rem; border-radius:12px; }

@@ -2,8 +2,8 @@
 import { supabase } from '../api.js';
 
 /**
- * Render app links into a pure grid (no heading), acceptable targetId 'homeLinks'.
- * Schema per app_links(id, title, url, image_url, category, sort_order, is_active).
+ * Render app links grid into targetId (default 'homeLinks') without heading.
+ * Adds a "ดูแอปทั้งหมด" button linking to #links.
  */
 export async function renderAppsCard(targetId='homeLinks'){
   const el = document.getElementById(targetId);
@@ -22,7 +22,7 @@ export async function renderAppsCard(targetId='homeLinks'){
       el.innerHTML = '<div class="text-sm text-ink3">ยังไม่มีรายการ</div>';
       return;
     }
-    el.innerHTML = rows.map(r => {
+    const grid = rows.map(r => {
       const img = r.image_url || './icons/icon-192.png';
       const cat = r.category ? `<div class="cat">${escapeHtml(r.category)}</div>` : '';
       return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener">
@@ -33,6 +33,10 @@ export async function renderAppsCard(targetId='homeLinks'){
         </div>
       </a>`;
     }).join('');
+    const more = `<div class="links-more">
+      <a class="btn btn-prim" href="https://infobwd.github.io/APPWD/#links">ดูแอปทั้งหมด</a>
+    </div>`;
+    el.innerHTML = `<div class="links-grid">${grid}</div>${more}`;
   }catch(e){
     el.innerHTML = '<div class="text-sm text-red-600">โหลดลิงก์ไม่สำเร็จ</div>';
   }
@@ -40,8 +44,7 @@ export async function renderAppsCard(targetId='homeLinks'){
 function escapeHtml(s=''){
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]||c));
 }
-
-// auto render on load for homeLinks if exists
+// auto render for homeLinks if exists
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('homeLinks')) renderAppsCard('homeLinks');
 });
