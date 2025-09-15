@@ -11,8 +11,7 @@ async function ensureLiff(){
   return liff;
 }
 export function makeFlexNewsCard({ title, desc, url, img }){
-  return {
-    type:'bubble',
+  return { type:'bubble',
     hero: img ? { type:'image', url:img, size:'full', aspectRatio:'20:13', aspectMode:'cover' } : undefined,
     body:{ type:'box', layout:'vertical', spacing:'sm', contents:[
       { type:'text', text:title||'ข่าว', weight:'bold', size:'md', wrap:true },
@@ -29,7 +28,6 @@ export async function shareFlexStrict(altText, bubble){
     const can = sdk.isInClient() && await sdk.isApiAvailable('shareTargetPicker');
     if (can){ await sdk.shareTargetPicker([{ type:'flex', altText, contents:bubble }]); return; }
   }catch{}
-  // Not in LINE or cannot use picker → open LIFF deep-link (will auto share)
   location.href = getLiffDeepLink({ altText, bubble });
 }
 export async function sharePostData({ title, url, img, desc }){
@@ -37,7 +35,6 @@ export async function sharePostData({ title, url, img, desc }){
   await shareFlexStrict(title || 'ข่าว', bubble);
 }
 window.LINE_SHARE = { makeFlexNewsCard, shareFlexStrict, sharePostData };
-// Auto-run when opened via ?flexShare=...
 (async function(){
   try{
     const params = new URLSearchParams(location.search);
