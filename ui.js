@@ -1,6 +1,6 @@
 
 import { DEFAULT_FONT_SCALE,DEFAULT_ICON_SCALE,DEFAULT_THEME,BRAND_LOGO_URL,BRAND_TITLE } from './config.js';
-export function toast(m){const b=document.getElementById('toast');if(!b)return;b.classList.remove('hide');b.innerHTML=`<div class="rounded-xl px-3 py-2 shadow-soft bg-white border border-[#E6EAF0]">${m}</div>`;clearTimeout(window.__t);window.__t=setTimeout(()=>b.classList.add('hide'),2400);}
+export function toast(m){const b=document.getElementById('toast');if(!b)return;b.classList.remove('hide');b.innerHTML=`<div class="rounded-xl px-3 py-2 shadow-soft bg-white border border-[#E6EAF0]">${m}</div>`;clearTimeout(window.__t);window.__t=setTimeout(()=>b.classList.add('hide'),2600);}
 const sheet=document.getElementById('sheet'); export const body=document.getElementById('sheet-body');
 export function openSheet(h){if(!sheet||!body)return;body.innerHTML=h;sheet.classList.add('show');}
 export function closeSheet(){if(!sheet)return;sheet.classList.remove('show');}

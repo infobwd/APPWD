@@ -29,7 +29,7 @@ async function route(){
   const { path, params } = parseHash();
   const h = path || '#home';
   setActive(h);
-  if (h === '#home')      { goto('#home'); await News.renderHome(); await Checkin.renderHomeRecent(); await Links.renderHome(); }
+  if (h === '#home')      { goto('#home'); await News.renderHome(); await Checkin.renderHomeSummary(); await Checkin.renderHomeRecent(); await Links.renderHome(); }
   else if (h === '#news') { goto('#news'); await News.renderList(); }
   else if (h === '#post') { goto('#post'); await News.renderDetail(params.id); }
   else if (h === '#links'){ goto('#links'); await Links.render(); }

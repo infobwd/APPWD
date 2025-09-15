@@ -1,9 +1,10 @@
 
 import { supabase } from '../api.js';
 import { openSheet, closeSheet, toast, skel, esc } from '../ui.js';
+import { SLIDER_AUTO_MS } from '../config.js';
 
 const PAGE_SIZE = 10;
-let page = 1, total = 0;
+let page = 1, total = 0, sliderTimer = null;
 
 export async function renderHome(){
   const listEl = document.getElementById('homeNewsList');
@@ -41,7 +42,26 @@ export async function renderHome(){
   }
 
   listEl.innerHTML = top2.map(p=>withStatsRow(p)).join('') || '<div class="text-gray-500">ยังไม่มีข่าว</div>';
-  cardsEl.innerHTML = await withStatsCards(picked);
+  const inner = await withStatsCards(picked);
+  cardsEl.innerHTML = inner;
+
+  const isSmall = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+  if (isSmall) {
+    cardsEl.classList.add('slider');
+    if (sliderTimer) clearInterval(sliderTimer);
+    sliderTimer = setInterval(()=>{
+      try{
+        const width = cardsEl.clientWidth;
+        const next = Math.round((cardsEl.scrollLeft + width) / width);
+        const max = cardsEl.children.length - 1;
+        const to = (next > max ? 0 : next) * width;
+        cardsEl.scrollTo({ left: to, behavior: 'smooth' });
+      }catch(_){}
+    }, SLIDER_AUTO_MS || 4000);
+  } else {
+    cardsEl.classList.remove('slider');
+    if (sliderTimer) { clearInterval(sliderTimer); sliderTimer=null; }
+  }
 }
 
 export async function renderList(){

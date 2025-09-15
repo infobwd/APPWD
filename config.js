@@ -5,5 +5,9 @@ export const LIFF_ID="2006490627-nERN5a26";
 export const PUBLIC_URL="https://infobwd.github.io/APPWD/";
 export const BRAND_TITLE="APPWD"; export const BRAND_LOGO_URL="";
 export const SCHOOL_LAT=14.221816, SCHOOL_LNG=99.472859, SCHOOL_RADIUS_METERS=100;
+export const CHECKIN_START="07:30";
+export const CHECKIN_ON_TIME_UNTIL="08:00";
+export const SUMMARY_DEFAULT_RANGE_DAYS=30;
+export const SLIDER_AUTO_MS=4000;
 export const DEFAULT_FONT_SCALE=1, DEFAULT_ICON_SCALE=1, DEFAULT_THEME="light";
 try{ localStorage.setItem("APPWD_PUBLIC_URL", PUBLIC_URL.endsWith('/')?PUBLIC_URL:(PUBLIC_URL+'/')); }catch(e){}
