@@ -87,8 +87,12 @@ function itemRow(r){
     </div>
   </a>`;
 }
-function escHtml(s=''){ return s.replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',\"'\":'&#39;'}[c]||c)); }
+function escHtml(s=''){ 
+  const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'": '&#39;' };
+  return String(s).replace(/[&<>"']/g, ch => map[ch]);
+}
 function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
+function (s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
 
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('homeLinks')) renderAppsCard('homeLinks');
