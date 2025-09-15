@@ -1,36 +1,30 @@
 
 import { supabase } from '../api.js';
-const isMobile=()=>matchMedia('(max-width: 640px)').matches;
-
-export async function renderAppsCard(targetId='homeLinks'){
-  const el=document.getElementById(targetId); if(!el) return;
-  el.innerHTML='<div class="text-sm text-ink3">กำลังโหลด...</div>';
+function mk(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+function safe(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function favicon(url){ try{ const u=new URL(url); return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`; }catch{ return ''; } }
+async function loadFeaturedApps(limit=8){
   try{
-    const {data,error}=await supabase.from('app_links').select('id,title,url,image_url,category,sort_order,is_active')
-      .eq('is_active',true).order('category',{ascending:true}).order('sort_order',{ascending:true}).order('id',{ascending:true});
-    if(error) throw error; const rows=data||[]; if(!rows.length){ el.innerHTML='<div class="text-sm text-ink3">ยังไม่มีรายการ</div>'; return; }
-
-    const moreBtn = `<div class="apps-head"><a class="text-brand text-sm cursor-pointer btn-inline" href="https://infobwd.github.io/APPWD/#links">ดูทั้งหมด</a></div>`;
-
-    if(isMobile()){
-      const host=el; const container=document.createElement('div'); container.id=host.id; host.replaceWith(container); container.classList.add('mobile');
-      const pages=chunk(rows,8); const slides=pages.map(p=>`<div class="tiles-slide"><div class="app-tiles">${p.map(tile).join('')}</div></div>`).join('');
-      const dots=pages.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join('');
-      container.innerHTML = `${moreBtn}<div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
-      const slider=container.querySelector('.tiles-slider'); const dotEls=Array.from(container.querySelectorAll('.dot'));
-      slider?.addEventListener('scroll',()=>{ const idx=Math.round(slider.scrollLeft/slider.clientWidth); dotEls.forEach((d,i)=>d.classList.toggle('active',i===idx)); },{passive:true});
-    }else{
-      const host=el; const container=document.createElement('div'); container.id=host.id; host.replaceWith(container);
-      container.innerHTML = `<div class="links-grid home-3cols">` + rows.map(itemRow).join('') + `</div>`;
-    }
-  }catch(e){
-    el.innerHTML='<div class="text-sm text-red-600">โหลดลิงก์ไม่สำเร็จ</div>';
-  }
+    const q = await supabase.from('app_links').select('id,title,url,image_url,category,sort_order,is_active').eq('is_active',true).order('sort_order',{ascending:true}).order('title',{ascending:true}).limit(limit);
+    return q?.data||[];
+  }catch{ return []; }
 }
-function chunk(a,n){const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r;}
-function tile(r){const img=r.image_url||'./icons/icon-192.png'; const title=escHtml(r.title||'รายการ'); return `<a class="tile" href="${r.url}" target="_blank" rel="noopener"><img class="icon" src="${img}" alt="icon"><div class="label">${title}</div></a>`;}
-function itemRow(r){const img=r.image_url||'./icons/icon-192.png'; const cat=r.category?`<div class="cat">${escHtml(r.category)}</div>`:''; return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener"><img src="${img}" alt="icon"><div class="meta"><div class="title">${escHtml(r.title||'รายการ')}</div>${cat}</div></a>`;}
-function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(s).replace(/[&<>"']/g,ch=>map[ch]); }
-function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
-
-document.addEventListener('DOMContentLoaded',()=>{ if(document.getElementById('homeLinks')) renderAppsCard('homeLinks'); });
+export async function renderAppsCard(containerId='homeLinks'){
+  const host = document.getElementById(containerId); if(!host) return;
+  if (host.getAttribute('data-rendered')==='1') return; host.setAttribute('data-rendered','1');
+  host.innerHTML = `<div class="p-4 text-slate-400">กำลังโหลดรายการ…</div>`;
+  const apps = await loadFeaturedApps(8);
+  if(!apps.length){ host.innerHTML = `<div class="p-4 text-slate-400">ยังไม่มีรายการแอป/ระบบ</div>`; return; }
+  host.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="text-base font-semibold">แอป/ระบบในโรงเรียน</h3></div><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" id="appsGrid"></div>`;
+  const grid = host.querySelector('#appsGrid');
+  apps.forEach(a=>{
+    const img = a.image_url || favicon(a.url);
+    const el = mk(`<a class="block p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow transition bg-white" href="${safe(a.url)}" target="_blank" rel="noopener">
+      <div class="flex items-center gap-3">
+        ${img?`<img src="${safe(img)}" class="w-10 h-10 rounded-lg object-cover" alt="">`:`<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500">🟦</div>`}
+        <div class="min-w-0"><div class="font-medium truncate">${safe(a.title||'ไม่ระบุชื่อ')}</div>${a.category?`<div class="text-xs text-slate-500 truncate">${safe(a.category)}</div>`:''}</div>
+      </div>
+    </a>`);
+    grid.appendChild(el);
+  });
+}
