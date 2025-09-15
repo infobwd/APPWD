@@ -102,3 +102,7 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
     gap:12px;
   }
 }
+
+
+/* Force #homeLinks to behave as a block container to avoid legacy Tailwind grid classes */
+#homeView #homeLinks{ display:block !important; }
