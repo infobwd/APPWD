@@ -83,8 +83,8 @@ export async function renderHome(){
   // small screens: auto slide
   const isSmall = (typeof matchMedia!=='undefined') && matchMedia('(max-width: 640px)').matches;
   if(isSmall){
-    cardsEl.classList.add('slider-x');
-    const st = JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}'); const ms = Number(st.SLIDER_AUTO_MS || 4000);
+    cardsEl.classList.add('slider');
+    const ms = 4000;
     clearInterval(sliderTimer);
     sliderTimer = setInterval(()=>{
       try{
