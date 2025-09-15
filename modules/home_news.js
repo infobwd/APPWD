@@ -10,8 +10,7 @@ export async function renderFeaturedNews(limit = 6){
   if (isMobile()) wrap.classList.add('slider');
   else wrap.classList.remove('slider');
 
-  // Featured only
-  const { data: rows, error } = await supabase
+  let { data: rows, error } = await supabase
     .from('posts')
     .select('id,title,cover_url,body,category,published_at,is_featured')
     .eq('is_featured', true)
@@ -21,28 +20,52 @@ export async function renderFeaturedNews(limit = 6){
 
   if (error) {
     console.error('[featured] error:', error);
-    wrap.innerHTML = `<div class="text-sm text-red-600">โหลดข่าวเด่นไม่สำเร็จ</div>`;
-    return;
   }
+
   if (!rows || rows.length === 0) {
-    wrap.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าวเด่น</div>`;
+    const res2 = await supabase
+      .from('posts')
+      .select('id,title,cover_url,body,category,published_at,is_featured')
+      .lte('published_at', new Date().toISOString())
+      .order('published_at', { ascending: false })
+      .limit(limit);
+    rows = res2.data || [];
+  }
+
+  if (!rows || rows.length === 0) {
+    wrap.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าว</div>`;
     return;
   }
 
   wrap.innerHTML = rows.map(toCard).join('');
+  setupResizeHandler();
+}
+
+function setupResizeHandler(){
+  let timer;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const wrap = document.getElementById('homeNewsCards');
+      if (!wrap) return;
+      if (matchMedia('(max-width: 640px)').matches) wrap.classList.add('slider');
+      else wrap.classList.remove('slider');
+    }, 120);
+  });
 }
 
 function toCard(r){
   const img = r.cover_url || './icons/icon-192.png';
-  const title = esc(r.title);
+  const title = escHtml(r.title);
   const date = r.published_at ? new Date(r.published_at).toLocaleDateString('th-TH', { day:'2-digit', month:'short' }) : '';
   const openHref = `#news?post=${r.id}`;
+  const badge = r.is_featured ? `<span class="badge">เด่น</span>` : '';
   return `
   <article class="news-card">
     <img class="thumb" src="${img}" alt="">
-    <span class="badge">เด่น</span>
+    ${badge}
     <div class="p-3">
-      <div class="font-semibold line-clamp-2">${title}</div>
+      <div class="font-semibold">${title}</div>
       <div class="text-xs text-ink3">${date}</div>
       <div class="mt-2 flex gap-2">
         <a class="btn" href="${openHref}">อ่าน</a>
@@ -52,7 +75,7 @@ function toCard(r){
   </article>`;
 }
 
-function esc(s=''){ return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;'}[ch])); }
+function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }; return String(s).replace(/[&<>\"']/g,ch=>map[ch]); }
 
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('homeNewsCards');
