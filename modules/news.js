@@ -189,3 +189,50 @@ async function fetchCategories(){
 
 // Expose for manual refresh if needed
 window.renderNewsList = renderNewsList;
+
+
+import { renderFeaturedNews } from './home_news.js';
+
+async function renderHomeLatestList(limit=6){
+  const listEl = document.getElementById('homeNewsList');
+  if (!listEl) return;
+  listEl.innerHTML = `<div class="text-sm text-ink3">กำลังโหลดข่าวล่าสุด...</div>`;
+  try{
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id,title,cover_url,body,category,published_at,is_featured')
+      .lte('published_at', new Date().toISOString())
+      .order('published_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length){ listEl.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าว</div>`; return; }
+    listEl.innerHTML = rows.map(r=>{
+      const img = r.cover_url || './icons/icon-192.png';
+      const date = r.published_at ? new Date(r.published_at).toLocaleDateString('th-TH', { dateStyle:'medium' }) : '';
+      const snippet = (r.body || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120) + (((r.body||'').length>120)?'…':'');
+      return `
+      <article class="card p-2 grid grid-cols-[80px_1fr] gap-3">
+        <img class="w-[80px] h-[56px] object-cover rounded-lg border" src="${img}" alt="">
+        <div class="pr-1">
+          <div class="flex items-center gap-2">${r.is_featured?`<span class='badge'>เด่น</span>`:''}${r.category?`<span class='text-[12px] text-ink3'>${esc(r.category)}</span>`:''}</div>
+          <div class="font-semibold leading-tight mt-0.5">${esc(r.title)}</div>
+          <div class="text-xs text-ink3">${date}</div>
+          <div class="text-sm text-ink2 line-clamp-2 mt-0.5">${esc(snippet)}</div>
+          <div class="mt-1 flex gap-2">
+            <a class="btn" href="#news?post=${r.id}">อ่าน</a>
+            <button class="btn" onclick="window.sharePost && window.sharePost(${r.id})">แชร์</button>
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+  }catch(e){
+    listEl.innerHTML = `<div class="text-sm text-red-600">โหลดข่าวล่าสุดไม่สำเร็จ</div>`;
+    console.error(e);
+  }
+}
+
+export async function renderHome(){
+  await renderHomeLatestList();
+  await renderFeaturedNews(6);
+}
