@@ -30,7 +30,7 @@ export async function renderAppsCard(targetId='homeLinks'){
 function chunk(a,n){const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r;}
 function tile(r){const img=r.image_url||'./icons/icon-192.png'; const title=escHtml(r.title||'รายการ'); return `<a class="tile" href="${r.url}" target="_blank" rel="noopener"><img class="icon" src="${img}" alt="icon"><div class="label">${title}</div></a>`;}
 function itemRow(r){const img=r.image_url||'./icons/icon-192.png'; const cat=r.category?`<div class="cat">${escHtml(r.category)}</div>`:''; return `<a class="link-item" href="${r.url}" target="_blank" rel="noopener"><img src="${img}" alt="icon"><div class="meta"><div class="title">${escHtml(r.title||'รายการ')}</div>${cat}</div></a>`;}
-function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }; return String(s).replace(/[&<>"']/g,ch=>map[ch]); }
-function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
+function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }; return String(s).replace(/[&<>\"']/g,ch=>map[ch]); }
+function escAttr(s=''){ return escHtml(s).replace(/\"/g,'&quot;'); }
 
 document.addEventListener('DOMContentLoaded',()=>{ if(document.getElementById('homeLinks')) renderAppsCard('homeLinks'); });

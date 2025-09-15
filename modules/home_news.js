@@ -1,108 +1,83 @@
 
 import { supabase } from '../api.js';
-import { PUBLIC_URL } from '../config.js';
 
 const isMobile = () => matchMedia('(max-width: 640px)').matches;
 
-export async function renderFeaturedNews(){
+export async function renderFeaturedNews(limit = 6){
   const wrap = document.getElementById('homeNewsCards');
   if (!wrap) return;
 
-  // Toggle slider class based on viewport
   if (isMobile()) wrap.classList.add('slider');
   else wrap.classList.remove('slider');
 
-  // Try featured first
-  let rows = [];
-  try{
-    const { data, error } = await supabase
+  let { data: rows, error } = await supabase
+    .from('posts')
+    .select('id,title,cover_url,body,category,published_at,is_featured')
+    .eq('is_featured', true)
+    .lte('published_at', new Date().toISOString())
+    .order('published_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[featured] error:', error);
+  }
+
+  if (!rows || rows.length === 0) {
+    const res2 = await supabase
       .from('posts')
       .select('id,title,cover_url,body,category,published_at,is_featured')
-      .eq('is_featured', true)
-      // .lte('published_at', new Date().toISOString())
+      .lte('published_at', new Date().toISOString())
       .order('published_at', { ascending: false })
-      .limit(6);
-    if (error) throw error;
-    rows = data || [];
-  }catch(e){
-    console.warn('featured fetch error:', e);
+      .limit(limit);
+    rows = res2.data || [];
   }
 
-  // Fallback to latest
-  if (!rows || rows.length === 0){
-    try{
-      const { data } = await supabase
-        .from('posts')
-        .select('id,title,cover_url,body,category,published_at,is_featured')
-        // .lte('published_at', new Date().toISOString())
-        .order('published_at', { ascending: false })
-        .limit(6);
-      rows = data || [];
-    }catch(e){ rows = []; }
-  }
-
-  // Render
-  if (!rows.length){
-    wrap.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าวให้แสดง</div>`;
+  if (!rows || rows.length === 0) {
+    wrap.innerHTML = `<div class="text-sm text-ink3">ยังไม่มีข่าว</div>`;
     return;
   }
 
   wrap.innerHTML = rows.map(toCard).join('');
-
-  // Delegate share buttons
-  wrap.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('[data-share]');
-    if (btn){
-      const id = Number(btn.dataset.share || 0);
-      if (window.sharePost) window.sharePost(id);
-      else openNews(id);
-    }
-  }, { passive: true });
+  setupResizeHandler();
 }
 
-function openNews(id){
-  const url = newsUrl(id);
-  if ('navigate' in window) {
-    location.hash = '#news?post=' + id;
-  } else {
-    location.href = url;
-  }
-}
-
-function newsUrl(id){
-  const base = (typeof PUBLIC_URL === 'string' && PUBLIC_URL) ? PUBLIC_URL : (location.origin + location.pathname);
-  return base + '#news?post=' + id;
+function setupResizeHandler(){
+  let timer;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const wrap = document.getElementById('homeNewsCards');
+      if (!wrap) return;
+      if (matchMedia('(max-width: 640px)').matches) wrap.classList.add('slider');
+      else wrap.classList.remove('slider');
+    }, 120);
+  });
 }
 
 function toCard(r){
   const img = r.cover_url || './icons/icon-192.png';
-  const title = esc(r.title || 'ข่าว');
+  const title = escHtml(r.title);
   const date = r.published_at ? new Date(r.published_at).toLocaleDateString('th-TH', { day:'2-digit', month:'short' }) : '';
+  const openHref = `#news?post=${r.id}`;
+  const badge = r.is_featured ? `<span class="badge">เด่น</span>` : '';
   return `
   <article class="news-card">
     <img class="thumb" src="${img}" alt="">
-    ${r.is_featured ? `<span class="badge">เด่น</span>` : ''}
+    ${badge}
     <div class="p-3">
-      <div class="font-semibold line-clamp-2">${title}</div>
+      <div class="font-semibold">${title}</div>
       <div class="text-xs text-ink3">${date}</div>
       <div class="mt-2 flex gap-2">
-        <a class="btn" href="#news?post=${r.id}">อ่าน</a>
-        <button class="btn" data-share="${r.id}">แชร์</button>
+        <a class="btn" href="${openHref}">อ่าน</a>
+        <button class="btn" onclick="window.sharePost && window.sharePost(${r.id})">แชร์</button>
       </div>
     </div>
   </article>`;
 }
 
-function esc(s=''){
-  const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
-  return String(s).replace(/[&<>"']/g, ch => map[ch]);
-}
+function escHtml(s=''){ const map={ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }; return String(s).replace(/[&<>\"']/g,ch=>map[ch]); }
 
-// Auto render on DOM ready if element exists
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('homeNewsCards');
   if (el) renderFeaturedNews().catch(()=>{});
 });
-
-// expose for manual refresh
-window.renderFeaturedNews = renderFeaturedNews;
