@@ -18,12 +18,13 @@ async function fetchPost(id){
 }
 export async function sharePost(id){
   let post=null;
-  const pid = Number(id); if (!isNaN(pid)) post=await fetchPost(pid);
+  if (typeof id==='number'||typeof id==='string'){ const pid=Number(id); if(!isNaN(pid)) post=await fetchPost(pid); }
+  else if (id&&id.id){ post=id; }
   const title = post?.title || post?.name || document.title;
-  const img   = pickCover(post);
-  const desc  = pickDesc(post);
-  const url   = (PUBLIC_URL || location.origin + location.pathname) + '#news?post=' + (post?.id || id || '');
-  await sharePostData({ title, url, img, desc, id: post?.id || pid });
+  const img = pickCover(post);
+  const desc = pickDesc(post);
+  const url = (PUBLIC_URL || location.origin + location.pathname) + '#news?post=' + (post?.id || id || '');
+  await sharePostData({ title, url, img, desc });
 }
 window.sharePost = sharePost;
 document.addEventListener('DOMContentLoaded', () => {
