@@ -55,6 +55,31 @@ body{ font-size: calc(16px * var(--fs-base)); }
 body{font-size:calc(16px * var(--fs-base))}
 .navbar img,.tabbar img,.fab,.btn-icon{transform:scale(var(--ic-scale));transform-origin:center}
 
+
+/* ===== Floating Scan Button (Center + Safe Area) ===== */
+:root { --tabbar-h: 64px; } /* ปรับตามความสูงแถบล่างของแอปพี่ที่รัก */
+
+#fabScan{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px);
+  height: clamp(56px, 16vw, 72px);
+  border-radius: 18px;
+  z-index: 60;
+  box-shadow: 0 12px 30px rgba(33, 97, 243, .35);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px){
+  #fabScan{
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+  }
+}
+/* ป้องกันการถูก parent จัดตำแหน่งใหม่ */
+.fab-wrap, .fab-container { position: static !important; }
+ 
 </style>  <link rel="stylesheet" href="./style.css">
 </head><body class='font-sans'><header class='appbar'><div class='container px-4 py-3 flex items-center gap-3'><div id='brandBox' class='w-10 h-10 rounded-xl bg-brand grid place-items-center text-white font-bold'>WD</div><div><div class='text-base font-semibold leading-tight' id='brandTitle'>APPWD</div><div class='text-[11px] text-ink3'>v5.6.1 • Mobile • Powerful</div></div><div class='ml-auto flex items-center gap-2'><button id='btnInstall' class='btn hide'>ติดตั้งแอป</button><div id='userBadge' class='flex items-center gap-2 hide'><img id='userAvatar' class='w-8 h-8 rounded-full border' src=''><span id='userName' class='text-sm'></span></div><button id='btnLineLogin' class='btn btn-prim'>เข้าสู่ระบบด้วย LINE</button><button id='btnLogout' class='btn hide'>ออกจากระบบ</button></div></div></header><main class='container px-4 pb-28 pt-3'><section id='homeView' class='view slide-in show'>
   <div id='homeLayout' class='space-y-4'>
