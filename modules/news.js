@@ -22,14 +22,18 @@ export async function renderHome(){
     .limit(8);
   const latest = latestResp.data || [];
 
-  // featured pool for cards (featured only)
+  // featured pool for cards
   const featuredResp = await supabase
     .from('posts')
     .select('id,title,category,published_at,cover_url,is_featured')
     .eq('is_featured', true)
     .order('published_at',{ascending:false})
     .limit(12);
-  const pool = (featuredResp.data || []);
+  const featured = featuredResp.data || [];
+
+  const top2 = latest.slice(0,2);
+  const top2Ids = new Set(top2.map(x=>x.id));
+  const pool = [...featured, ...latest.filter(p=>!top2Ids.has(p.id))];
   const picked = [];
   const seen = new Set();
   for(const p of pool){
