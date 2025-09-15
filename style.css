@@ -1,10 +1,10 @@
 
 :root { --tabbar-h: 64px; }
-/* Container constraint like original */
 .container{ margin:0 auto; width:100%; max-width:1120px; }
 main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
+#homeView .card{ margin-left:auto; margin-right:auto; }
 
-/* ===== FAB (center) ===== */
+/* FAB center */
 #fabScan{ position:fixed; left:50%; transform:translateX(-50%);
   bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
   width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px);
@@ -12,18 +12,20 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 @media (max-width:420px){ #fabScan{ bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius:16px; } }
 .fab-wrap,.fab-container{ position: static !important; }
 
-/* Force #homeLinks not to inherit old grid */
-#homeView #homeLinks{ display:block !important; }
-
-/* ===== Featured news slider ===== */
+/* Featured news: mobile slider, desktop grid */
 #homeNewsCards.slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow:auto; scroll-snap-type:x mandatory; gap:0; border-radius:14px }
 #homeNewsCards.slider>*{ scroll-snap-align:center }
 @media (min-width:1024px){
   #homeNewsCards.slider{ grid-auto-flow:row; grid-auto-columns:auto; overflow:visible; scroll-snap-type:none; gap:12px; grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
-/* ===== Links item rows ===== */
-.links-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:12px }
+/* Check-in tabs compact on mobile */
+#homeView [role="tablist"]{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; padding-bottom:.25rem; }
+#homeView [role="tablist"] .btn{ flex:0 0 auto; white-space:nowrap; }
+#homeView [role="tablist"]::-webkit-scrollbar{ display:none; }
+
+/* List style for links (desktop) */
+#homeLinks .links-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:12px; }
 .link-item{ display:flex; gap:.75rem; align-items:center; padding:.6rem .8rem; border:1px solid var(--bd); border-radius:14px; background:var(--card); transition:transform .15s ease, box-shadow .15s ease; }
 .link-item:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(15,23,42,.08); }
 .link-item img{ width:40px; height:40px; border-radius:10px; object-fit:cover; border:1px solid var(--bd); background:#fff; }
@@ -33,21 +35,26 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 .links-more{ margin-top:.5rem; display:flex; justify-content:center; }
 .links-more .btn{ padding:.55rem 1rem; border-radius:12px; }
 
-/* ===== Home mobile tiles slider (fixed overlap) ===== */
-#homeLinks.mobile .tiles-slider{
-  display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; gap:0; scroll-padding-left:0;
-}
-#homeLinks.mobile .tiles-slider::-webkit-scrollbar{ display:none }
-#homeLinks.mobile .tiles-slide{ flex:0 0 100%; scroll-snap-align:start; scroll-snap-stop:always; padding:6px 6px; box-sizing:border-box; }
-#homeLinks.mobile .app-tiles{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; }
-#homeLinks.mobile .tile{ display:grid; justify-items:center; row-gap:8px; padding:12px 8px; border:1px solid var(--bd); border-radius:14px; background:var(--card); contain:layout paint; }
+/* Mobile tiles + slider */
+#homeLinks.mobile .tiles-slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow-x:auto; scroll-snap-type:x mandatory; gap:0; -webkit-overflow-scrolling:touch }
+#homeLinks.mobile .tiles-slider > .tiles-slide{ scroll-snap-align:center; padding:4px 2px; }
+#homeLinks.mobile .app-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:4px 8px; }
+#homeLinks.mobile .tile{ display:grid; justify-items:center; row-gap:8px; padding:12px 8px; border:1px solid var(--bd); border-radius:14px; background:var(--card) }
 #homeLinks.mobile .tile .icon{ width:56px; height:56px; object-fit:cover; border-radius:12px; border:1px solid var(--bd); background:#fff }
 #homeLinks.mobile .tile .label{ font-size:14px; text-align:center; line-height:1.2; }
 #homeLinks.mobile .dots{ display:flex; justify-content:center; gap:8px; padding:6px 0 0; }
-#homeLinks.mobile .dot{ width:8px; height:8px; border-radius:999px; background:#cfd8e3 }
-#homeLinks.mobile .dot.active{ background:#2563EB }
+#homeLinks.mobile .dot{ width:8px; height:8px; border-radius:999px; background:#cfd8e3; }
+#homeLinks.mobile .dot.active{ background:#2563EB; }
 
-/* ===== Links page: category tabs (desktop) ===== */
+/* Grouped headings */
+.apps-head{ display:flex; align-items:center; justify-content:flex-end; margin-bottom:.5rem; }
+.apps-head a.btn-inline{ color:#2563EB; font-size:14px; }
+.apps-section{ margin-top:.6rem; }
+.apps-section .sect-title{ display:inline-block; background:#EAF2FF; color:#2563EB; font-weight:700; padding:.3rem .8rem; border-radius:14px; margin-bottom:.5rem }
+@media (max-width:640px){ .apps-section .sect-title{ margin-left:.25rem } }
+
+
+/* ===== Category Tabs (desktop) ===== */
 .cat-tabs{ position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--bd);
   margin-bottom:.75rem; padding:.5rem; border-radius:14px }
 .cat-tabs .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
@@ -55,7 +62,22 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 .cat-tab.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
 @media (max-width:1024px){ .cat-tabs{ display:none } }
 
-/* ===== Links mobile list ===== */
+/* ===== Mobile tiles slider for #links ===== */
+@media (max-width:640px){
+  #linksView .tiles-slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow-x:auto; scroll-snap-type:x mandatory; gap:0; -webkit-overflow-scrolling:touch }
+  #linksView .tiles-slide{ scroll-snap-align:center; padding:4px 2px }
+  #linksView .app-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:4px 8px }
+  #linksView .tile{ display:grid; justify-items:center; row-gap:8px; padding:12px 8px; border:1px solid var(--bd); border-radius:14px; background:var(--card) }
+  #linksView .tile .icon{ width:56px; height:56px; object-fit:cover; border-radius:12px; border:1px solid var(--bd); background:#fff }
+  #linksView .tile .label{ font-size:14px; text-align:center; line-height:1.2 }
+  #linksView .dots{ display:flex; justify-content:center; gap:8px; padding:6px 0 0 }
+  #linksView .dot{ width:8px; height:8px; border-radius:999px; background:#cfd8e3 }
+  #linksView .dot.active{ background:#2563EB }
+  #linksView .apps-head{ display:flex; justify-content:flex-end; margin-bottom:.4rem }
+}
+
+
+/* ===== Links mobile list style ===== */
 @media (max-width:640px){
   #linksView .links-list{ display:flex; flex-direction:column; gap:.6rem; }
   #linksView .links-list .link-item{ padding:.75rem .9rem; border-radius:16px; }
@@ -64,9 +86,19 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
   #linksView .links-list .link-item .cat{ font-size:12px; }
 }
 
-/* ===== Home desktop: simple 3-col grid ===== */
+
+/* ===== HOME desktop: simple filter chips (non-sticky) ===== */
+#homeView .home-filter{ margin-bottom:.75rem }
+#homeView .home-filter .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
+#homeView .home-filter .chip{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; background:var(--card) }
+#homeView .home-filter .chip.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
+
+
+/* ===== HOME (desktop): simple 3-column grid ===== */
 @media (min-width:1024px){
   #homeView .links-grid.home-3cols{
-    display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px;
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap:12px;
   }
 }

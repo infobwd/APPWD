@@ -24,25 +24,18 @@ export async function renderAppsCard(targetId='homeLinks'){
     </div>`;
 
     
-if (isMobile()){
-      // use a new clean host to avoid inherited grid classes
-      const host = el;
-      const container = document.createElement('div'); container.id = host.id;
-      host.replaceWith(container);
-      container.classList.add('mobile');
+if (isMobile()) {
+      el.classList.add('mobile');
       const pages = chunk(rows,8);
       const slides = pages.map(p=>`<div class="tiles-slide"><div class="app-tiles">${p.map(tile).join('')}</div></div>`).join('');
       const dots = pages.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join('');
-      container.innerHTML = `${moreBtn}<div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
-      const slider=container.querySelector('.tiles-slider'); const dotEls=Array.from(el.querySelectorAll('.dot'));
+      el.innerHTML = `${moreBtn}<div class="tiles-slider">${slides}</div><div class="dots">${dots}</div>`;
+      const slider=el.querySelector('.tiles-slider'); const dotEls=Array.from(el.querySelectorAll('.dot'));
       slider?.addEventListener('scroll',()=>{ const idx=Math.round(slider.scrollLeft/slider.clientWidth); dotEls.forEach((d,i)=>d.classList.toggle('active',i===idx)); },{passive:true});
-    }
-    else {
-      const host = el;
-      const container = document.createElement('div'); container.id = host.id;
-      host.replaceWith(container);
+    } else {
+      el.classList.remove('mobile');
       // Desktop: simple 3-column grid (no filters)
-      container.innerHTML = `<div class="links-grid home-3cols">` + rows.map(itemRow).join('') + `</div>`;
+      el.innerHTML = `<div class="links-grid home-3cols">` + rows.map(itemRow).join('') + `</div>`;
     }
   }catch
 (e){
