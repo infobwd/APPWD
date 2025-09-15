@@ -1,79 +1,72 @@
 
 
-/* =============== Desktop Home Layout =============== */
-#homeLayout { max-width: 1320px; margin: 0 auto; padding: 8px 0; }
-@media (min-width: 1280px){
-  #homeLayout{
-    display: grid;
-    grid-template-columns: 1.6fr 1.2fr 1fr; /* left / mid / right */
-    gap: 24px;
-    align-items: start;
-  }
-  #homeColLeft  { grid-column: 1; }
-  #homeColMid   { grid-column: 2; }
-  #homeColRight { grid-column: 3; }
+/* ===== Floating Scan Button Center ===== */
+:root { --tabbar-h: 64px; }
+#fabScan{
+  position: fixed; left:50%; transform:translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px); height: clamp(56px, 16vw, 72px);
+  border-radius: 18px; z-index: 60; box-shadow: 0 12px 30px rgba(33,97,243,.35);
+  -webkit-tap-highlight-color: transparent;
 }
-
-/* News list 2 columns on wide */
-@media (min-width: 1280px){
-  #homeNewsList.news-list{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
+@media (max-width: 420px){
+  #fabScan{ bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom)); border-radius: 16px; }
 }
+.fab-wrap, .fab-container { position: static !important; }
 
-/* Featured slider: slide on small, grid on large */
-#homeNewsCards.slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow:auto; scroll-snap-type:x mandatory; gap:0; border-radius:14px; }
-#homeNewsCards.slider > *{ scroll-snap-align:center; }
-@media (min-width: 1024px){
-  #homeNewsCards.slider{
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    overflow: visible;
-    scroll-snap-type: none;
-    gap: 12px;
-    grid-template-columns: repeat(3, minmax(0,1fr));
-  }
-  #homeNewsCards.slider > *{ scroll-snap-align: initial; }
-}
-#homeNewsCards .thumb{ aspect-ratio:16/9; object-fit:cover; }
-#homeNewsCards .title{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-
-/* Keep bottom nav visible on desktop */
-@media (min-width:1024px){ .tabbar{ display:block !important; } }
-
-/* Keep FAB centered above tabbar on all sizes */
-@media (min-width:1024px){
-  #fabScan{ left:50% !important; right:auto !important; transform:translateX(-50%) !important;
-            bottom: calc(64px + 16px + env(safe-area-inset-bottom)) !important; width:68px; height:68px; }
-}
-
-/* Make tablist (เช็คอินล่าสุด) scrollable on small screens */
-#homeView [role="tablist"]{
-  display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
-  padding-bottom:.25rem;
-}
-#homeView [role="tablist"] .btn{ flex:0 0 auto; }
-#homeView [role="tablist"]::-webkit-scrollbar{ display:none; }
-@media (min-width:768px){
-  #homeView [role="tablist"]{ overflow:visible; scroll-snap-type:none; }
-}
-
-/* Sticker/Pin editor: prevent overflow on small devices */
-.sheet-body .form-grid{ grid-template-columns: 1fr; }
-.sticker-grid,[data-sticker-grid]{
-  display:grid; grid-template-columns: repeat(auto-fill, minmax(56px,1fr)); gap:.5rem;
-  max-height: 45vh; overflow:auto; -webkit-overflow-scrolling:touch;
-}
-.editor-actions,.tag-list,.chip-set{ display:flex; gap:.5rem; flex-wrap:wrap; overflow-x:auto; }
-.editor-actions::-webkit-scrollbar,.tag-list::-webkit-scrollbar,.chip-set::-webkit-scrollbar{ display:none; }
-
-/* Mobile spacing tweaks */
+/* ===== Check-in Tabs: Compact ===== */
+.checkin-compact{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.25rem; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+.checkin-compact .tab{ flex:0 0 auto; padding:.375rem .75rem; font-size:.9rem; line-height:1.15; border-radius:12px; scroll-snap-align:start; box-shadow:none; }
+.checkin-compact .tab.is-active{ font-weight:600; }
 @media (max-width:420px){
-  .card{ border-radius:16px; }
-  #homeLinks{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .checkin-compact .tab{ padding:.35rem .6rem; font-size:.85rem; border-radius:10px; }
 }
 
-/* Ensure featured slider snaps nicely on phones */
-#homeNewsCards.slider{ scroll-behavior:smooth; }
+/* utility */
+.hide{ display:none !important; }
+
+
+/* ===== Floating Scan Button (Center + Safe Area) ===== */
+:root { --tabbar-h: 64px; } /* ปรับตามความสูงแถบล่าง */
+
+#fabScan{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  width: clamp(56px, 16vw, 72px);
+  height: clamp(56px, 16vw, 72px);
+  border-radius: 18px;
+  z-index: 60;
+  box-shadow: 0 12px 30px rgba(33, 97, 243, .35);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 420px){
+  #fabScan{
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+  }
+}
+/* ป้องกันการถูก parent จัดตำแหน่งใหม่ */
+.fab-wrap, .fab-container { position: static !important; }
+
+/* ===== 820x1180 and small screens spacing / tabs ===== */
+main{ padding-bottom: calc(96px + var(--tabbar-h)); } /* กันโดน tabbar บัง */
+#homeView [role="tablist"]{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; padding-bottom:.25rem; }
+#homeView [role="tablist"] .btn{ flex:0 0 auto; white-space:nowrap; }
+#homeView [role="tablist"]::-webkit-scrollbar{ display:none; }
+
+/* Featured slider smooth */
+#homeNewsCards.slider{ display:grid; grid-auto-flow:column; grid-auto-columns:100%; overflow:auto; scroll-snap-type:x mandatory; gap:0; }
+#homeNewsCards.slider>*{ scroll-snap-align:center; }
+@media (min-width:1024px){
+  #homeNewsCards.slider{ grid-auto-flow:row; grid-auto-columns:auto; overflow:visible; scroll-snap-type:none; gap:12px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
+/* Home links grid responsive */
+#homeLinks{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+@media (min-width:640px){ #homeLinks{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width:1024px){ #homeLinks{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+/* Bottom tabbar ensure on top */
+.tabbar{ z-index: 55; }
