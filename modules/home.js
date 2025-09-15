@@ -92,7 +92,7 @@ function escHtml(s=''){
   return String(s).replace(/[&<>"']/g, ch => map[ch]);
 }
 function escAttr(s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
-function (s=''){ return escHtml(s).replace(/"/g,'&quot;'); }
+
 
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('homeLinks')) renderAppsCard('homeLinks');
