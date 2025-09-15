@@ -55,12 +55,12 @@ main.container{ padding-bottom: calc(96px + var(--tabbar-h)); }
 
 
 /* ===== Category Tabs (desktop) ===== */
-#linksView .cat-tabs{ position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--bd);
+.cat-tabs{ position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--bd);
   margin-bottom:.75rem; padding:.5rem; border-radius:14px }
-#linksView .cat-tabs .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
-#linksView .cat-tab{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; }
-#linksView .cat-tab.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
-@media (max-width:1024px){ #linksView .cat-tabs{ display:none } }
+.cat-tabs .row{ display:flex; gap:.5rem; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem }
+.cat-tab{ flex:0 0 auto; padding:.55rem 1rem; border:1px solid var(--bd); border-radius:999px; font-weight:600; }
+.cat-tab.active{ background:#2563EB; color:#fff; border-color:#2563EB; box-shadow:0 6px 16px rgba(37,99,235,.2) }
+@media (max-width:1024px){ .cat-tabs{ display:none } }
 
 /* ===== Mobile tiles slider for #links ===== */
 @media (max-width:640px){

@@ -46,7 +46,7 @@ export async function renderAppsCard(targetId='homeLinks'){
         cats.map((c,i)=>`<button class="cat-tab ${i===0?'active':''}" data-cat="${escAttr(c)}">${escHtml(c)}</button>`).join('')
         + `</div></div>`;
       const container = document.createElement('div');
-      container.innerHTML = `${moreBtn}` + tabs + `<div id="homeLinksContainer"></div>`;
+      container.innerHTML = tabs + `<div id="homeLinksContainer"></div>`;
       el.innerHTML = container.innerHTML;
       const listEl = el.querySelector('#homeLinksContainer');
       function renderList(cat){
