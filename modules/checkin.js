@@ -19,7 +19,7 @@ function dist(a,b,c,d){ const R=6371000; const toR=x=>x*Math.PI/180; const dLat=
 async function openScanner(){ const panel=document.getElementById('scanPanel'); const holder=document.getElementById('qrReader'); if(!panel||!holder) return; panel.classList.remove('hide'); holder.innerHTML=''; try{ scanner=new Html5Qrcode('qrReader'); await scanner.start({facingMode:'environment'},{fps:10,qrbox:240}, t=>{ lastText=t; const res=document.getElementById('scanResult'); if(res) res.textContent='QR: '+t; }); }catch(e){ holder.innerHTML='<div class="p-4 text-sm text-red-600">ไม่สามารถเปิดกล้อง: '+(e?.message||e)+'</div>'; } }
 async function closeScanner(){ const panel=document.getElementById('scanPanel'); if(panel) panel.classList.add('hide'); if(scanner){ try{ await scanner.stop(); }catch{} try{ await scanner.clear(); }catch{} scanner=null; } }
 async function doCheckin(method){ const profile=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); if(!profile){ toast('ต้องเข้าสู่ระบบด้วย LINE ก่อน'); return; } if(!lastGeo){ toast('ยังไม่ได้ตำแหน่ง (กดอ่านตำแหน่งอีกครั้ง)'); return; } const distance=dist(SCHOOL_LAT,SCHOOL_LNG,lastGeo.lat,lastGeo.lng); const within=distance<=SCHOOL_RADIUS_METERS;
-  // Prevent duplicate 'work' check-in in the same day
+  // Prevent duplicate 'work' check-in today (within school radius)
   if(within){
     const start=new Date(); start.setHours(0,0,0,0);
     const end=new Date(); end.setHours(23,59,59,999);
@@ -27,11 +27,11 @@ async function doCheckin(method){ const profile=JSON.parse(localStorage.getItem(
     if(profile && profile.userId){
       const { count, error } = await supabase
         .from('checkins')
-        .select('id',{ count:'exact', head:true })
+        .select('id', { count: 'exact', head: true })
         .gte('created_at', start.toISOString())
         .lt('created_at', new Date(end.getTime()+1).toISOString())
         .eq('line_user_id', profile.userId)
-        .eq('purpose','work');
+        .eq('purpose', 'work');
       if(!error && (count||0) > 0){
         toast('วันนี้เช็คอิน “มาทำงาน” ไปแล้ว');
         return;
@@ -42,7 +42,7 @@ async function doCheckin(method){ const profile=JSON.parse(localStorage.getItem(
 async function saveCheckin({method,within,purpose,note,distance}){ const profile=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const status=within?statusFromTime():'offsite'; const payload={ line_user_id:profile?.userId||null, line_display_name:profile?.displayName||null, line_picture_url:profile?.pictureUrl||null, method, purpose, status, note, lat:Number(lastGeo.lat)||null, lng:Number(lastGeo.lng)||null, accuracy:Number(lastGeo.accuracy)||0, distance_m:Math.round(distance||0), within_radius:!!within }; Object.keys(payload).forEach(k=>{ if(payload[k]===undefined || (typeof payload[k]==='number' && !isFinite(payload[k])) ) delete payload[k]; }); const ins=await supabase.from('checkins').insert(payload).select('id').single(); if(ins.error){ console.warn(ins.error); toast('เช็คอินไม่สำเร็จ'); return; } toast(within?'เช็คอินสำเร็จ ✅':'บันทึกภารกิจนอกสถานที่ ✅'); await loadToday(); await renderSummary(); }
 async function loadToday(){ const profile=JSON.parse(localStorage.getItem('LINE_PROFILE')||'null'); const box=document.getElementById('todayList'); if(!box)return; box.innerHTML=''; if(!profile){ box.innerHTML='<div class="text-ink3">ยังไม่เข้าสู่ระบบ</div>'; return; } const start=new Date(); start.setHours(0,0,0,0); const resp=await supabase.from('checkins').select('*').eq('line_user_id',profile.userId).gte('created_at',start.toISOString()).order('created_at',{ascending:false}).limit(50); const data=resp.data||[];
   const admin = await isAdmin();
- const renderer=(r)=>{ const canEdit = (admin || !r.within_radius); const editBtn=canEdit?`<button class='btn text-xs' onclick='editOffsite(${r.id}, "${r.purpose||''}", ${JSON.stringify(r.note||'').replace(/"/g,'&quot;')})'>แก้ไข</button>`:''; return `<div class='p-2 border rounded-lg flex items-center gap-2 text-sm bg-[var(--card)]' style='border-color:var(--bd)'><img src='${r.line_picture_url||''}' class='w-8 h-8 rounded-full border' onerror="this.style.display='none'"><div class='flex-1'>${new Date(r.created_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} — ${purposeLabel(r.purpose)}${r.note?' • '+r.note:''} ${r.status ? ' • ' + (r.status==='on_time'?'ตรงเวลา': (r.status==='late'?'สาย':'นอกสถานที่')) : ''}</div><div class='${r.within_radius?'text-green-600':'text-red-600'}'>${fmtDist(r.distance_m||0)}</div>${editBtn}</div>`; 
+ const renderer = r=>{ const canEdit=(!r.within_radius); const editBtn=canEdit?`<button class='btn text-xs' onclick='editOffsite(${r.id}, "${r.purpose||''}", ${JSON.stringify(r.note||'').replace(/"/g,'&quot;')})'>แก้ไข</button>`:''; return `<div class='p-2 border rounded-lg flex items-center gap-2 text-sm bg-[var(--card)]' style='border-color:var(--bd)'><img src='${r.line_picture_url||''}' class='w-8 h-8 rounded-full border' onerror="this.style.display='none'"><div class='flex-1'>${new Date(r.created_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} — ${purposeLabel(r.purpose)}${r.note?' • '+r.note:''} ${r.status ? ' • ' + (r.status==='on_time'?'ตรงเวลา': (r.status==='late'?'สาย':'นอกสถานที่')) : ''}</div><div class='${r.within_radius?'text-green-600':'text-red-600'}'>${fmtDist(r.distance_m||0)}</div>${editBtn}</div>`; 
   const onTime = data.filter(r=>r.status==='on_time');
   const late   = data.filter(r=>r.status==='late');
   const other  = data.filter(r=>r.status!=='on_time' && r.status!=='late');
@@ -73,7 +73,5 @@ window.deleteCheckin = async function(id){
   const del = await supabase.from('checkins').delete().eq('id', id);
   if(del.error){ toast('ลบไม่สำเร็จ'); return; }
   toast('ลบแล้ว');
-  try{
-    await loadToday();
-  }catch(_){ location.hash = '#checkin'; }
+  await import('./checkin.js').then(m => m.render());
 };
