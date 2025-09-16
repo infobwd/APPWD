@@ -1,8 +1,5 @@
 
 // ==== News Filters State ====
-let page = typeof page !== 'undefined' ? page : 1;
-let total = typeof total !== 'undefined' ? total : 0;
-let sliderTimer = typeof sliderTimer !== 'undefined' ? sliderTimer : null;
 
 let currentCat = '__ALL__';
 let featuredOnly = false;
