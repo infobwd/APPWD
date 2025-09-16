@@ -143,3 +143,72 @@ window.deleteCheckin = function(id){
     await loadToday();
   };
 };
+
+
+// === PATCH: Admin-only edit/delete, geoState distance, FAB positions (2025-09-16) ===
+(function(){
+  // Inject minimal FAB CSS for two buttons (no other UI changes)
+  try {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      #btnCheckinGPS{ position:fixed; right:1rem; bottom:1rem; z-index:50; }
+      #btnReloadGPS{ position:fixed; left:1rem; bottom:1rem; z-index:50; }
+    `;
+    document.head.appendChild(style);
+  } catch(_){}
+
+  // Gate edit & delete to admin only (runtime guard)
+  const _origDel = window.deleteCheckin;
+  window.deleteCheckin = async function(id){
+    try{
+      const admin = await isAdmin();
+      if(!admin){ toast('เฉพาะผู้ดูแลระบบเท่านั้น'); return; }
+    }catch(_){ /* ignore */ }
+    return (typeof _origDel==='function') ? _origDel(id) : null;
+  };
+
+  const _origEdit = window.editOffsite;
+  window.editOffsite = async function(id,purpose,note){
+    try{
+      const admin = await isAdmin();
+      if(!admin){ toast('เฉพาะผู้ดูแลระบบเท่านั้น'); return; }
+    }catch(_){ /* ignore */ }
+    return (typeof _origEdit==='function') ? _origEdit(id,purpose,note) : null;
+  };
+
+  // Update #geoState with distance to school check-in point
+  function updateGeoState(){
+    const box = document.getElementById('geoState');
+    if(!box) return;
+    box.textContent = 'กำลังอ่านตำแหน่ง…';
+    if(!navigator.geolocation){ box.textContent='เบราว์เซอร์ไม่รองรับการอ่านตำแหน่ง'; return; }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      const R = 6371000, toR = x=>x*Math.PI/180;
+      const dLat = toR((typeof SCHOOL_LAT==='number'?SCHOOL_LAT:parseFloat(SCHOOL_LAT)) - lat);
+      const dLon = toR((typeof SCHOOL_LNG==='number'?SCHOOL_LNG:parseFloat(SCHOOL_LNG)) - lng);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toR(lat))*Math.cos(toR((typeof SCHOOL_LAT==='number'?SCHOOL_LAT:parseFloat(SCHOOL_LAT))))*Math.sin(dLon/2)**2;
+      const distM = Math.round(2*R*Math.asin(Math.sqrt(a)));
+      const radius = (typeof SCHOOL_RADIUS_METERS==='number'?SCHOOL_RADIUS_METERS:parseFloat(SCHOOL_RADIUS_METERS)) || 150;
+      const inArea = distM <= radius;
+      const fmt = distM>=1000 ? (distM/1000).toFixed(2)+' กม.' : distM+' ม.';
+      box.innerHTML = 'ห่างจุดเช็คอิน ~ <b>'+fmt+'</b> ' + (inArea?'<span class="text-green-600">(ภายในพื้นที่)</span>':'<span class="text-red-600">(นอกพื้นที่)</span>');
+    }, function(err){
+      box.textContent = 'อ่านตำแหน่งไม่สำเร็จ';
+    }, { enableHighAccuracy:true, timeout: 10000, maximumAge: 0 });
+  }
+
+  // Bind updater to reload button if present, and run once after render
+  setTimeout(updateGeoState, 800);
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if(!t) return;
+    if (t.id === 'btnReloadGPS') {
+      e.preventDefault();
+      updateGeoState();
+    }
+  });
+
+})();
+// === END PATCH ===
+
