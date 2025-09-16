@@ -78,35 +78,43 @@ export async function renderHome(){
   listEl.innerHTML = skel(2);
   cardsEl.innerHTML = skel(3,'180px');
 
-  // latest for top2
+  // === Home rules ===
+  // - Latest: 2 items (is_featured = false)
+  // - Featured today: 3 items (is_featured = true)
+  // - No duplicates; if featured < 3, fill with latest (non-featured) not in top2
+
+  // Latest (non-featured) for top2
   const latestResp = await supabase
     .from('posts')
     .select('id,title,category,published_at,cover_url,is_featured')
     .lte('published_at', new Date().toISOString())
-    .order('published_at',{ascending:false})
+    .eq('is_featured', false)
+    .order('published_at', { ascending:false })
     .limit(8);
   const latest = latestResp.data || [];
+  const top2 = latest.slice(0,2);
 
-  // featured pool for cards
-  const featuredResp = await supabase
+  // Featured 3
+  const featResp = await supabase
     .from('posts')
     .select('id,title,category,published_at,cover_url,is_featured')
+    .lte('published_at', new Date().toISOString())
     .eq('is_featured', true)
-    .order('published_at',{ascending:false})
-    .limit(12);
-  const featured = featuredResp.data || [];
+    .order('published_at', { ascending:false })
+    .limit(5);
+  let featured = (featResp.data || []).slice(0,3);
 
-  const top2 = latest.slice(0,2);
-  const top2Ids = new Set(top2.map(x=>x.id));
-  const pool = [...featured, ...latest.filter(p=>!top2Ids.has(p.id))];
-  const picked = [];
-  const seen = new Set();
-  for(const p of pool){
-    if(picked.length>=3) break;
-    if(top2Ids.has(p.id) || seen.has(p.id)) continue;
-    picked.push(p); seen.add(p.id);
+  // Fallback fill if featured < 3
+  if(featured.length < 3){
+    const top2Ids = new Set(top2.map(x=>x.id));
+    for(const p of latest){
+      if(featured.length>=3) break;
+      if(top2Ids.has(p.id) || p.is_featured) continue;
+      if(!featured.find(f=>f.id===p.id)) featured.push(p);
+    }
   }
 
+  // Render latest (top2)
   listEl.innerHTML = top2.map(p => {
     const date = p.published_at ? new Date(p.published_at).toLocaleDateString('th-TH') : '';
     const thumb = p.cover_url
@@ -119,12 +127,13 @@ export async function renderHome(){
         <div class='text-[12px] text-ink3'>${esc(p.category||'ทั่วไป')} • ${date}</div>
       </div>
     </div>`;
-  }).join('') || '<div class="text-ink3">ยังไม่มีข่าว</div>';
+  }).join('');
 
-  const ids = picked.map(p=>p.id);
+  // Render featured 3 cards
+  const ids = featured.map(p=>p.id);
   const statMap = await fetchStats(ids);
 
-  cardsEl.innerHTML = picked.map(p => {
+  cardsEl.innerHTML = featured.map(p => {
     const s = statMap.get(p.id) || {views:0, likes:0};
     const date = p.published_at ? new Date(p.published_at).toLocaleDateString('th-TH') : '';
     const hero = p.cover_url
@@ -135,34 +144,15 @@ export async function renderHome(){
       <div class='badge'>เด่น</div>
       <div class='p-3'>
         <div class='text-[12px] text-ink3 mb-1'>${esc(p.category||'ทั่วไป')} • ${date}</div>
-        <a class='font-semibold leading-snug line-clamp-2 block' href='#post?id=${p.id}' style='color:var(--ink)'>${esc(p.title)}</a>
-        <div class='flex items-center gap-3 mt-2 text-[12px] text-ink2'>
-          <span>👁️ ${s.views}</span>
-          <span>❤️ ${s.likes}</span>
+        <a href='#post?id=${p.id}' class='block font-semibold leading-snug line-clamp-2 mb-1' style='color:var(--ink)'>${esc(p.title)}</a>
+        <div class='flex items-center gap-3 text-[12px] text-ink2'>
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span>
           <button onclick='sharePost(${p.id})' class='underline'>แชร์</button>
         </div>
       </div>
     </div>`;
   }).join('');
 
-  // small screens: auto slide
-  const isSmall = (typeof matchMedia!=='undefined') && matchMedia('(max-width: 640px)').matches;
-  if(isSmall){
-    cardsEl.classList.add('slider-x');
-    const st = JSON.parse(localStorage.getItem('APPWD_SETTINGS')||'{}'); const ms = Number(st.SLIDER_AUTO_MS || 4000);
-    clearInterval(sliderTimer);
-    sliderTimer = setInterval(()=>{
-      try{
-        const w = cardsEl.clientWidth;
-        const next = Math.round((cardsEl.scrollLeft + w)/w);
-        const max = cardsEl.children.length - 1;
-        const to = (next>max?0:next)*w;
-        cardsEl.scrollTo({left:to, behavior:'smooth'});
-      }catch(_){}
-    }, ms);
-  }else{
-    if(sliderTimer) clearInterval(sliderTimer);
-  }
 }
 
 // -------- LIST --------
@@ -188,40 +178,55 @@ export async function renderList(){
 }
 
 async function loadPage(p){
-  page=p;
-  const box=document.getElementById('newsList');
+  page = p;
+  const box = document.getElementById('newsList');
   if(!box) return;
   box.innerHTML = skel(PAGE_SIZE,'72px');
 
-  const from=(page-1)*PAGE_SIZE, to=from+PAGE_SIZE-1;
-  const resp = await supabase
-    .from('posts')
-    .select('id,title,category,published_at,cover_url,created_by', {count:'exact'})
-    .order('published_at',{ascending:false})
-    .range(from,to);
+  const from = (page-1)*PAGE_SIZE, to = from + PAGE_SIZE - 1;
 
-  const data = resp.data||[];
-  total = resp.count||0;
+  let q = supabase
+    .from('posts')
+    .select('id,title,category,published_at,cover_url,created_by,is_featured', { count:'exact' })
+    .lte('published_at', new Date().toISOString());
+
+  if(currentCat !== '__ALL__' && currentCat !== 'ทั้งหมด'){
+    q = q.eq('category', currentCat);
+  }
+  if(featuredOnly){
+    q = q.eq('is_featured', true);
+  }
+
+  q = q.order('is_featured', { ascending:false })
+       .order('published_at', { ascending:false })
+       .range(from, to);
+
+  const resp = await q;
+  const data = resp.data || [];
+  total = resp.count || 0;
+
   const ids = data.map(x=>x.id);
   const statMap = await fetchStats(ids);
-  const can = await canManageContent();
 
   box.innerHTML = data.map(p => {
-    const s = statMap.get(p.id)||{views:0,likes:0};
+    const s = statMap.get(p.id) || {views:0, likes:0};
     const date = p.published_at ? new Date(p.published_at).toLocaleDateString('th-TH') : '';
-    const tools = can
-      ? `<div class='flex gap-2 mt-1'>
-          <button class='btn text-xs' onclick='editPost(${p.id})'>แก้ไข</button>
-          <button class='btn text-xs' onclick='deletePost(${p.id})'>ลบ</button>
-        </div>`
-      : '';
     const thumb = p.cover_url
       ? `<img class='w-16 h-16 object-cover rounded-lg border' src='${p.cover_url}'>`
       : `<div class='w-16 h-16 rounded-lg bg-brandSoft grid place-items-center text-brand'>📰</div>`;
+    const tools = (window.canManage && canManageContent && (typeof canManageContent==='function'))
+      ? `<div class='mt-2 flex gap-2'>
+           <button class='btn sm' onclick='editPost(${p.id})'>แก้ไข</button>
+           <button class='btn sm danger' onclick='deletePost(${p.id})'>ลบ</button>
+         </div>`
+      : '';
     return `<article class='p-3 border rounded-xl bg-[var(--card)] flex items-center gap-3' style='border-color:var(--bd)'>
       <a class='flex-shrink-0' href='#post?id=${p.id}'>${thumb}</a>
       <div class='flex-1'>
-        <a href='#post?id=${p.id}' class='font-semibold leading-snug line-clamp-2' style='color:var(--ink)'>${esc(p.title)}</a>
+        <div class='flex items-center gap-2'>
+          ${p.is_featured ? "<span class='px-2 py-[2px] text-[11px] rounded-full bg-brandSoft text-brand'>เด่น</span>" : ""}
+          <a href='#post?id=${p.id}' class='font-semibold leading-snug line-clamp-2' style='color:var(--ink)'>${esc(p.title)}</a>
+        </div>
         <div class='text-[12px] text-ink3'>${esc(p.category||'ทั่วไป')} • ${date}</div>
         <div class='flex items-center gap-3 mt-1 text-[12px] text-ink2'>
           <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span>
@@ -232,11 +237,10 @@ async function loadPage(p){
     </article>`;
   }).join('') || '<div class="text-ink3">ยังไม่มีข่าว</div>';
 
-  const info=document.getElementById('pageInfo');
-  if(info){
-    const max=Math.ceil(total/PAGE_SIZE)||1;
-    info.textContent = `หน้า ${page} / ${max} • ทั้งหมด ${total} ข่าว`;
-  }
+  const max = Math.ceil((total||0)/PAGE_SIZE) || 1;
+  const info = document.getElementById('pageInfo');
+  if(info) info.textContent = `${page}/${max}`;
+
 }
 
 // -------- DETAIL --------
