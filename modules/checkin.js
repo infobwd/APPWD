@@ -586,7 +586,7 @@ async function saveCheckin({ method, within, purpose, note, distance, profile })
       time: checkinTime, purpose: purposeLabel(purpose), distance: fmtDist(distance), within, status
     });
     showCheckinStatus(within ? `เช็คอินสำเร็จ เวลา ${checkinTime}` : `บันทึกภารกิจนอกสถานที่สำเร็จ เวลา ${checkinTime}`, 'success');
-    await loadToday(); await ();
+    await loadToday(); await renderSummary();
     document.dispatchEvent(new CustomEvent('appwd:checkinSaved', { detail: { checkinId: result.data.id, payload } }));
   } catch (error) {
     console.error('Checkin save error:', error);
@@ -632,7 +632,7 @@ export async function render() {
     const geoState = document.getElementById('geoState');
     if (geoState) { getGeoLocation(geoState, { showLoading: true }).catch(() => {}); }
     await loadToday();
-    await ();
+    await renderSummary();
   } catch (error) {
     console.error('Render failed:', error);
     showCheckinStatus('ไม่สามารถโหลดหน้าเช็คอินได้', 'error');
@@ -911,42 +911,31 @@ async function loadToday() {
   }
 }
 
-// === Enhanced Summary with sticky headers + full-bleed + auto-fit grid (FULL) ===
+// === Enhanced Summary with responsive design (positive tone + 3 cols on large) ===
 async function renderSummary() {
-  const box = document.getElementById('checkinSummary');
-  if (!box) return;
-
-  // สเกลตันสูงขึ้นให้พอดีการ์ดใหญ่
-  box.innerHTML = skel(6, '120px');
+  const box = document.getElementById('checkinSummary'); if (!box) return;
+  box.innerHTML = skel(6, '80px');
 
   const profile = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const now = new Date();
-
-  const weekStart  = new Date(now);
-  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  weekStart.setHours(0,0,0,0);
-
+  const weekStart  = new Date(now); weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); weekStart.setHours(0,0,0,0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const yearStart  = new Date(now.getFullYear(), 0, 1);
 
   try {
-    // helper: ดึงสถิติตามช่วงและ scope
     async function getCheckinStats(since, scope = 'org') {
       let q = supabase.from('checkins')
         .select('purpose,status,line_user_id,created_at')
         .gte('created_at', since.toISOString())
         .lte('created_at', now.toISOString());
-
-      if (scope === 'me' && profile?.userId) {
-        q = q.eq('line_user_id', profile.userId);
-      }
+      if (scope === 'me' && profile?.userId) q = q.eq('line_user_id', profile.userId);
 
       const { data, error } = await q;
       const s = { work:0, meeting:0, training:0, official:0, ontime:0, late:0, total:0 };
       if (!error && data) {
         data.forEach(r => {
           s.total++;
-          if (r.purpose && Object.prototype.hasOwnProperty.call(s, r.purpose)) s[r.purpose]++;
+          if (r.purpose && s.hasOwnProperty(r.purpose)) s[r.purpose]++;
           if (r.purpose === 'work') {
             if (r.status === 'on_time') s.ontime++;
             else if (r.status === 'late') s.late++;
@@ -965,36 +954,32 @@ async function renderSummary() {
       getCheckinStats(yearStart, 'org'),
     ]);
 
-    // การ์ดสรุป (สูงเท่ากันด้วย flex + mt-auto)
     function createSummaryCard(title, stats, type='personal') {
       const cardColor  = type==='personal' ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
       const titleColor = type==='personal' ? 'text-blue-800' : 'text-green-800';
       return `
-        <div class="summary-card card p-4 ${cardColor} hover:shadow-lg transition-all duration-200 h-full flex flex-col">
-          <div class="text-sm font-semibold mb-3 ${titleColor}">${title}</div>
-
-          <div class="summary-stats grid grid-cols-2 gap-3 text-sm">
-            <div class="summary-stat-row"><span class="text-gray-600">มาทำงาน</span><span class="font-semibold text-green-700">${stats.work||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">ประชุม</span><span class="font-semibold text-blue-700">${stats.meeting||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">อบรม</span><span class="font-semibold text-purple-700">${stats.training||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">ไปราชการ</span><span class="font-semibold text-orange-700">${stats.official||0}</span></div>
+        <div class='card p-4 ${cardColor} hover:shadow-lg transition-all duration-200'>
+          <div class='text-sm font-semibold mb-3 ${titleColor}'>${title}</div>
+          <div class='grid grid-cols-2 gap-3 text-sm'>
+            <div class='flex justify-between'><span class='text-gray-600'>มาทำงาน</span><span class='font-semibold text-green-700'>${stats.work||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ประชุม</span><span class='font-semibold text-blue-700'>${stats.meeting||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>อบรม</span><span class='font-semibold text-purple-700'>${stats.training||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ไปราชการ</span><span class='font-semibold text-orange-700'>${stats.official||0}</span></div>
           </div>
-
-          <div class="mt-auto pt-3 border-t border-gray-200">
-            <div class="flex justify-between text-xs text-gray-500">
-              <span>รวมทั้งหมด</span><span class="font-semibold">${stats.total||0} ครั้ง</span>
-            </div>
+          <div class='mt-3 pt-3 border-t border-gray-200'>
+            <div class='flex justify-between text-xs text-gray-500'><span>รวมทั้งหมด</span><span class='font-semibold'>${stats.total||0} ครั้ง</span></div>
           </div>
         </div>
       `;
     }
 
-    // กล่องเสริมแรงเชิงบวก (เดือนนี้)
+    // Positive reinforcement block
     const totalWorkDays = (meMonth.ontime||0) + (meMonth.late||0);
     let encouragementSection = '';
     if (totalWorkDays >= 0) {
       const pct = totalWorkDays ? Math.round((meMonth.ontime||0) * 100 / totalWorkDays) : 0;
 
+      // โทนเชิงบวกเสริมแรงทุกกรณี
       let message = '';
       let bgColor = 'bg-blue-50', textColor = 'text-blue-800';
       if (totalWorkDays === 0) {
@@ -1013,47 +998,41 @@ async function renderSummary() {
       }
 
       encouragementSection = `
-        <div class="card p-4 mt-4 ${bgColor} border-l-4 border-current">
-          <div class="font-semibold mb-2 ${textColor}">สถิติการมาทำงานเดือนนี้</div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-            <div class="text-center"><div class="text-2xl font-bold text-green-600">${meMonth.ontime||0}</div><div class="text-gray-600">ตรงเวลา</div></div>
-            <div class="text-center"><div class="text-2xl font-bold text-yellow-600">${meMonth.late||0}</div><div class="text-gray-600">มาสาย</div></div>
-            <div class="text-center"><div class="text-2xl font-bold text-blue-600">${totalWorkDays}</div><div class="text-gray-600">รวม</div></div>
-            <div class="text-center"><div class="text-2xl font-bold ${pct>=75?'text-green-600':'text-yellow-600'}">${pct}%</div><div class="text-gray-600">ตรงเวลา</div></div>
+        <div class='card p-4 mt-4 ${bgColor} border-l-4 border-current'>
+          <div class='font-semibold mb-2 ${textColor}'>สถิติการมาทำงานเดือนนี้</div>
+          <div class='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3'>
+            <div class='text-center'><div class='text-2xl font-bold text-green-600'>${meMonth.ontime||0}</div><div class='text-gray-600'>ตรงเวลา</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-yellow-600'>${meMonth.late||0}</div><div class='text-gray-600'>มาสาย</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-blue-600'>${totalWorkDays}</div><div class='text-gray-600'>รวม</div></div>
+            <div class='text-center'><div class='text-2xl font-bold ${pct>=75?'text-green-600':'text-yellow-600'}'>${pct}%</div><div class='text-gray-600'>ตรงเวลา</div></div>
           </div>
-          <div class="text-sm ${textColor}">${message}</div>
+          <div class='text-sm ${textColor}'>${message}</div>
         </div>
       `;
     }
 
-    // Layout: FULL width จริง + sticky headers + auto-fit grid
+    // แสดงผล: จอใหญ่ (lg+) การ์ดภายในแต่ละกลุ่มเป็น 3 คอลัมน์ และ “สถิติของฉัน/องค์กร” แยกกันคนละแถว
     box.innerHTML = `
-      <div class="summary-wrap summary-bleed w-full">
-        <div class="space-y-8 w-full">
-          <section>
-            <h3 class="summary-sticky text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3 bg-white/70">
-              📊 สถิติของฉัน
-            </h3>
-            <div class="summary-grid">
-              ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
-              ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
-              ${createSummaryCard('ปีนี้',      meYear,  'personal')}
-            </div>
-          </section>
+      <div class='space-y-8'>
+        <section>
+          <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3'>📊 สถิติของฉัน</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
+            ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
+            ${createSummaryCard('ปีนี้',      meYear,  'personal')}
+          </div>
+        </section>
 
-          <section>
-            <h3 class="summary-sticky text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3 bg-white/70">
-              🏢 สถิติองค์กร
-            </h3>
-            <div class="summary-grid">
-              ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
-              ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
-              ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
-            </div>
-          </section>
+        <section>
+          <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3'>🏢 สถิติองค์กร</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
+            ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
+            ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
+          </div>
+        </section>
 
-          ${encouragementSection}
-        </div>
+        ${encouragementSection}
       </div>
     `;
   } catch (error) {
@@ -1068,8 +1047,6 @@ async function renderSummary() {
     `;
   }
 }
-
-
 
 
 // === Global functions for edit/delete operations ===
@@ -1283,8 +1260,6 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     console.warn('Fixed styles injection failed:', e);
   }
 })();
-
-
 
 
 // === เพิ่มการจัดการ touch events สำหรับ mobile ===
