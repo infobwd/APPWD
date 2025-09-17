@@ -71,7 +71,7 @@ export async function render(){
   // Determine scope from hash
   try{ const p = parseHashParams(); checkinScope = (p.get('all')==='today') ? 'all' : 'mine'; }catch(_){}
   ensureLoginForActions();
-  setupCheckinFilterBar(); const btnGps=document.getElementById('btnGpsOnly'), btnScan=document.getElementById('btnOpenScanner'), btnCheck=document.getElementById('btnCheckin'), btnRefresh=document.getElementById('btnRefreshGeo'), btnClose=document.getElementById('btnCloseScanner'); const geoState=document.getElementById('geoState'); initMap(); getGeo(geoState); if(btnScan) btnScan.onclick=openScanner; if(btnClose) btnClose.onclick=closeScanner; if(btnRefresh) btnRefresh.onclick=()=>getGeo(geoState); if(btnGps) btnGps.onclick=()=>doCheckin('gps'); if(btnCheck) btnCheck.onclick = () => openScanner(); await loadToday(); await renderSummary(); }
+  setupCheckinFilterBar(); const btnGps=document.getElementById('btnGpsOnly'), btnScan=document.getElementById('btnOpenScanner'), btnCheck=document.getElementById('btnCheckin'), btnRefresh=document.getElementById('btnRefreshGeo'), btnClose=document.getElementById('btnCloseScanner'); const geoState=document.getElementById('geoState'); initMap(); getGeo(geoState); if(btnScan) btnScan.onclick=openScanner; if(btnClose) btnClose.onclick=closeScanner; if(btnRefresh) btnRefresh.onclick=()=>getGeo(geoState); if(btnGps) btnGps.onclick=()=>doCheckin('gps'); if(btnCheck) btnCheck.onclick = () => doCheckin('gps'); await loadToday(); await renderSummary(); }
 export async function renderHomeRecent(kind){ const box=document.getElementById('homeCheckins'); if(!box)return; box.innerHTML=skel(5,'52px'); const start=new Date(); start.setHours(0,0,0,0);
 const end=new Date(); end.setHours(23,59,59,999);
 const q=supabase.from('checkins').select('id,line_display_name,line_picture_url,created_at,distance_m,within_radius,purpose,status').gte('created_at', start.toISOString()).lt('created_at', new Date(end.getTime()+1).toISOString()).order('created_at',{ascending:false}).limit(5); const resp=(kind && kind!=='work')?await q.eq('purpose',kind):await q.eq('purpose','work'); if(resp.error){ box.innerHTML='<div class="text-ink3">โหลดเช็คอินไม่สำเร็จ</div>'; return; } const data=resp.data||[]; document.querySelectorAll('[data-ci-tab]').forEach(b=>b.classList.toggle('btn-prim', b.getAttribute('data-ci-tab')===(kind||'work'))); box.innerHTML=data.map(r=>`<div class='p-2 border rounded-lg flex items-center gap-2 bg-[var(--card)]' style='border-color:var(--bd)'><img src='${r.line_picture_url||''}' class='w-8 h-8 rounded-full border' onerror="this.style.display='none'"><div class='flex-1 min-w-0'><div class='text-sm font-medium truncate' style='color:var(--ink)'>${r.line_display_name||'ไม่ระบุ'}</div><div class='text-[12px] text-ink3'>${new Date(r.created_at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} • ${purposeLabel(r.purpose)}${r.status?(' • '+(r.status==='on_time'?'ตรงเวลา':(r.status==='late'?'สาย':'นอกพื้นที่'))):''}</div></div><div class='${r.within_radius?'text-green-600':'text-red-600'} text-[12px]'>${fmtDist(r.distance_m||0)}</div></div>`).join('')||'<div class="text-ink3">ยังไม่มีรายการ</div>'; }
@@ -96,8 +96,29 @@ export async function renderHomeSummary(){
   const tile=(label,val)=>`<div class='p-3 border rounded-xl bg-[var(--card)]' style='border-color:var(--bd)'><div class='text-[12px] text-ink3'>${label}</div><div class='text-xl font-semibold' style='color:var(--ink)'>${val||0}</div></div>`;
   box.innerHTML=[tile('มาทำงาน',m.work),tile('ประชุม',m.meeting),tile('อบรม',m.training),tile('ไปราชการ',m.official)].join('');
 }
-function initMap(){ const el=document.getElementById('map'); if(!el) return; if(map){ map.remove(); map=null; } map=L.map('map').setView([SCHOOL_LAT,SCHOOL_LNG],16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map); L.circle([SCHOOL_LAT,SCHOOL_LNG],{radius:SCHOOL_RADIUS_METERS,color:'#2563EB',fillOpacity:0.08}).addTo(map); L.marker([SCHOOL_LAT,SCHOOL_LNG]).addTo(map).bindPopup('โรงเรียน'); }
-function updateMeMarker(lat,lng){ if(!map) return; if(!meMarker){ meMarker=L.marker([lat,lng]).addTo(map).bindPopup('ตำแหน่งของฉัน'); } else { meMarker.setLatLng([lat,lng]); } }
+function initMap(){
+  const el = document.getElementById('map');
+  if(!el) return;
+  if(map){ map.remove(); map = null; }
+  map = L.map('map').setView([SCHOOL_LAT, SCHOOL_LNG], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  // School: marker + radius
+  L.circle([SCHOOL_LAT,SCHOOL_LNG], { radius: SCHOOL_RADIUS_METERS, color:'#22c55e', fillColor:'#22c55e', fillOpacity:0.08 }).addTo(map);
+  L.marker([SCHOOL_LAT,SCHOOL_LNG], { title: 'โรงเรียน' }).addTo(map).bindPopup('โรงเรียน');
+} map=L.map('map').setView([SCHOOL_LAT,SCHOOL_LNG],16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map); L.circle([SCHOOL_LAT,SCHOOL_LNG],{radius:SCHOOL_RADIUS_METERS,color:'#2563EB',fillOpacity:0.08}).addTo(map); L.marker([SCHOOL_LAT,SCHOOL_LNG]).addTo(map).bindPopup('โรงเรียน'); }
+function updateMeMarker(lat, lng){
+  if(!map) return;
+  if(!meMarker){
+    meMarker = L.circleMarker([lat, lng], {
+      radius: 8,
+      color: '#2563EB',
+      fillColor: '#60A5FA',
+      fillOpacity: 0.9
+    }).addTo(map).bindPopup('ตำแหน่งของฉัน');
+  } else {
+    meMarker.setLatLng([lat, lng]);
+  }
+} else { meMarker.setLatLng([lat,lng]); } }
 function getGeo(out){ out.textContent='กำลังอ่านตำแหน่ง…'; if(!navigator.geolocation){ out.textContent='อุปกรณ์ไม่รองรับตำแหน่ง'; return; } navigator.geolocation.getCurrentPosition((pos)=>{ const {latitude,longitude,accuracy}=pos.coords; lastGeo={lat:latitude,lng:longitude,accuracy:accuracy||0}; updateMeMarker(latitude,longitude); const d=dist(SCHOOL_LAT,SCHOOL_LNG,latitude,longitude); const ok=d<=SCHOOL_RADIUS_METERS; out.innerHTML=`ตำแหน่ง: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy||0)}m) → ${ok?'<span class="text-green-600">ในเขต</span>':'<span class="text-red-600">นอกเขต ('+Math.round(d)+'m)'}`; }, (err)=>{ out.textContent='อ่านตำแหน่งไม่สำเร็จ: '+(err?.message||err); }, {enableHighAccuracy:true,timeout:8000,maximumAge:0}); }
 function dist(a,b,c,d){ const R=6371000; const toR=x=>x*Math.PI/180; const dLat=toR(c-a), dLon=toR(d-b); const A=Math.sin(dLat/2)**2 + Math.cos(toR(a))*Math.cos(toR(c))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(A)); }
 async function openScanner(){ const panel=document.getElementById('scanPanel'); const holder=document.getElementById('qrReader'); if(!panel||!holder) return; panel.classList.remove('hide'); holder.innerHTML=''; try{ scanner=new Html5Qrcode('qrReader'); await scanner.start({facingMode:'environment'},{fps:10,qrbox:240}, t=>{ lastText=t; const res=document.getElementById('scanResult'); if(res) res.textContent='QR: '+t; }); }catch(e){ holder.innerHTML='<div class="p-4 text-sm text-red-600">ไม่สามารถเปิดกล้อง: '+(e?.message||e)+'</div>'; } }
@@ -143,3 +164,17 @@ window.deleteCheckin = function(id){
     await loadToday();
   };
 };
+
+
+;(() => {
+  try{
+    const st = document.createElement('style');
+    st.id = 'checkin-fab-zfix';
+    st.innerHTML = `
+      #map { position: relative; }
+      .leaflet-container { z-index: 1; }
+      #btnOpenScanner, #btnCheckin, #btnRefreshGeo, #btnGpsOnly { z-index: 1000; }
+    `;
+    document.head.appendChild(st);
+  }catch(_){}
+})();
