@@ -1012,29 +1012,31 @@ async function renderSummary() {
     }
 
     // แสดงผล: จอใหญ่ (lg+) การ์ดภายในแต่ละกลุ่มเป็น 3 คอลัมน์ และ “สถิติของฉัน/องค์กร” แยกกันคนละแถว
-    box.innerHTML = `
-      <div class='space-y-8'>
-        <section>
-          <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3'>📊 สถิติของฉัน</h3>
-          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
-            ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
-            ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
-            ${createSummaryCard('ปีนี้',      meYear,  'personal')}
-          </div>
-        </section>
-
-        <section>
-          <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3'>🏢 สถิติองค์กร</h3>
-          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
-            ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
-            ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
-            ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
-          </div>
-        </section>
-
-        ${encouragementSection}
+box.innerHTML = `
+  <div class='space-y-8'>
+    <section>
+      <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3'>📊 สถิติของฉัน</h3>
+      <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+        ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
+        ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
+        ${createSummaryCard('ปีนี้',      meYear,  'personal')}
       </div>
-    `;
+    </section>
+
+    <section>
+      <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3'>🏢 สถิติองค์กร</h3>
+      <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+        ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
+        ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
+        ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
+      </div>
+    </section>
+
+    ${encouragementSection}
+  </div>
+`;
+ensureSummaryFullWidth();
+
   } catch (error) {
     console.error('Error rendering summary:', error);
     box.innerHTML = `
@@ -1115,6 +1117,18 @@ export function cleanup() {
   const statusEl = document.getElementById('checkinStatus'); if (statusEl) statusEl.remove();
   delete window.retryGps; delete window.retryScanner; delete window.editOffsite; delete window.deleteCheckin; delete window.reloadSummary;
 }
+
+function ensureSummaryFullWidth() {
+  const box = document.getElementById('checkinSummary');
+  if (!box) return;
+  // กินทั้งแถวของ parent grid (ถ้ามี)
+  box.style.gridColumn = '1 / -1';
+  // กว้างเต็ม
+  box.style.width = '100%';
+  // กัน class เผลอ ๆ
+  box.classList.add('w-full', 'col-span-full');
+}
+
 
 // === Auto cleanup on page navigation ===
 window.addEventListener('beforeunload', cleanup);
@@ -1362,6 +1376,21 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
           touch-action: manipulation;
         }
       }
+
+      /* ==== Force summary to span full width on large screens ==== */
+      #checkinSummary { width:100%; }
+      #checkinSummary { grid-column: 1 / -1; }
+      
+      /* กันกรณีมี class max-w-* ครอบอยู่ */
+      #checkinSummary .space-y-8 { max-width: none !important; }
+      
+      /* ย้ำ layout ด้านในให้เป็น 3 คอลัมน์บนจอใหญ่ */
+      @media (min-width: 1024px) {
+        #checkinSummary section > .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+      }
+
     `;
     
     document.head.appendChild(style);
