@@ -1,6 +1,32 @@
-// === SW toggle UI (injected) ===
+// modules/profile.js
+// รวม: SW toggle (ของเดิม) + ตั้งค่า Theme/Font + ดึงข้อมูล users มาขึ้นหน้าโปรไฟล์
+
+import { supabase } from '../api.js';
+import { openSheet, closeSheet, toast } from '../ui.js';
 import { getEnableSW, setEnableSW } from '../config.js';
 
+/* ---------- Utils ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const onProfileRoute = () => {
+  const hash = (location.hash || '#').replace('#','').split('?')[0];
+  return hash === 'profile' || hash === 'tab-profile';
+};
+const getLineProfile = () => {
+  try { return JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null'); }
+  catch { return null; }
+};
+const getSettings = () => {
+  try { return JSON.parse(localStorage.getItem('APPWD_SETTINGS') || '{}'); }
+  catch { return {}; }
+};
+const saveSettings = (patch) => {
+  const cur = getSettings();
+  const next = { ...cur, ...patch };
+  localStorage.setItem('APPWD_SETTINGS', JSON.stringify(next));
+  document.dispatchEvent(new CustomEvent('appwd:settingsSaved', { detail: next }));
+};
+
+/* ----------  A) SW toggle (ของเดิม) ---------- */
 export function initProfileSWToggle() {
   let container =
     document.querySelector('#profile-advanced') ||
@@ -72,87 +98,7 @@ export function initProfileSWToggle() {
   });
 }
 
-(function autoInit(){
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(initProfileSWToggle, 0);
-  } else {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(initProfileSWToggle, 0));
-  }
-})();
-
-///////////////////////////////
-// === Profile: preferences + user details (add-on) ===
-import { supabase } from '../api.js';
-import { openSheet, closeSheet } from '../ui.js';
-
-// ใช้กับ route #profile
-const onProfileRoute = () => {
-  const hash = (location.hash || '#').replace('#','').split('?')[0];
-  return hash === 'profile' || hash === '' || hash === 'tab-profile';
-};
-
-function getSettings() {
-  try { return JSON.parse(localStorage.getItem('APPWD_SETTINGS') || '{}'); }
-  catch { return {}; }
-}
-function saveSettings(patch) {
-  const cur = getSettings();
-  const next = { ...cur, ...patch };
-  localStorage.setItem('APPWD_SETTINGS', JSON.stringify(next));
-  document.dispatchEvent(new CustomEvent('appwd:settingsSaved', { detail: next }));
-}
-
-// ----- UI: แสดงรายละเอียดจากตาราง users -----
-function renderUserDetails(row) {
-  const host = document.querySelector('#profileView .card');
-  if (!host) return;
-
-  let box = document.getElementById('pfDetails');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'pfDetails';
-    box.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 mt-3';
-    host.appendChild(box);
-  }
-  const F = (label, value='—') =>
-    `<div class="card p-3 text-sm">
-       <div class="text-ink3">${label}</div>
-       <div class="font-medium break-words">${value || '—'}</div>
-     </div>`;
-
-  box.innerHTML = [
-    F('บทบาท (role)', row?.role),
-    F('ห้อง/กลุ่มสาระ', row?.classroom),
-    F('อีเมล', row?.email),
-    F('เบอร์โทร', row?.phone),
-    F('สร้างเมื่อ', row?.created_at ? new Date(row.created_at).toLocaleString('th-TH') : ''),
-    F('อัปเดตล่าสุด', row?.updated_at ? new Date(row.updated_at).toLocaleString('th-TH') : '')
-  ].join('');
-}
-
-async function loadUserDetails() {
-  const line = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
-  // อัปหัวโปรไฟล์เดิม
-  if (line) {
-    const avatar = document.getElementById('pfAvatar');
-    const name = document.getElementById('pfName');
-    const sub = document.getElementById('pfSub');
-    if (avatar && line.pictureUrl) avatar.src = line.pictureUrl;
-    if (name) name.textContent = line.displayName || 'ผู้ใช้';
-    if (sub)  sub.textContent  = line.userId || '';
-  }
-  if (!line?.userId) { renderUserDetails(null); return; }
-
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('line_user_id', line.userId)
-    .maybeSingle();
-
-  renderUserDetails(error ? null : data);
-}
-
-// ----- UI: แผงปรับธีม/ขนาดตัวอักษร -----
+/* ----------  B) Theme/Font dialog ---------- */
 function openThemeDialog() {
   const s = getSettings();
   const theme = s.THEME || 'light';
@@ -192,44 +138,99 @@ function openThemeDialog() {
   `);
 
   const root = document.documentElement;
-  const fsRange = document.getElementById('fsRange');
-  const icRange = document.getElementById('icRange');
-  const fsVal = document.getElementById('fsVal');
-  const icVal = document.getElementById('icVal');
+  const fsRange = $('#fsRange');
+  const icRange = $('#icRange');
+  const fsVal = $('#fsVal');
+  const icVal = $('#icVal');
 
-  // Live preview
+  // live preview
   fsRange.oninput = () => { root.style.setProperty('--fs-base', fsRange.value); fsVal.textContent = (+fsRange.value).toFixed(2); };
   icRange.oninput = () => { root.style.setProperty('--ic-scale', icRange.value); icVal.textContent = (+icRange.value).toFixed(2); };
 
-  // เปลี่ยนธีมทันทีตอนเลือก
+  // theme preview
   document.querySelectorAll('input[name="theme"]').forEach(r=>{
     r.addEventListener('change', ()=>{
       const v = r.value;
-      if (v === 'system') root.removeAttribute('data-theme');
+      if (v === 'system') root.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       else root.setAttribute('data-theme', v);
     });
   });
 
-  document.getElementById('cancelTheme').onclick = closeSheet;
-  document.getElementById('saveTheme').onclick = () => {
+  $('#cancelTheme').onclick = closeSheet;
+  $('#saveTheme').onclick = () => {
     const chosen = (document.querySelector('input[name="theme"]:checked')?.value) || 'light';
     saveSettings({ THEME: chosen, FONT_SCALE: Number(fsRange.value), ICON_SCALE: Number(icRange.value) });
     closeSheet();
   };
 }
 
+/* ----------  C) users: load and render ---------- */
+function renderUserDetails(row) {
+  const host = $('#profileView .card'); if (!host) return;
+
+  let box = $('#pfDetails');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'pfDetails';
+    box.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 mt-3';
+    host.appendChild(box);
+  }
+  const F = (label, value='—') =>
+    `<div class="card p-3 text-sm">
+       <div class="text-ink3">${label}</div>
+       <div class="font-medium break-words">${value || '—'}</div>
+     </div>`;
+
+  box.innerHTML = [
+    F('บทบาท (role)', row?.role),
+    F('ห้อง/กลุ่มสาระ', row?.classroom),
+    F('อีเมล', row?.email),
+    F('เบอร์โทร', row?.phone),
+    F('สร้างเมื่อ', row?.created_at ? new Date(row.created_at).toLocaleString('th-TH') : ''),
+    F('อัปเดตล่าสุด', row?.updated_at ? new Date(row.updated_at).toLocaleString('th-TH') : '')
+  ].join('');
+}
+
+async function loadUserDetails() {
+  const line = getLineProfile();
+  // อัปหัวโปรไฟล์เดิม
+  if (line) {
+    const avatar = $('#pfAvatar');
+    const name = $('#pfName');
+    const sub = $('#pfSub');
+    if (avatar && line.pictureUrl) avatar.src = line.pictureUrl;
+    if (name) name.textContent = line.displayName || 'ผู้ใช้';
+    if (sub)  sub.textContent  = line.userId || '';
+  }
+  if (!line?.userId) { renderUserDetails(null); return; }
+
+  const { data, error, status } = await supabase
+    .from('users')
+    .select('*')
+    .eq('line_user_id', line.userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('load users error', status, error);
+    renderUserDetails(null);
+    return;
+  }
+  renderUserDetails(data);
+}
+
+/* ----------  D) wire buttons & init ---------- */
 function wireProfileUI() {
-  // ปุ่มใน index.html: <button id='btnTheme' class='btn'>ขนาดตัวอักษร/ธีม</button>
-  const themeBtn = document.getElementById('btnTheme');
+  const themeBtn = $('#btnTheme');
   if (themeBtn) themeBtn.onclick = openThemeDialog;
 }
 
-// auto init เฉพาะตอนอยู่ route โปรไฟล์
-function initProfileExtras() {
+function initProfilePage() {
   if (!onProfileRoute()) return;
   wireProfileUI();
   loadUserDetails().catch(()=>{});
+  initProfileSWToggle();
 }
 
-window.addEventListener('hashchange', initProfileExtras);
-document.addEventListener('DOMContentLoaded', initProfileExtras);
+// first run + on route change
+document.addEventListener('DOMContentLoaded', initProfilePage);
+window.addEventListener('hashchange', initProfilePage);
