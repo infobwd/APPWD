@@ -105,7 +105,7 @@ function initMap(){
   // School: marker + radius
   L.circle([SCHOOL_LAT,SCHOOL_LNG], { radius: SCHOOL_RADIUS_METERS, color:'#22c55e', fillColor:'#22c55e', fillOpacity:0.08 }).addTo(map);
   L.marker([SCHOOL_LAT,SCHOOL_LNG], { title: 'โรงเรียน' }).addTo(map).bindPopup('โรงเรียน');
-} map=L.map('map').setView([SCHOOL_LAT,SCHOOL_LNG],16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map); L.circle([SCHOOL_LAT,SCHOOL_LNG],{radius:SCHOOL_RADIUS_METERS,color:'#2563EB',fillOpacity:0.08}).addTo(map); L.marker([SCHOOL_LAT,SCHOOL_LNG]).addTo(map).bindPopup('โรงเรียน'); }
+}
 function updateMeMarker(lat, lng){
   if(!map) return;
   if(!meMarker){
@@ -118,7 +118,7 @@ function updateMeMarker(lat, lng){
   } else {
     meMarker.setLatLng([lat, lng]);
   }
-} else { meMarker.setLatLng([lat,lng]); } }
+}
 function getGeo(out){ out.textContent='กำลังอ่านตำแหน่ง…'; if(!navigator.geolocation){ out.textContent='อุปกรณ์ไม่รองรับตำแหน่ง'; return; } navigator.geolocation.getCurrentPosition((pos)=>{ const {latitude,longitude,accuracy}=pos.coords; lastGeo={lat:latitude,lng:longitude,accuracy:accuracy||0}; updateMeMarker(latitude,longitude); const d=dist(SCHOOL_LAT,SCHOOL_LNG,latitude,longitude); const ok=d<=SCHOOL_RADIUS_METERS; out.innerHTML=`ตำแหน่ง: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy||0)}m) → ${ok?'<span class="text-green-600">ในเขต</span>':'<span class="text-red-600">นอกเขต ('+Math.round(d)+'m)'}`; }, (err)=>{ out.textContent='อ่านตำแหน่งไม่สำเร็จ: '+(err?.message||err); }, {enableHighAccuracy:true,timeout:8000,maximumAge:0}); }
 function dist(a,b,c,d){ const R=6371000; const toR=x=>x*Math.PI/180; const dLat=toR(c-a), dLon=toR(d-b); const A=Math.sin(dLat/2)**2 + Math.cos(toR(a))*Math.cos(toR(c))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(A)); }
 async function openScanner(){ const panel=document.getElementById('scanPanel'); const holder=document.getElementById('qrReader'); if(!panel||!holder) return; panel.classList.remove('hide'); holder.innerHTML=''; try{ scanner=new Html5Qrcode('qrReader'); await scanner.start({facingMode:'environment'},{fps:10,qrbox:240}, t=>{ lastText=t; const res=document.getElementById('scanResult'); if(res) res.textContent='QR: '+t; }); }catch(e){ holder.innerHTML='<div class="p-4 text-sm text-red-600">ไม่สามารถเปิดกล้อง: '+(e?.message||e)+'</div>'; } }
