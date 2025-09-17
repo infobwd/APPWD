@@ -586,7 +586,7 @@ async function saveCheckin({ method, within, purpose, note, distance, profile })
       time: checkinTime, purpose: purposeLabel(purpose), distance: fmtDist(distance), within, status
     });
     showCheckinStatus(within ? `เช็คอินสำเร็จ เวลา ${checkinTime}` : `บันทึกภารกิจนอกสถานที่สำเร็จ เวลา ${checkinTime}`, 'success');
-    await loadToday(); await renderSummary();
+    await loadToday(); await ();
     document.dispatchEvent(new CustomEvent('appwd:checkinSaved', { detail: { checkinId: result.data.id, payload } }));
   } catch (error) {
     console.error('Checkin save error:', error);
@@ -632,7 +632,7 @@ export async function render() {
     const geoState = document.getElementById('geoState');
     if (geoState) { getGeoLocation(geoState, { showLoading: true }).catch(() => {}); }
     await loadToday();
-    await renderSummary();
+    await ();
   } catch (error) {
     console.error('Render failed:', error);
     showCheckinStatus('ไม่สามารถโหลดหน้าเช็คอินได้', 'error');
@@ -911,19 +911,19 @@ async function loadToday() {
   }
 }
 
-// === Enhanced Summary with responsive design (positive tone + 3 cols on large) ===
+// === Enhanced Summary with sticky headers + full-width on large ===
 async function renderSummary() {
-  const box = document.getElementById('checkinSummary'); 
+  const box = document.getElementById('checkinSummary');
   if (!box) return;
 
-  // skeleton สูงขึ้นนิดให้พอดีการ์ดใหญ่
+  // สเกลตันสูงขึ้นให้พอดีการ์ดใหญ่
   box.innerHTML = skel(6, '120px');
 
   const profile = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const now = new Date();
 
-  const weekStart  = new Date(now); 
-  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); 
+  const weekStart  = new Date(now);
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   weekStart.setHours(0,0,0,0);
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1026,12 +1026,14 @@ async function renderSummary() {
       `;
     }
 
-    // Layout ใหม่: จำกัดความกว้าง + 3 คอลัมน์จริงบนจอใหญ่
+    // Layout: FULL-WIDTH บนจอใหญ่ + sticky section headers
     box.innerHTML = `
-      <div class="summary-wrap mx-auto px-3 md:px-6 lg:px-8">
-        <div class="space-y-8 max-w-screen-2xl mx-auto">
+      <div class="summary-wrap w-full mx-auto px-3 md:px-6 lg:px-8">
+        <div class="space-y-8 w-full">
           <section>
-            <h3 class="text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3">📊 สถิติของฉัน</h3>
+            <h3 class="summary-sticky text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3 bg-white/70">
+              📊 สถิติของฉัน
+            </h3>
             <div class="summary-grid grid gap-4">
               ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
               ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
@@ -1040,7 +1042,9 @@ async function renderSummary() {
           </section>
 
           <section>
-            <h3 class="text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3">🏢 สถิติองค์กร</h3>
+            <h3 class="summary-sticky text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3 bg-white/70">
+              🏢 สถิติองค์กร
+            </h3>
             <div class="summary-grid grid gap-4">
               ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
               ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
@@ -1064,6 +1068,7 @@ async function renderSummary() {
     `;
   }
 }
+
 
 
 // === Global functions for edit/delete operations ===
@@ -1151,8 +1156,7 @@ window.addEventListener('resize', applyCheckinLatestSlider);
 document.addEventListener('DOMContentLoaded', applyCheckinLatestSlider);
 document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
 
-// === แก้ไข CSS สำหรับ responsive และ badge ===
-// === แก้ไข CSS สำหรับ responsive/badge/summary (FULL) ===
+// === แก้ไข CSS สำหรับ responsive/badge/summary + sticky (FULL) ===
 (function injectFixedStyles() {
   try {
     // ลบ style เก่าที่เคยฉีด
@@ -1162,45 +1166,42 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     const style = document.createElement('style');
     style.id = 'checkin-fixed-styles';
     style.textContent = `
-      /* === Checkin Card Responsive Styles === */
-      .checkin-card {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        transition: box-shadow 0.2s ease;
-        animation: fadeIn 0.3s ease-in-out;
+      :root{
+        /* ระยะยึดหัว sticky ใต้แถบ navbar หรือ topbar ที่ระบบมีอยู่ */
+        --summary-sticky-top: 64px;
       }
-      .checkin-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+      /* === Checkin Card Responsive Styles === */
+      .checkin-card{
+        box-shadow:0 2px 8px rgba(0,0,0,.06);
+        transition:box-shadow .2s ease;
+        animation:fadeIn .3s ease-in-out;
+      }
+      .checkin-card:hover{ box-shadow:0 4px 12px rgba(0,0,0,.1); }
 
       /* === Status Badge Styles === */
-      .status-badge {
-        display: inline-flex !important;
-        align-items: center;
-        justify-content: center;
-        padding: 2px 8px !important;
-        border-radius: 12px !important;
-        font-size: 10px !important;
-        font-weight: 600 !important;
-        line-height: 1.2 !important;
-        white-space: nowrap;
-        border: 1px solid;
-        min-height: 20px;
+      .status-badge{
+        display:inline-flex!important; align-items:center; justify-content:center;
+        padding:2px 8px!important; border-radius:12px!important; font-size:10px!important;
+        font-weight:600!important; line-height:1.2!important; white-space:nowrap; border:1px solid; min-height:20px;
       }
-      .status-badge.badge-ontime { background-color:#dcfce7!important; color:#15803d!important; border-color:#86efac!important; }
-      .status-badge.badge-late   { background-color:#fef3c7!important; color:#a16207!important; border-color:#fde047!important; }
-      .status-badge.badge-offsite{ background-color:#e0e7ff!important; color:#4338ca!important; border-color:#a5b4fc!important; }
+      .status-badge.badge-ontime{ background:#dcfce7!important; color:#15803d!important; border-color:#86efac!important; }
+      .status-badge.badge-late{   background:#fef3c7!important; color:#a16207!important; border-color:#fde047!important; }
+      .status-badge.badge-offsite{background:#e0e7ff!important; color:#4338ca!important; border-color:#a5b4fc!important; }
 
       /* === Buttons === */
-      .edit-btn, .delete-btn {
+      .edit-btn,.delete-btn{
         display:inline-flex!important; align-items:center; justify-content:center;
         border:none!important; border-radius:6px!important; cursor:pointer;
         transition:all .2s ease; font-weight:500!important; text-align:center; min-height:24px;
         position:relative; z-index:10; pointer-events:auto;
       }
-      .edit-btn:hover   { transform: translateY(-1px); box-shadow:0 4px 8px rgba(59,130,246,.3); }
-      .delete-btn:hover { transform: translateY(-1px); box-shadow:0 4px 8px rgba(239,68,68,.3); }
-      .edit-btn:active, .delete-btn:active { transform: translateY(0); }
+      .edit-btn:hover{   transform:translateY(-1px); box-shadow:0 4px 8px rgba(59,130,246,.3); }
+      .delete-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 8px rgba(239,68,68,.3); }
+      .edit-btn:active,.delete-btn:active{ transform:translateY(0); }
 
       /* === Containers === */
-      .status-container { flex:1; display:flex; align-items:center; overflow:hidden; }
+      .status-container{ flex:1; display:flex; align-items:center; overflow:hidden; }
       .actions-container{ flex-shrink:0; display:flex; align-items:center; gap:4px; }
 
       /* === Mobile tweaks === */
@@ -1237,15 +1238,30 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
         .edit-btn,.delete-btn{ min-height:32px!important; min-width:48px!important; touch-action:manipulation; }
       }
 
-      /* === Summary (Large screen friendly) === */
-      .summary-wrap{ max-width:1440px; }                    /* กัน ultrawide กว้างเกิน */
+      /* === Summary (Large screen friendly + FULL width) === */
+      .summary-wrap{ width:100%; } /* ให้กว้างเต็ม */
       .summary-grid{ grid-template-columns:repeat(1,minmax(0,1fr)); }
       @media (min-width:768px){  .summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
       @media (min-width:1280px){ .summary-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
-      .summary-card{ min-height:190px; }                    /* การ์ดสูงใกล้เคียงกัน */
+
+      .summary-card{ min-height:190px; }
       .summary-stats{ row-gap:.75rem; }
       .summary-stat-row{ display:flex; justify-content:space-between; gap:.75rem; }
-      .summary-card .font-semibold{ white-space:nowrap; }   /* กันตัวเลขตีกัน/ตัดคำ */
+      .summary-card .font-semibold{ white-space:nowrap; }
+
+      /* Sticky headers ของแต่ละ section */
+      .summary-sticky{
+        position: sticky;
+        top: var(--summary-sticky-top);
+        z-index: 20;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      /* ถ้าจอใหญ่มาก ๆ ให้หัวติดสูงขึ้นเล็กน้อย (กันทับ toolbar) */
+      @media (min-width:1024px){
+        :root{ --summary-sticky-top: 72px; }
+      }
     `;
 
     document.head.appendChild(style);
@@ -1253,6 +1269,7 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     console.warn('Fixed styles injection failed:', e);
   }
 })();
+
 
 
 // === เพิ่มการจัดการ touch events สำหรับ mobile ===
