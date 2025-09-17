@@ -563,7 +563,6 @@ async function fallbackToDeepLink(altText, flexContent, customUrl, showFeedback)
     return false;
   }
 }
-
 // === Convenience Share Functions ===
 export async function sharePost(postData, options = {}) {
   const { 
@@ -965,12 +964,6 @@ window.copyCurrentUrl = function() {
   }
 };
 
-// === Legacy Compatibility Functions ===
-export async function sharePostData(data) {
-  // Legacy wrapper for backward compatibility
-  return await sharePost(data, { showFeedback: true });
-}
-
 // === Global Share Interface ===
 window.LINE_SHARE = {
   // Core functions
@@ -979,9 +972,6 @@ window.LINE_SHARE = {
   shareCheckin,
   shareText,
   shareUrl,
-  
-  // Legacy compatibility
-  sharePostData,
   
   // Flex creators
   createFlexNewsCard,
