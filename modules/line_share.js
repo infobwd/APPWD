@@ -1,3 +1,568 @@
+/**
+ * Enhanced LINE Share Module
+ * ระบบแชร์ข้อมูลผ่าน LINE LIFF ที่ปรับปรุงแล้ว
+ */
+
+import * as CFG from '../config.js';
+
+// === Enhanced State Management ===
+const ShareState = {
+  isLiffReady: false,
+  isInitializing: false,
+  liffInstance: null,
+  shareInProgress: false,
+  retryCount: 0,
+  maxRetries: 3,
+  
+  // Cache for performance
+  contextCache: null,
+  userCache: null,
+  
+  // Reset method
+  reset() {
+    this.shareInProgress = false;
+    this.retryCount = 0;
+  }
+};
+
+// === Enhanced Utility Functions ===
+function safeJsonStringify(obj, maxLength = 1500) {
+  try {
+    const jsonStr = JSON.stringify(obj || {});
+    if (jsonStr.length > maxLength) {
+      console.warn(`JSON payload too long: ${jsonStr.length} characters`);
+      // Try to compress by removing optional fields
+      const compressed = compressFlexMessage(obj);
+      return JSON.stringify(compressed);
+    }
+    return jsonStr;
+  } catch (error) {
+    console.error('JSON stringify failed:', error);
+    return '{}';
+  }
+}
+
+function safeUrlEncode(str) {
+  try {
+    // Use base64 encoding for Thai characters to avoid URL length issues
+    if (/[\u0E00-\u0E7F]/.test(str)) {
+      return btoa(encodeURIComponent(str));
+    }
+    return encodeURIComponent(str);
+  } catch (error) {
+    console.error('URL encode failed:', error);
+    return '';
+  }
+}
+
+function compressFlexMessage(flexObj) {
+  if (!flexObj || typeof flexObj !== 'object') return flexObj;
+  
+  const compressed = { ...flexObj };
+  
+  // Remove optional empty fields
+  if (compressed.hero && !compressed.hero.url) {
+    delete compressed.hero;
+  }
+  
+  // Truncate long text
+  if (compressed.body && compressed.body.contents) {
+    compressed.body.contents.forEach(content => {
+      if (content.type === 'text' && content.text && content.text.length > 100) {
+        content.text = content.text.substring(0, 97) + '...';
+      }
+    });
+  }
+  
+  return compressed;
+}
+
+// === Enhanced LIFF Management ===
+async function initializeLiff(options = {}) {
+  const { timeout = 10000, forceReinit = false } = options;
+  
+  if (ShareState.isLiffReady && !forceReinit) {
+    return ShareState.liffInstance;
+  }
+  
+  if (ShareState.isInitializing) {
+    // Wait for existing initialization
+    let attempts = 0;
+    while (ShareState.isInitializing && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+    
+    if (ShareState.isLiffReady) {
+      return ShareState.liffInstance;
+    }
+  }
+  
+  ShareState.isInitializing = true;
+  
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      ShareState.isInitializing = false;
+      reject(new Error('LIFF initialization timeout'));
+    }, timeout);
+    
+    try {
+      // Check if LIFF SDK is loaded
+      if (!window.liff) {
+        clearTimeout(timeoutId);
+        ShareState.isInitializing = false;
+        reject(new Error('LIFF SDK not loaded'));
+        return;
+      }
+      
+      const liffId = CFG?.LIFF_ID || window.LIFF_ID || '';
+      if (!liffId) {
+        clearTimeout(timeoutId);
+        ShareState.isInitializing = false;
+        reject(new Error('LIFF ID not configured'));
+        return;
+      }
+      
+      if (window.liff.isInitialized()) {
+        clearTimeout(timeoutId);
+        ShareState.isLiffReady = true;
+        ShareState.isInitializing = false;
+        ShareState.liffInstance = window.liff;
+        resolve(window.liff);
+        return;
+      }
+      
+      window.liff.init({
+        liffId: liffId,
+        withLoginOnExternalBrowser: true
+      }).then(() => {
+        clearTimeout(timeoutId);
+        ShareState.isLiffReady = true;
+        ShareState.isInitializing = false;
+        ShareState.liffInstance = window.liff;
+        
+        // Cache user info and context
+        cacheUserAndContext();
+        
+        resolve(window.liff);
+      }).catch((error) => {
+        clearTimeout(timeoutId);
+        ShareState.isInitializing = false;
+        console.error('LIFF init failed:', error);
+        reject(error);
+      });
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      ShareState.isInitializing = false;
+      reject(error);
+    }
+  });
+}
+
+async function cacheUserAndContext() {
+  try {
+    if (ShareState.liffInstance) {
+      const liff = ShareState.liffInstance;
+      
+      if (liff.isInClient()) {
+        ShareState.contextCache = await liff.getContext();
+      }
+      
+      if (liff.isLoggedIn()) {
+        ShareState.userCache = await liff.getProfile();
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to cache user/context:', error);
+  }
+}
+
+// === Enhanced Flex Message Creation ===
+export function createFlexNewsCard({ title, description, url, imageUrl, author, publishedAt }) {
+  // Validate and sanitize inputs
+  const safeTitle = (title || 'ข่าวสาร').substring(0, 40);
+  const safeDesc = description ? description.substring(0, 80) : null;
+  const safeUrl = url || CFG.PUBLIC_URL || location.href;
+  const safeImageUrl = imageUrl && isValidImageUrl(imageUrl) ? imageUrl : null;
+  
+  const flexCard = {
+    type: 'bubble',
+    size: 'kilo'
+  };
+  
+  // Add hero image if valid
+  if (safeImageUrl) {
+    flexCard.hero = {
+      type: 'image',
+      url: safeImageUrl,
+      size: 'full',
+      aspectRatio: '20:13',
+      aspectMode: 'cover'
+    };
+  }
+  
+  // Body content
+  const bodyContents = [
+    {
+      type: 'text',
+      text: safeTitle,
+      weight: 'bold',
+      size: 'md',
+      wrap: true,
+      maxLines: 2
+    }
+  ];
+  
+  if (safeDesc) {
+    bodyContents.push({
+      type: 'text',
+      text: safeDesc,
+      size: 'sm',
+      color: '#6b7280',
+      wrap: true,
+      maxLines: 3
+    });
+  }
+  
+  // Add metadata if available
+  if (author || publishedAt) {
+    bodyContents.push({ type: 'spacer', size: 'sm' });
+    
+    const metaText = [];
+    if (author) metaText.push(`โดย ${author}`);
+    if (publishedAt) {
+      const date = new Date(publishedAt).toLocaleDateString('th-TH');
+      metaText.push(date);
+    }
+    
+    bodyContents.push({
+      type: 'text',
+      text: metaText.join(' • '),
+      size: 'xs',
+      color: '#9ca3af'
+    });
+  }
+  
+  flexCard.body = {
+    type: 'box',
+    layout: 'vertical',
+    contents: bodyContents,
+    spacing: 'sm'
+  };
+  
+  // Footer with action button
+  flexCard.footer = {
+    type: 'box',
+    layout: 'vertical',
+    contents: [
+      {
+        type: 'button',
+        style: 'primary',
+        action: {
+          type: 'uri',
+          label: 'อ่านข่าวเต็ม',
+          uri: safeUrl
+        }
+      }
+    ]
+  };
+  
+  return flexCard;
+}
+
+export function createFlexCheckinCard({ displayName, purpose, time, location, status }) {
+  const statusConfig = {
+    'on_time': { text: 'ตรงเวลา', color: '#10b981' },
+    'late': { text: 'สาย', color: '#f59e0b' },
+    'offsite': { text: 'นอกพื้นที่', color: '#6366f1' }
+  };
+  
+  const statusInfo = statusConfig[status] || { text: 'ไม่ระบุ', color: '#6b7280' };
+  
+  return {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: '✅ เช็คอินสำเร็จ',
+          weight: 'bold',
+          color: '#10b981',
+          size: 'lg'
+        },
+        { type: 'spacer', size: 'md' },
+        {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'box',
+              layout: 'baseline',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: 'ชื่อ:', size: 'sm', color: '#6b7280', flex: 2 },
+                { type: 'text', text: displayName || 'ไม่ระบุ', size: 'sm', flex: 5, wrap: true }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'baseline',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: 'เวลา:', size: 'sm', color: '#6b7280', flex: 2 },
+                { type: 'text', text: time || 'ไม่ระบุ', size: 'sm', flex: 5 }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'baseline',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: 'ประเภท:', size: 'sm', color: '#6b7280', flex: 2 },
+                { type: 'text', text: purpose || 'ไม่ระบุ', size: 'sm', flex: 5 }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'baseline',
+              spacing: 'sm',
+              contents: [
+                { type: 'text', text: 'สถานะ:', size: 'sm', color: '#6b7280', flex: 2 },
+                { type: 'text', text: statusInfo.text, size: 'sm', color: statusInfo.color, flex: 5, weight: 'bold' }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+function isValidImageUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'https:' && 
+           /\.(jpg|jpeg|png|gif|webp)$/i.test(urlObj.pathname);
+  } catch {
+    return false;
+  }
+}
+
+// === Enhanced Share Functions ===
+function showShareLoading(message = 'กำลังแชร์...') {
+  const loadingEl = document.getElementById('shareLoading');
+  if (loadingEl) {
+    loadingEl.textContent = message;
+    loadingEl.style.display = 'block';
+    return;
+  }
+  
+  const loading = document.createElement('div');
+  loading.id = 'shareLoading';
+  loading.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-medium text-center';
+  loading.innerHTML = `
+    <div class="flex items-center justify-center gap-2">
+      <span class="animate-spin">⟳</span>
+      <span>${message}</span>
+    </div>
+  `;
+  document.body.appendChild(loading);
+}
+
+function hideShareLoading() {
+  const loadingEl = document.getElementById('shareLoading');
+  if (loadingEl) {
+    loadingEl.remove();
+  }
+}
+
+function showShareError(message, canRetry = false) {
+  hideShareLoading();
+  
+  const errorEl = document.createElement('div');
+  errorEl.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm';
+  errorEl.innerHTML = `
+    <div class="flex items-start gap-2">
+      <span>⚠️</span>
+      <div class="flex-1">
+        <div class="font-medium">${message}</div>
+        ${canRetry ? '<button onclick="window.retryShare()" class="mt-2 px-3 py-1 bg-red-600 text-white rounded text-xs">ลองใหม่</button>' : ''}
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" class="text-red-600 hover:text-red-800">×</button>
+    </div>
+  `;
+  
+  document.body.appendChild(errorEl);
+  
+  setTimeout(() => {
+    if (errorEl && errorEl.parentElement) {
+      errorEl.remove();
+    }
+  }, 5000);
+}
+
+function showShareSuccess(message = 'แชร์สำเร็จ!') {
+  hideShareLoading();
+  
+  const successEl = document.createElement('div');
+  successEl.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm font-medium text-center';
+  successEl.innerHTML = `
+    <div class="flex items-center justify-center gap-2">
+      <span>✅</span>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  document.body.appendChild(successEl);
+  
+  setTimeout(() => {
+    if (successEl && successEl.parentElement) {
+      successEl.remove();
+    }
+  }, 3000);
+}
+
+export async function shareFlexMessage(altText, flexContent, options = {}) {
+  const { 
+    showFeedback = true, 
+    retryOnFail = true,
+    fallbackUrl = null 
+  } = options;
+  
+  if (ShareState.shareInProgress) {
+    if (showFeedback) {
+      showShareError('กำลังดำเนินการแชร์อยู่ กรุณารอสักครู่');
+    }
+    return false;
+  }
+  
+  ShareState.shareInProgress = true;
+  
+  try {
+    if (showFeedback) {
+      showShareLoading('กำลังเตรียมการแชร์...');
+    }
+    
+    // Validate flex message
+    if (!flexContent || !flexContent.type) {
+      throw new Error('ข้อมูล Flex Message ไม่ถูกต้อง');
+    }
+    
+    // Initialize LIFF
+    const liff = await initializeLiff();
+    
+    if (showFeedback) {
+      showShareLoading('กำลังตรวจสอบสภาพแวดล้อม...');
+    }
+    
+    // Check if in LINE client and API is available
+    const isInClient = liff.isInClient();
+    const canShare = isInClient && await liff.isApiAvailable('shareTargetPicker');
+    
+    if (canShare) {
+      if (showFeedback) {
+        showShareLoading('กำลังเปิดหน้าต่างแชร์...');
+      }
+      
+      await liff.shareTargetPicker([{
+        type: 'flex',
+        altText: altText || 'แชร์จาก APPWD',
+        contents: flexContent
+      }]);
+      
+      if (showFeedback) {
+        showShareSuccess('แชร์สำเร็จ!');
+      }
+      
+      ShareState.reset();
+      return true;
+      
+    } else {
+      // Fallback to deep link
+      return await fallbackToDeepLink(altText, flexContent, fallbackUrl, showFeedback);
+    }
+    
+  } catch (error) {
+    console.error('Share failed:', error);
+    ShareState.reset();
+    
+    let errorMessage = 'ไม่สามารถแชร์ได้';
+    
+    if (error.message?.includes('User cancel')) {
+      if (showFeedback) {
+        hideShareLoading();
+      }
+      return false;
+    } else if (error.message?.includes('network')) {
+      errorMessage = 'ปัญหาการเชื่อมต่อ กรุณาตรวจสอบอินเทอร์เน็ต';
+    } else if (error.message?.includes('LIFF')) {
+      errorMessage = 'ไม่สามารถเชื่อมต่อ LINE ได้ กรุณาเปิดใน LINE app';
+    } else if (error.message?.includes('timeout')) {
+      errorMessage = 'การแชร์ใช้เวลานานเกินไป กรุณาลองใหม่';
+    }
+    
+    if (showFeedback) {
+      showShareError(errorMessage, retryOnFail && ShareState.retryCount < ShareState.maxRetries);
+    }
+    
+    // Auto retry logic
+    if (retryOnFail && ShareState.retryCount < ShareState.maxRetries) {
+      ShareState.retryCount++;
+      setTimeout(() => {
+        shareFlexMessage(altText, flexContent, options);
+      }, 2000);
+    }
+    
+    return false;
+  }
+}
+
+async function fallbackToDeepLink(altText, flexContent, customUrl, showFeedback) {
+  try {
+    if (showFeedback) {
+      showShareLoading('กำลังสร้างลิงก์แชร์...');
+    }
+    
+    const payload = { altText, bubble: flexContent };
+    const encodedPayload = safeUrlEncode(safeJsonStringify(payload));
+    
+    if (encodedPayload.length > 1800) {
+      throw new Error('ข้อมูลมีขนาดใหญ่เกินไป');
+    }
+    
+    const liffId = CFG?.LIFF_ID || window.LIFF_ID || '';
+    const deepLink = customUrl || `https://liff.line.me/${liffId}?flexShare=${encodedPayload}`;
+    
+    if (showFeedback) {
+      showShareLoading('กำลังเปิด LINE...');
+    }
+    
+    // Try to open in LINE app
+    window.location.href = deepLink;
+    
+    // Fallback notification
+    setTimeout(() => {
+      if (showFeedback) {
+        showShareError('หาก LINE ไม่เปิดขึ้น กรุณาคัดลอกลิงก์และแชร์ด้วยตนเอง', false);
+      }
+    }, 3000);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Deep link fallback failed:', error);
+    
+    if (showFeedback) {
+      showShareError('ไม่สามารถสร้างลิงก์แชร์ได้ กรุณาลองใหม่', false);
+    }
+    
+    return false;
+  }
+}
 // === Convenience Share Functions ===
 export async function sharePost(postData, options = {}) {
   const { 
