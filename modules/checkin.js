@@ -685,9 +685,9 @@ export async function renderHomeRecent(kind) {
     box.innerHTML = data.map(record => {
       const time = new Date(record.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
       const statusBadge = record.status ? (
-        record.status === 'on_time' ? '<span class="badge badge-ontime">ตรงเวลา</span>' :
-        record.status === 'late'    ? '<span class="badge badge-late">สาย</span>' :
-                                       '<span class="badge badge-offsite">นอกพื้นที่</span>'
+        record.status === 'on_time' ? '<span class="badge ci-badge badge-ontime">ตรงเวลา</span>' :
+        record.status === 'late'    ? '<span class="badge ci-badge badge-late">สาย</span>' :
+                                       '<span class="badge ci-badge badge-offsite">นอกพื้นที่</span>'
       ) : '';
       const distanceColor = record.within_radius ? 'text-green-600' : 'text-red-600';
       return `<div class='card p-3 flex items-center gap-3 hover:shadow-md transition-shadow'>
@@ -764,9 +764,9 @@ async function loadToday() {
       const editBtn = canEdit ? `<button class='btn btn-sm text-blue-600' onclick='editOffsite(${record.id}, "${record.purpose||''}", ${JSON.stringify(record.note||'').replace(/"/g,'&quot;')})'>แก้ไข</button>` : '';
       const delBtn = admin ? `<button class='btn btn-sm text-red-600' onclick='deleteCheckin(${record.id})'>ลบ</button>` : '';
       const statusBadge = record.status ? (
-        record.status === 'on_time' ? '<span class="badge badge-ontime">ตรงเวลา</span>' :
-        record.status === 'late'    ? '<span class="badge badge-late">สาย</span>' :
-                                       '<span class="badge badge-offsite">นอกพื้นที่</span>'
+        record.status === 'on_time' ? '<span class="badge ci-badge badge-ontime">ตรงเวลา</span>' :
+        record.status === 'late'    ? '<span class="badge ci-badge badge-late">สาย</span>' :
+                                       '<span class="badge ci-badge badge-offsite">นอกพื้นที่</span>'
       ) : '';
       const distanceColor = record.within_radius ? 'text-green-600' : 'text-red-600';
       return `<div class='card p-3 space-y-2'>
@@ -779,7 +779,7 @@ async function loadToday() {
             <div class='text-sm ${distanceColor} font-medium'>${fmtDist(record.distance_m || 0)}</div>
           </div>
           <div class='flex items-center justify-between'>
-            <div class='flex items-center gap-2'>${statusBadge}</div>
+            <div class='ci-badge-wrap flex items-center gap-2 flex-nowrap'>${statusBadge}</div>
             <div class='flex items-center gap-2'>${editBtn}${delBtn}</div>
           </div>
         </div>`;
@@ -791,97 +791,143 @@ async function loadToday() {
 }
 
 // === Enhanced Summary with responsive design ===
+// === Enhanced Summary with responsive design (positive tone + 3 cols on large) ===
 async function renderSummary() {
   const box = document.getElementById('checkinSummary'); if (!box) return;
   box.innerHTML = skel(6, '80px');
+
   const profile = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const now = new Date();
-  const weekStart = new Date(now); weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); weekStart.setHours(0,0,0,0);
+  const weekStart  = new Date(now); weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); weekStart.setHours(0,0,0,0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const yearStart = new Date(now.getFullYear(), 0, 1);
+  const yearStart  = new Date(now.getFullYear(), 0, 1);
+
   try {
     async function getCheckinStats(since, scope = 'org') {
-      let query = supabase.from('checkins').select('purpose,status,line_user_id,created_at')
-        .gte('created_at', since.toISOString()).lte('created_at', now.toISOString());
-      if (scope === 'me' && profile?.userId) { query = query.eq('line_user_id', profile.userId); }
-      const { data, error } = await query;
-      const stats = { work: 0, meeting: 0, training: 0, official: 0, ontime: 0, late: 0, total: 0 };
+      let q = supabase.from('checkins')
+        .select('purpose,status,line_user_id,created_at')
+        .gte('created_at', since.toISOString())
+        .lte('created_at', now.toISOString());
+      if (scope === 'me' && profile?.userId) q = q.eq('line_user_id', profile.userId);
+
+      const { data, error } = await q;
+      const s = { work:0, meeting:0, training:0, official:0, ontime:0, late:0, total:0 };
       if (!error && data) {
-        data.forEach(record => {
-          stats.total++;
-          if (record.purpose && stats.hasOwnProperty(record.purpose)) stats[record.purpose]++;
-          if (record.purpose === 'work') {
-            if (record.status === 'on_time') stats.ontime++;
-            else if (record.status === 'late') stats.late++;
+        data.forEach(r => {
+          s.total++;
+          if (r.purpose && s.hasOwnProperty(r.purpose)) s[r.purpose]++;
+          if (r.purpose === 'work') {
+            if (r.status === 'on_time') s.ontime++;
+            else if (r.status === 'late') s.late++;
           }
         });
       }
-      return stats;
+      return s;
     }
+
     const [meWeek, meMonth, meYear, orgWeek, orgMonth, orgYear] = await Promise.all([
-      getCheckinStats(weekStart, 'me'), getCheckinStats(monthStart, 'me'), getCheckinStats(yearStart, 'me'),
-      getCheckinStats(weekStart, 'org'), getCheckinStats(monthStart, 'org'), getCheckinStats(yearStart, 'org')
+      getCheckinStats(weekStart, 'me'),
+      getCheckinStats(monthStart, 'me'),
+      getCheckinStats(yearStart, 'me'),
+      getCheckinStats(weekStart, 'org'),
+      getCheckinStats(monthStart, 'org'),
+      getCheckinStats(yearStart, 'org'),
     ]);
-    function createSummaryCard(title, stats, type = 'personal') {
-      const cardColor = type === 'personal' ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
-      const titleColor = type === 'personal' ? 'text-blue-800' : 'text-green-800';
-      return `<div class='card p-4 ${cardColor} hover:shadow-lg transition-all duration-200'>
+
+    function createSummaryCard(title, stats, type='personal') {
+      const cardColor  = type==='personal' ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
+      const titleColor = type==='personal' ? 'text-blue-800' : 'text-green-800';
+      return `
+        <div class='card p-4 ${cardColor} hover:shadow-lg transition-all duration-200'>
           <div class='text-sm font-semibold mb-3 ${titleColor}'>${title}</div>
           <div class='grid grid-cols-2 gap-3 text-sm'>
-            <div class='flex justify-between'><span class='text-gray-600'>มาทำงาน</span><span class='font-semibold text-green-700'>${stats.work || 0}</span></div>
-            <div class='flex justify-between'><span class='text-gray-600'>ประชุม</span><span class='font-semibold text-blue-700'>${stats.meeting || 0}</span></div>
-            <div class='flex justify-between'><span class='text-gray-600'>อบรม</span><span class='font-semibold text-purple-700'>${stats.training || 0}</span></div>
-            <div class='flex justify-between'><span class='text-gray-600'>ไปราชการ</span><span class='font-semibold text-orange-700'>${stats.official || 0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>มาทำงาน</span><span class='font-semibold text-green-700'>${stats.work||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ประชุม</span><span class='font-semibold text-blue-700'>${stats.meeting||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>อบรม</span><span class='font-semibold text-purple-700'>${stats.training||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ไปราชการ</span><span class='font-semibold text-orange-700'>${stats.official||0}</span></div>
           </div>
           <div class='mt-3 pt-3 border-t border-gray-200'>
-            <div class='flex justify-between text-xs text-gray-500'><span>รวมทั้งหมด</span><span class='font-semibold'>${stats.total || 0} ครั้ง</span></div>
-          </div>
-        </div>`;
-    }
-    const totalWorkDays = (meMonth.ontime || 0) + (meMonth.late || 0);
-    let encouragementSection = '';
-    if (totalWorkDays > 0) {
-      const onTimePercentage = Math.round((meMonth.ontime || 0) * 100 / totalWorkDays);
-      const lateCount = meMonth.late || 0;
-      let message = '', bgColor = '', textColor = '';
-      if (onTimePercentage >= 90) { message = 'ยอดเยี่ยม! คุณตรงเวลามากที่สุด 🌟'; bgColor = 'bg-green-50'; textColor = 'text-green-800'; }
-      else if (onTimePercentage >= 75) { message = 'ดีมาก! พยายามรักษาไว้นะ ✨'; bgColor = 'bg-blue-50'; textColor = 'text-blue-800'; }
-      else if (onTimePercentage >= 50) { message = 'ควรปรับปรุง ลองตั้งเป้ามาให้เร็วขึ้น 💪'; bgColor = 'bg-yellow-50'; textColor = 'text-yellow-800'; }
-      else { message = 'ต้องปรับปรุงเร่งด่วน ⏰'; bgColor = 'bg-red-50'; textColor = 'text-red-800'; }
-      encouragementSection = `<div class='card p-4 mt-4 ${bgColor} border-l-4 border-current'>
-          <div class='font-semibold mb-2 ${textColor}'>สถิติการมาทำงานเดือนนี้</div>
-          <div class='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3'>
-            <div class='text-center'><div class='text-2xl font-bold text-green-600'>${meMonth.ontime || 0}</div><div class='text-gray-600'>ตรงเวลา</div></div>
-            <div class='text-center'><div class='text-2xl font-bold text-yellow-600'>${lateCount}</div><div class='text-gray-600'>มาสาย</div></div>
-            <div class='text-center'><div class='text-2xl font-bold text-blue-600'>${totalWorkDays}</div><div class='text-gray-600'>รวม</div></div>
-            <div class='text-center'><div class='text-2xl font-bold ${onTimePercentage >= 75 ? 'text-green-600' : 'text-yellow-600'}'>${onTimePercentage}%</div><div class='text-gray-600'>ตรงเวลา</div></div>
-          </div>
-          <div class='text-sm ${textColor}'>${message}</div>
-        </div>`;
-    }
-    box.innerHTML = `<div class='space-y-6'>
-        <div class='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-          <div class='space-y-4'>
-            <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2'>📊 สถิติของฉัน</h3>
-            <div class='grid grid-cols-1 gap-4'>${createSummaryCard('สัปดาห์นี้', meWeek, 'personal')}${createSummaryCard('เดือนนี้', meMonth, 'personal')}${createSummaryCard('ปีนี้', meYear, 'personal')}</div>
-          </div>
-          <div class='space-y-4'>
-            <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2'>🏢 สถิติองค์กร</h3>
-            <div class='grid grid-cols-1 gap-4'>${createSummaryCard('สัปดาห์นี้', orgWeek, 'organization')}${createSummaryCard('เดือนนี้', orgMonth, 'organization')}${createSummaryCard('ปีนี้', orgYear, 'organization')}</div>
+            <div class='flex justify-between text-xs text-gray-500'><span>รวมทั้งหมด</span><span class='font-semibold'>${stats.total||0} ครั้ง</span></div>
           </div>
         </div>
+      `;
+    }
+
+    // Positive reinforcement block
+    const totalWorkDays = (meMonth.ontime||0) + (meMonth.late||0);
+    let encouragementSection = '';
+    if (totalWorkDays >= 0) {
+      const pct = totalWorkDays ? Math.round((meMonth.ontime||0) * 100 / totalWorkDays) : 0;
+
+      // โทนเชิงบวกเสริมแรงทุกกรณี
+      let message = '';
+      let bgColor = 'bg-blue-50', textColor = 'text-blue-800';
+      if (totalWorkDays === 0) {
+        message = 'มาเริ่มเดือนนี้ด้วยเช็คอินครั้งแรกกันเลย! ทุกก้าวเล็ก ๆ มีความหมาย 💙';
+      } else if (pct >= 90) {
+        message = 'ยอดเยี่ยมมาก! ความสม่ำเสมอของคุณคือแรงบันดาลใจให้ทีม 🌟';
+        bgColor='bg-green-50'; textColor='text-green-800';
+      } else if (pct >= 75) {
+        message = 'ดีมาก! กำลังไปได้สวย รักษาความสม่ำเสมอไว้นะ ✨';
+      } else if (pct >= 50) {
+        message = 'กำลังพัฒนา! ลองตั้งแจ้งเตือนหรือเตรียมตัวล่วงหน้าสักนิด เพื่อให้ดียิ่งขึ้น 💪';
+        bgColor='bg-yellow-50'; textColor='text-yellow-800';
+      } else {
+        message = 'เริ่มต้นใหม่ได้เสมอ วันนี้คือโอกาสที่ดีในการสร้างนิสัยตรงเวลา 😊';
+        bgColor='bg-indigo-50'; textColor='text-indigo-800';
+      }
+
+      encouragementSection = `
+        <div class='card p-4 mt-4 ${bgColor} border-l-4 border-current'>
+          <div class='font-semibold mb-2 ${textColor}'>สถิติการมาทำงานเดือนนี้</div>
+          <div class='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3'>
+            <div class='text-center'><div class='text-2xl font-bold text-green-600'>${meMonth.ontime||0}</div><div class='text-gray-600'>ตรงเวลา</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-yellow-600'>${meMonth.late||0}</div><div class='text-gray-600'>มาสาย</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-blue-600'>${totalWorkDays}</div><div class='text-gray-600'>รวม</div></div>
+            <div class='text-center'><div class='text-2xl font-bold ${pct>=75?'text-green-600':'text-yellow-600'}'>${pct}%</div><div class='text-gray-600'>ตรงเวลา</div></div>
+          </div>
+          <div class='text-sm ${textColor}'>${message}</div>
+        </div>
+      `;
+    }
+
+    // แสดงผล: จอใหญ่ (lg+) การ์ดภายในแต่ละกลุ่มเป็น 3 คอลัมน์ และ “สถิติของฉัน/องค์กร” แยกกันคนละแถว
+    box.innerHTML = `
+      <div class='space-y-8'>
+        <section>
+          <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3'>📊 สถิติของฉัน</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
+            ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
+            ${createSummaryCard('ปีนี้',      meYear,  'personal')}
+          </div>
+        </section>
+
+        <section>
+          <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3'>🏢 สถิติองค์กร</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
+            ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
+            ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
+          </div>
+        </section>
+
         ${encouragementSection}
-      </div>`;
+      </div>
+    `;
   } catch (error) {
     console.error('Error rendering summary:', error);
-    box.innerHTML = `<div class="card p-6 text-center text-red-600">
+    box.innerHTML = `
+      <div class="card p-6 text-center text-red-600">
         <div class="text-4xl mb-2">⚠️</div>
         <div class="font-medium mb-2">ไม่สามารถโหลดสรุปผลได้</div>
         <div class="text-sm text-gray-600">กรุณาลองใหม่อีกครั้ง</div>
         <button onclick="window.reloadSummary()" class="mt-3 btn btn-prim">โหลดใหม่</button>
-      </div>`;
+      </div>
+    `;
   }
 }
+
 
 // === Global functions for edit/delete operations ===
 window.editOffsite = function(id, purpose, note) {
@@ -976,35 +1022,52 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     const style = document.createElement('style');
     style.id = 'checkin-enhanced-styles';
     style.textContent = `
-      /* Badge base */
-      .badge {
-        display: inline-flex !important;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        line-height: 1;
-        border: 1px solid transparent;
-      }
-      /* Use higher specificity to win over framework defaults */
-      .badge.badge-ontime { background-color: #dcfce7 !important; color: #166534 !important; border-color: rgba(16,185,129,0.25) !important; }
-      .badge.badge-late   { background-color: #fef3c7 !important; color: #92400e !important; border-color: rgba(245,158,11,0.25) !important; }
-      .badge.badge-offsite{ background-color: #e0e7ff !important; color: #3730a3 !important; border-color: rgba(99,102,241,0.25) !important; }
-
-      /* Map container enhancements */
-      #map { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-      .leaflet-container { z-index: 1; }
-
-      /* QR Reader rounded corners */
-      #qrReader { border-radius: 14px; overflow: hidden; }
-      #qrReader canvas, #qrReader video { border-radius: 14px !important; }
-
-      /* Spinner */
-      @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-      .animate-spin { animation: spin 1s linear infinite; }
-    `;
+    /* ===== Badge styles scoped to Checkin view & explicit ci-badge class ===== */
+    #checkinView .badge, .ci-badge {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      vertical-align: middle;
+      position: relative;
+    }
+    #checkinView .badge.badge-ontime, .ci-badge.badge-ontime {
+      background-color: #dcfce7 !important; color: #166534 !important; border-color: rgba(16,185,129,0.25) !important;
+    }
+    #checkinView .badge.badge-late, .ci-badge.badge-late {
+      background-color: #fef3c7 !important; color: #92400e !important; border-color: rgba(245,158,11,0.25) !important;
+    }
+    #checkinView .badge.badge-offsite, .ci-badge.badge-offsite {
+      background-color: #e0e7ff !important; color: #3730a3 !important; border-color: rgba(99,102,241,0.25) !important;
+    }
+    /* Badge container inside each card */
+    #checkinView .ci-badge-wrap, .ci-badge-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      flex-wrap: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+    }
+  
+    /* Map container enhancements */
+    #map { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .leaflet-container { z-index: 1; }
+  
+    /* QR Reader rounded corners */
+    #qrReader { border-radius: 14px; overflow: hidden; }
+    #qrReader canvas, #qrReader video { border-radius: 14px !important; }
+  
+    /* Spinner */
+    @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+    .animate-spin { animation: spin 1s linear infinite; }
+  `;
     document.head.appendChild(style);
   } catch (e) {
     console.warn('Style injection failed:', e);
