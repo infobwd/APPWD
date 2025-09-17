@@ -1251,7 +1251,7 @@ async function loadToday() {
         minute: '2-digit'
       });
       
-      const canEdit = (isAdmin || (!record.within_radius && record.purpose !== 'work' && 
+      const canEdit = (adminStatus || (!record.within_radius && record.purpose !== 'work' && 
                        profile?.userId && record.line_user_id === profile.userId));
       
       const editBtn = canEdit ? `
@@ -1261,7 +1261,7 @@ async function loadToday() {
         </button>
       ` : '';
       
-      const delBtn = isAdmin ? `
+      const delBtn = adminStatus ? `
         <button class='btn btn-sm text-red-600' onclick='deleteCheckin(${record.id})'>
           ลบ
         </button>
