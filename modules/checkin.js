@@ -911,45 +911,36 @@ async function loadToday() {
   }
 }
 
+// === Enhanced Summary with responsive design (positive tone + 3 cols on large) ===
 async function renderSummary() {
-  const box = document.getElementById('checkinSummary');
-  if (!box) return;
+  const box = document.getElementById('checkinSummary'); if (!box) return;
+  box.innerHTML = skel(6, '80px');
 
-  box.innerHTML = skel(6, '120px');
-
-  const profile = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
+  const profile = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const now = new Date();
-
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  weekStart.setHours(0, 0, 0, 0);
-
+  const weekStart  = new Date(now); weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); weekStart.setHours(0,0,0,0);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const yearStart  = new Date(now.getFullYear(), 0, 1);
 
   try {
-    async function getCheckinStats(since, scope) {
-      let q = supabase
-        .from('checkins')
+    async function getCheckinStats(since, scope = 'org') {
+      let q = supabase.from('checkins')
         .select('purpose,status,line_user_id,created_at')
         .gte('created_at', since.toISOString())
         .lte('created_at', now.toISOString());
-
-      if (scope === 'me' && profile && profile.userId) {
-        q = q.eq('line_user_id', profile.userId);
-      }
+      if (scope === 'me' && profile?.userId) q = q.eq('line_user_id', profile.userId);
 
       const { data, error } = await q;
       const s = { work:0, meeting:0, training:0, official:0, ontime:0, late:0, total:0 };
       if (!error && data) {
-        for (const r of data) {
+        data.forEach(r => {
           s.total++;
-          if (r.purpose && Object.prototype.hasOwnProperty.call(s, r.purpose)) s[r.purpose]++;
+          if (r.purpose && s.hasOwnProperty(r.purpose)) s[r.purpose]++;
           if (r.purpose === 'work') {
             if (r.status === 'on_time') s.ontime++;
             else if (r.status === 'late') s.late++;
           }
-        }
+        });
       }
       return s;
     }
@@ -960,87 +951,88 @@ async function renderSummary() {
       getCheckinStats(yearStart, 'me'),
       getCheckinStats(weekStart, 'org'),
       getCheckinStats(monthStart, 'org'),
-      getCheckinStats(yearStart, 'org')
+      getCheckinStats(yearStart, 'org'),
     ]);
 
-    function createSummaryCard(title, stats, type) {
-      const isPersonal = type === 'personal';
-      const cardColor  = isPersonal ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
-      const titleColor = isPersonal ? 'text-blue-800' : 'text-green-800';
+    function createSummaryCard(title, stats, type='personal') {
+      const cardColor  = type==='personal' ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
+      const titleColor = type==='personal' ? 'text-blue-800' : 'text-green-800';
       return `
-        <div class="summary-card card p-4 ${cardColor} hover:shadow-lg transition-all duration-200 h-full flex flex-col">
-          <div class="text-sm font-semibold mb-3 ${titleColor}">${title}</div>
-          <div class="summary-stats grid grid-cols-2 gap-3 text-sm">
-            <div class="summary-stat-row"><span class="text-gray-600">มาทำงาน</span><span class="font-semibold text-green-700">${stats.work||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">ประชุม</span><span class="font-semibold text-blue-700">${stats.meeting||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">อบรม</span><span class="font-semibold text-purple-700">${stats.training||0}</span></div>
-            <div class="summary-stat-row"><span class="text-gray-600">ไปราชการ</span><span class="font-semibold text-orange-700">${stats.official||0}</span></div>
+        <div class='card p-4 ${cardColor} hover:shadow-lg transition-all duration-200'>
+          <div class='text-sm font-semibold mb-3 ${titleColor}'>${title}</div>
+          <div class='grid grid-cols-2 gap-3 text-sm'>
+            <div class='flex justify-between'><span class='text-gray-600'>มาทำงาน</span><span class='font-semibold text-green-700'>${stats.work||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ประชุม</span><span class='font-semibold text-blue-700'>${stats.meeting||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>อบรม</span><span class='font-semibold text-purple-700'>${stats.training||0}</span></div>
+            <div class='flex justify-between'><span class='text-gray-600'>ไปราชการ</span><span class='font-semibold text-orange-700'>${stats.official||0}</span></div>
           </div>
-          <div class="mt-auto pt-3 border-t border-gray-200">
-            <div class="flex justify-between text-xs text-gray-500">
-              <span>รวมทั้งหมด</span><span class="font-semibold">${stats.total||0} ครั้ง</span>
-            </div>
+          <div class='mt-3 pt-3 border-t border-gray-200'>
+            <div class='flex justify-between text-xs text-gray-500'><span>รวมทั้งหมด</span><span class='font-semibold'>${stats.total||0} ครั้ง</span></div>
           </div>
         </div>
       `;
     }
 
-    const totalWorkDays = (meMonth.ontime || 0) + (meMonth.late || 0);
+    // Positive reinforcement block
+    const totalWorkDays = (meMonth.ontime||0) + (meMonth.late||0);
     let encouragementSection = '';
-    {
-      const pct = totalWorkDays ? Math.round((meMonth.ontime || 0) * 100 / totalWorkDays) : 0;
+    if (totalWorkDays >= 0) {
+      const pct = totalWorkDays ? Math.round((meMonth.ontime||0) * 100 / totalWorkDays) : 0;
+
+      // โทนเชิงบวกเสริมแรงทุกกรณี
       let message = '';
-      let bgColor = 'bg-blue-50';
-      let textColor = 'text-blue-800';
+      let bgColor = 'bg-blue-50', textColor = 'text-blue-800';
       if (totalWorkDays === 0) {
         message = 'มาเริ่มเดือนนี้ด้วยเช็คอินครั้งแรกกันเลย! ทุกก้าวเล็ก ๆ มีความหมาย 💙';
       } else if (pct >= 90) {
         message = 'ยอดเยี่ยมมาก! ความสม่ำเสมอของคุณคือแรงบันดาลใจให้ทีม 🌟';
-        bgColor = 'bg-green-50'; textColor = 'text-green-800';
+        bgColor='bg-green-50'; textColor='text-green-800';
       } else if (pct >= 75) {
         message = 'ดีมาก! กำลังไปได้สวย รักษาความสม่ำเสมอไว้นะ ✨';
       } else if (pct >= 50) {
         message = 'กำลังพัฒนา! ลองตั้งแจ้งเตือนหรือเตรียมตัวล่วงหน้าสักนิด เพื่อให้ดียิ่งขึ้น 💪';
-        bgColor = 'bg-yellow-50'; textColor = 'text-yellow-800';
+        bgColor='bg-yellow-50'; textColor='text-yellow-800';
       } else {
         message = 'เริ่มต้นใหม่ได้เสมอ วันนี้คือโอกาสที่ดีในการสร้างนิสัยตรงเวลา 😊';
-        bgColor = 'bg-indigo-50'; textColor = 'text-indigo-800';
+        bgColor='bg-indigo-50'; textColor='text-indigo-800';
       }
+
       encouragementSection = `
-        <div class="card p-4 mt-4 ${bgColor} border-l-4 border-current">
-          <div class="font-semibold mb-2 ${textColor}">สถิติการมาทำงานเดือนนี้</div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-            <div class="text-center"><div class="text-2xl font-bold text-green-600">${meMonth.ontime||0}</div><div class="text-gray-600">ตรงเวลา</div></div>
-            <div class="text-center"><div class="text-2xl font-bold text-yellow-600">${meMonth.late||0}</div><div class="text-gray-600">มาสาย</div></div>
-            <div class="text-center"><div class="text-2xl font-bold text-blue-600">${totalWorkDays}</div><div class="text-gray-600">รวม</div></div>
-            <div class="text-center"><div class="text-2xl font-bold ${pct>=75?'text-green-600':'text-yellow-600'}">${pct}%</div><div class="text-gray-600">ตรงเวลา</div></div>
+        <div class='card p-4 mt-4 ${bgColor} border-l-4 border-current'>
+          <div class='font-semibold mb-2 ${textColor}'>สถิติการมาทำงานเดือนนี้</div>
+          <div class='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3'>
+            <div class='text-center'><div class='text-2xl font-bold text-green-600'>${meMonth.ontime||0}</div><div class='text-gray-600'>ตรงเวลา</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-yellow-600'>${meMonth.late||0}</div><div class='text-gray-600'>มาสาย</div></div>
+            <div class='text-center'><div class='text-2xl font-bold text-blue-600'>${totalWorkDays}</div><div class='text-gray-600'>รวม</div></div>
+            <div class='text-center'><div class='text-2xl font-bold ${pct>=75?'text-green-600':'text-yellow-600'}'>${pct}%</div><div class='text-gray-600'>ตรงเวลา</div></div>
           </div>
-          <div class="text-sm ${textColor}">${message}</div>
+          <div class='text-sm ${textColor}'>${message}</div>
         </div>
       `;
     }
 
+    // แสดงผล: จอใหญ่ (lg+) การ์ดภายในแต่ละกลุ่มเป็น 3 คอลัมน์ และ “สถิติของฉัน/องค์กร” แยกกันคนละแถว
     box.innerHTML = `
-      <div class="summary-wrap summary-bleed w-full">
-        <div class="space-y-8 w-full">
-          <section>
-            <h3 class="summary-sticky text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3 bg-white/70">📊 สถิติของฉัน</h3>
-            <div class="summary-grid">
-              ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
-              ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
-              ${createSummaryCard('ปีนี้',      meYear,  'personal')}
-            </div>
-          </section>
-          <section>
-            <h3 class="summary-sticky text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3 bg-white/70">🏢 สถิติองค์กร</h3>
-            <div class="summary-grid">
-              ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
-              ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
-              ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
-            </div>
-          </section>
-          ${encouragementSection}
-        </div>
+      <div class='space-y-8'>
+        <section>
+          <h3 class='text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3'>📊 สถิติของฉัน</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
+            ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
+            ${createSummaryCard('ปีนี้',      meYear,  'personal')}
+          </div>
+        </section>
+
+        <section>
+          <h3 class='text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3'>🏢 สถิติองค์กร</h3>
+          <div class='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+            ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
+            ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
+            ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
+          </div>
+        </section>
+
+        ${encouragementSection}
       </div>
     `;
   } catch (error) {
@@ -1055,7 +1047,6 @@ async function renderSummary() {
     `;
   }
 }
-
 
 
 // === Global functions for edit/delete operations ===
@@ -1146,91 +1137,238 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
 // === แก้ไข CSS สำหรับ responsive และ badge ===
 (function injectFixedStyles() {
   try {
-    const olds = document.querySelectorAll('#checkin-enhanced-styles, #checkin-fixed-styles');
-    olds.forEach(n => n.remove());
-
+    // ลบ style เก่า
+    const existingStyles = document.querySelectorAll('#checkin-enhanced-styles, #checkin-fixed-styles');
+    existingStyles.forEach(style => style.remove());
+    
     const style = document.createElement('style');
     style.id = 'checkin-fixed-styles';
-    style.textContent = String.raw`
-:root{ --summary-sticky-top: 64px; }
-
-/* Checkin Card */
-.checkin-card{ box-shadow:0 2px 8px rgba(0,0,0,.06); transition:box-shadow .2s ease; animation:fadeIn .3s ease-in-out; }
-.checkin-card:hover{ box-shadow:0 4px 12px rgba(0,0,0,.1); }
-
-/* Status Badge */
-.status-badge{ display:inline-flex!important; align-items:center; justify-content:center; padding:2px 8px!important; border-radius:12px!important; font-size:10px!important; font-weight:600!important; line-height:1.2!important; white-space:nowrap; border:1px solid; min-height:20px; }
-.status-badge.badge-ontime{ background:#dcfce7!important; color:#15803d!important; border-color:#86efac!important; }
-.status-badge.badge-late{   background:#fef3c7!important; color:#a16207!important; border-color:#fde047!important; }
-.status-badge.badge-offsite{background:#e0e7ff!important; color:#4338ca!important; border-color:#a5b4fc!important; }
-
-/* Buttons */
-.edit-btn,.delete-btn{ display:inline-flex!important; align-items:center; justify-content:center; border:none!important; border-radius:6px!important; cursor:pointer; transition:all .2s ease; font-weight:500!important; text-align:center; min-height:24px; position:relative; z-index:10; pointer-events:auto; }
-.edit-btn:hover{   transform:translateY(-1px); box-shadow:0 4px 8px rgba(59,130,246,.3); }
-.delete-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 8px rgba(239,68,68,.3); }
-.edit-btn:active,.delete-btn:active{ transform:translateY(0); }
-
-/* Containers */
-.status-container{ flex:1; display:flex; align-items:center; overflow:hidden; }
-.actions-container{ flex-shrink:0; display:flex; align-items:center; gap:4px; }
-
-/* Mobile tweaks */
-@media (max-width:480px){
-  .checkin-card{ padding:12px!important; margin-bottom:8px!important; }
-  .checkin-card .flex.items-center.gap-3{ gap:8px!important; }
-  .status-badge{ font-size:9px!important; padding:1px 6px!important; min-height:18px!important; }
-  .edit-btn,.delete-btn{ font-size:10px!important; min-width:40px!important; min-height:22px!important; padding:1px 6px!important; }
-  .actions-container{ gap:3px!important; }
-  .checkin-card .flex.items-center.justify-between{ flex-direction:column; align-items:stretch; gap:8px; }
-  .status-container{ justify-content:flex-start; }
-  .actions-container{ justify-content:flex-end; flex-shrink:0; }
-}
-@media (max-width:360px){
-  .checkin-card{ padding:10px!important; }
-  .checkin-card .w-10.h-10{ width:32px!important; height:32px!important; }
-  .status-badge{ font-size:8px!important; padding:1px 4px!important; min-height:16px!important; }
-  .edit-btn,.delete-btn{ font-size:9px!important; min-width:35px!important; min-height:20px!important; }
-}
-
-/* Animations */
-@keyframes fadeIn{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
-@keyframes spin{ from{transform:rotate(0);} to{transform:rotate(360deg);} }
-.animate-spin{ animation:spin 1s linear infinite; }
-
-/* Map & QR */
-#map{ position:relative; border-radius:14px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.08); z-index:1; }
-.leaflet-container{ z-index:1!important; }
-#qrReader{ border-radius:14px; overflow:hidden; }
-#qrReader canvas, #qrReader video{ border-radius:14px!important; }
-
-/* Touch targets */
-@media (pointer:coarse){
-  .edit-btn,.delete-btn{ min-height:32px!important; min-width:48px!important; touch-action:manipulation; }
-}
-
-/* Summary: full-bleed + auto-fit */
-.summary-wrap{ width:100%; max-width:none; }
-.summary-bleed{ margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); padding-left:  min(24px, 4vw); padding-right: min(24px, 4vw); }
-.summary-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
-@media (min-width:768px){   .summary-grid{ gap: 1.25rem; } }
-@media (min-width:1280px){  .summary-grid{ gap: 1.5rem;  } }
-@media (min-width:1536px){  .summary-grid{ gap: 2rem;    } }
-
-.summary-card{ min-height:190px; height:100%; }
-.summary-stats{ row-gap:.75rem; }
-.summary-stat-row{ display:flex; justify-content:space-between; gap:.75rem; }
-.summary-card .font-semibold{ white-space:nowrap; }
-
-/* Sticky headers */
-.summary-sticky{ position: sticky; top: var(--summary-sticky-top); z-index: 20; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-@media (min-width:1024px){ :root{ --summary-sticky-top: 72px; } }
+    style.textContent = `
+      /* === Checkin Card Responsive Styles === */
+      .checkin-card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s ease;
+      }
+      
+      .checkin-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      
+      /* === Status Badge Styles === */
+      .status-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 8px !important;
+        border-radius: 12px !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+        border: 1px solid;
+        min-height: 20px;
+      }
+      
+      .status-badge.badge-ontime {
+        background-color: #dcfce7 !important;
+        color: #15803d !important;
+        border-color: #86efac !important;
+      }
+      
+      .status-badge.badge-late {
+        background-color: #fef3c7 !important;
+        color: #a16207 !important;
+        border-color: #fde047 !important;
+      }
+      
+      .status-badge.badge-offsite {
+        background-color: #e0e7ff !important;
+        color: #4338ca !important;
+        border-color: #a5b4fc !important;
+      }
+      
+      /* === Button Styles === */
+      .edit-btn, .delete-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border: none !important;
+        border-radius: 6px !important;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500 !important;
+        text-align: center;
+        min-height: 24px;
+      }
+      
+      .edit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+      }
+      
+      .delete-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+      }
+      
+      .edit-btn:active, .delete-btn:active {
+        transform: translateY(0);
+      }
+      
+      /* === Container Layouts === */
+      .status-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+      
+      .actions-container {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      /* === Responsive Adjustments === */
+      @media (max-width: 480px) {
+        .checkin-card {
+          padding: 12px !important;
+          margin-bottom: 8px !important;
+        }
+        
+        .checkin-card .flex.items-center.gap-3 {
+          gap: 8px !important;
+        }
+        
+        .status-badge {
+          font-size: 9px !important;
+          padding: 1px 6px !important;
+          min-height: 18px !important;
+        }
+        
+        .edit-btn, .delete-btn {
+          font-size: 10px !important;
+          min-width: 40px !important;
+          min-height: 22px !important;
+          padding: 1px 6px !important;
+        }
+        
+        .actions-container {
+          gap: 3px !important;
+        }
+        
+        /* Stack actions below status on very small screens */
+        .checkin-card .flex.items-center.justify-between {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+        
+        .status-container {
+          justify-content: flex-start;
+        }
+        
+        .actions-container {
+          justify-content: flex-end;
+          flex-shrink: 0;
+        }
+      }
+      
+      @media (max-width: 360px) {
+        .checkin-card {
+          padding: 10px !important;
+        }
+        
+        .checkin-card .w-10.h-10 {
+          width: 32px !important;
+          height: 32px !important;
+        }
+        
+        .status-badge {
+          font-size: 8px !important;
+          padding: 1px 4px !important;
+          min-height: 16px !important;
+        }
+        
+        .edit-btn, .delete-btn {
+          font-size: 9px !important;
+          min-width: 35px !important;
+          min-height: 20px !important;
+        }
+      }
+      
+      /* === Animation for smooth transitions === */
+      .checkin-card {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      /* === Spinner Animation === */
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+      
+      /* === Map container === */
+      #map {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        z-index: 1;
+      }
+      
+      .leaflet-container {
+        z-index: 1 !important;
+      }
+      
+      /* === QR Reader === */
+      #qrReader {
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      
+      #qrReader canvas, #qrReader video {
+        border-radius: 14px !important;
+      }
+      
+      /* === Ensure buttons are clickable === */
+      .edit-btn, .delete-btn {
+        position: relative;
+        z-index: 10;
+        pointer-events: auto;
+      }
+      
+      /* === Touch targets for mobile === */
+      @media (pointer: coarse) {
+        .edit-btn, .delete-btn {
+          min-height: 32px !important;
+          min-width: 48px !important;
+          touch-action: manipulation;
+        }
+      }
     `;
+    
     document.head.appendChild(style);
   } catch (e) {
     console.warn('Fixed styles injection failed:', e);
   }
 })();
-
 
 // === เพิ่มการจัดการ touch events สำหรับ mobile ===
 document.addEventListener('DOMContentLoaded', function() {
