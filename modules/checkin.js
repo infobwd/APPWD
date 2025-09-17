@@ -911,7 +911,7 @@ async function loadToday() {
   }
 }
 
-// === Enhanced Summary with sticky headers + full-width on large ===
+// === Enhanced Summary with sticky headers + full-bleed + auto-fit grid (FULL) ===
 async function renderSummary() {
   const box = document.getElementById('checkinSummary');
   if (!box) return;
@@ -965,7 +965,7 @@ async function renderSummary() {
       getCheckinStats(yearStart, 'org'),
     ]);
 
-    // รูปแบบการ์ด: สูงเท่ากัน (flex column + mt-auto ที่ส่วนสรุปรวม)
+    // การ์ดสรุป (สูงเท่ากันด้วย flex + mt-auto)
     function createSummaryCard(title, stats, type='personal') {
       const cardColor  = type==='personal' ? 'border-blue-200 bg-blue-50' : 'border-green-200 bg-green-50';
       const titleColor = type==='personal' ? 'text-blue-800' : 'text-green-800';
@@ -1026,15 +1026,15 @@ async function renderSummary() {
       `;
     }
 
-    // Layout: FULL-WIDTH บนจอใหญ่ + sticky section headers
+    // Layout: FULL width จริง + sticky headers + auto-fit grid
     box.innerHTML = `
-      <div class="summary-wrap w-full mx-auto px-3 md:px-6 lg:px-8">
+      <div class="summary-wrap summary-bleed w-full">
         <div class="space-y-8 w-full">
           <section>
             <h3 class="summary-sticky text-lg font-semibold text-blue-800 border-b border-blue-200 pb-2 mb-3 bg-white/70">
               📊 สถิติของฉัน
             </h3>
-            <div class="summary-grid grid gap-4">
+            <div class="summary-grid">
               ${createSummaryCard('สัปดาห์นี้', meWeek,  'personal')}
               ${createSummaryCard('เดือนนี้',   meMonth, 'personal')}
               ${createSummaryCard('ปีนี้',      meYear,  'personal')}
@@ -1045,7 +1045,7 @@ async function renderSummary() {
             <h3 class="summary-sticky text-lg font-semibold text-green-800 border-b border-green-200 pb-2 mb-3 bg-white/70">
               🏢 สถิติองค์กร
             </h3>
-            <div class="summary-grid grid gap-4">
+            <div class="summary-grid">
               ${createSummaryCard('สัปดาห์นี้', orgWeek,  'organization')}
               ${createSummaryCard('เดือนนี้',   orgMonth, 'organization')}
               ${createSummaryCard('ปีนี้',      orgYear,  'organization')}
@@ -1068,6 +1068,7 @@ async function renderSummary() {
     `;
   }
 }
+
 
 
 
@@ -1156,10 +1157,10 @@ window.addEventListener('resize', applyCheckinLatestSlider);
 document.addEventListener('DOMContentLoaded', applyCheckinLatestSlider);
 document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
 
-// === แก้ไข CSS สำหรับ responsive/badge/summary + sticky (FULL) ===
+// === Fixed styles: responsive/badge/summary + sticky + full-bleed + auto-fit (FULL) ===
 (function injectFixedStyles() {
   try {
-    // ลบ style เก่าที่เคยฉีด
+    // ลบ style เดิมที่ฉีดไว้ก่อนหน้า
     const existingStyles = document.querySelectorAll('#checkin-enhanced-styles, #checkin-fixed-styles');
     existingStyles.forEach(style => style.remove());
 
@@ -1167,7 +1168,7 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     style.id = 'checkin-fixed-styles';
     style.textContent = `
       :root{
-        /* ระยะยึดหัว sticky ใต้แถบ navbar หรือ topbar ที่ระบบมีอยู่ */
+        /* ระยะยึดหัว sticky ใต้แถบ navbar หรือ topbar ของระบบ */
         --summary-sticky-top: 64px;
       }
 
@@ -1238,13 +1239,28 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
         .edit-btn,.delete-btn{ min-height:32px!important; min-width:48px!important; touch-action:manipulation; }
       }
 
-      /* === Summary (Large screen friendly + FULL width) === */
-      .summary-wrap{ width:100%; } /* ให้กว้างเต็ม */
-      .summary-grid{ grid-template-columns:repeat(1,minmax(0,1fr)); }
-      @media (min-width:768px){  .summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-      @media (min-width:1280px){ .summary-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+      /* === Summary (Full-width + Auto-fit columns) === */
+      .summary-wrap{ width:100%; max-width:none; }
 
-      .summary-card{ min-height:190px; }
+      /* ดึงกริดให้เต็ม viewport แม้ถูกห่อด้วย container ตรงกลาง (optional) */
+      .summary-bleed{
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        padding-left:  min(24px, 4vw);
+        padding-right: min(24px, 4vw);
+      }
+
+      /* กริดปรับตัวตามพื้นที่: การ์ดขั้นต่ำ 280px แล้วขยายเป็น 1fr */
+      .summary-grid{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+      @media (min-width:768px){   .summary-grid{ gap: 1.25rem; } }
+      @media (min-width:1280px){  .summary-grid{ gap: 1.5rem;  } }
+      @media (min-width:1536px){  .summary-grid{ gap: 2rem;    } }
+
+      .summary-card{ min-height:190px; height:100%; }
       .summary-stats{ row-gap:.75rem; }
       .summary-stat-row{ display:flex; justify-content:space-between; gap:.75rem; }
       .summary-card .font-semibold{ white-space:nowrap; }
@@ -1257,10 +1273,8 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
       }
-
-      /* ถ้าจอใหญ่มาก ๆ ให้หัวติดสูงขึ้นเล็กน้อย (กันทับ toolbar) */
       @media (min-width:1024px){
-        :root{ --summary-sticky-top: 72px; }
+        :root{ --summary-sticky-top: 72px; } /* กันทับ toolbar เมื่อจอใหญ่ */
       }
     `;
 
@@ -1269,6 +1283,7 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     console.warn('Fixed styles injection failed:', e);
   }
 })();
+
 
 
 
