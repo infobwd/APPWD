@@ -192,7 +192,7 @@ function updateButtonStates() {
   if (buttons.gpsOnly) {
     buttons.gpsOnly.innerHTML = CheckinState.isCheckingin ? 
       '<span class="animate-spin">⟳</span> กำลังเช็คอิน...' : 
-      'เช็คอิน (GPS เท่านั้น)';
+      'เช็คอิน';
   }
 }
 
@@ -666,41 +666,83 @@ function setupButtonHandlers() {
 }
 
 // === Enhanced home recent checkins ===
+// === แก้ไข renderHomeRecent ให้ใช้ badge ที่ดีกว่า ===
 export async function renderHomeRecent(kind) {
-  const box = document.getElementById('homeCheckins'); if (!box) return;
+  const box = document.getElementById('homeCheckins'); 
+  if (!box) return;
+  
   box.innerHTML = skel(5, '52px');
-  const start = new Date(); start.setHours(0,0,0,0);
-  const end = new Date(); end.setHours(23,59,59,999);
+  const start = new Date(); 
+  start.setHours(0,0,0,0);
+  const end = new Date(); 
+  end.setHours(23,59,59,999);
+  
   try {
-    let query = supabase.from('checkins')
+    let query = supabase
+      .from('checkins')
       .select('id,line_display_name,line_picture_url,created_at,distance_m,within_radius,purpose,status')
       .gte('created_at', start.toISOString())
       .lt('created_at', new Date(end.getTime()+1).toISOString())
-      .order('created_at', {ascending: false}).limit(5);
+      .order('created_at', {ascending: false})
+      .limit(5);
+    
     query = (kind && kind !== 'work') ? query.eq('purpose', kind) : query.eq('purpose', 'work');
     const { data, error } = await query;
-    if (error) { console.error('Failed to load recent checkins:', error); box.innerHTML = '<div class="text-ink3">โหลดเช็คอินไม่สำเร็จ</div>'; return; }
-    document.querySelectorAll('[data-ci-tab]').forEach(b => b.classList.toggle('btn-prim', b.getAttribute('data-ci-tab') === (kind || 'work')));
-    if (!data || data.length === 0) { box.innerHTML = '<div class="text-ink3">ยังไม่มีรายการ</div>'; return; }
+    
+    if (error) { 
+      console.error('Failed to load recent checkins:', error); 
+      box.innerHTML = '<div class="text-ink3">โหลดเช็คอินไม่สำเร็จ</div>'; 
+      return; 
+    }
+    
+    document.querySelectorAll('[data-ci-tab]').forEach(b => 
+      b.classList.toggle('btn-prim', b.getAttribute('data-ci-tab') === (kind || 'work'))
+    );
+    
+    if (!data || data.length === 0) { 
+      box.innerHTML = '<div class="text-ink3">ยังไม่มีรายการ</div>'; 
+      return; 
+    }
+    
     box.innerHTML = data.map(record => {
-      const time = new Date(record.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-      const statusBadge = record.status ? (
-        record.status === 'on_time' ? '<span class="badge ci-badge badge-ontime">ตรงเวลา</span>' :
-        record.status === 'late'    ? '<span class="badge ci-badge badge-late">สาย</span>' :
-                                       '<span class="badge ci-badge badge-offsite">นอกพื้นที่</span>'
-      ) : '';
+      const time = new Date(record.created_at).toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      let statusBadge = '';
+      if (record.status === 'on_time') {
+        statusBadge = '<span class="status-badge badge-ontime">ตรงเวลา</span>';
+      } else if (record.status === 'late') {
+        statusBadge = '<span class="status-badge badge-late">สาย</span>';
+      } else if (record.status === 'offsite') {
+        statusBadge = '<span class="status-badge badge-offsite">นอกพื้นที่</span>';
+      }
+      
       const distanceColor = record.within_radius ? 'text-green-600' : 'text-red-600';
-      return `<div class='card p-3 flex items-center gap-3 hover:shadow-md transition-shadow'>
-          <img src='${record.line_picture_url || '/assets/default-avatar.png'}' class='w-10 h-10 rounded-full border object-cover' onerror="this.src='/assets/default-avatar.png'">
+      
+      return `
+        <div class='card p-3 flex items-center gap-3 hover:shadow-md transition-shadow'>
+          <img src='${record.line_picture_url || '/assets/default-avatar.png'}' 
+               class='w-10 h-10 rounded-full border object-cover' 
+               onerror="this.src='/assets/default-avatar.png'"
+               loading="lazy">
           <div class='flex-1 min-w-0'>
             <div class='font-medium truncate'>${record.line_display_name || 'ไม่ระบุ'}</div>
-            <div class='text-sm text-ink3 flex items-center gap-2'>
-              <span>${time}</span><span>•</span><span>${purposeLabel(record.purpose)}</span>${statusBadge}
+            <div class='text-sm text-ink3 flex items-center gap-2 flex-wrap'>
+              <span>${time}</span>
+              <span>•</span>
+              <span>${purposeLabel(record.purpose)}</span>
+              ${statusBadge}
             </div>
           </div>
-          <div class='text-sm ${distanceColor} font-medium'>${fmtDist(record.distance_m || 0)}</div>
-        </div>`;
+          <div class='text-sm ${distanceColor} font-medium'>
+            ${fmtDist(record.distance_m || 0)}
+          </div>
+        </div>
+      `;
     }).join('');
+    
   } catch (error) {
     console.error('Error rendering home recent:', error);
     box.innerHTML = '<div class="text-red-600">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
@@ -744,53 +786,131 @@ export async function renderHomeSummary() {
 // === Enhanced today list with better mobile support ===
 async function loadToday() {
   const profile = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
-  const box = document.getElementById('todayList'); if (!box) return;
+  const box = document.getElementById('todayList'); 
+  if (!box) return;
+  
   box.innerHTML = skel(3, '60px');
-  if (!profile || !profile.userId) { box.innerHTML = '<div class="text-ink3 text-center py-4">ยังไม่เข้าสู่ระบบ</div>'; return; }
-  const start = new Date(); start.setHours(0,0,0,0);
-  const end = new Date(); end.setHours(23,59,59,999);
+  
+  if (!profile || !profile.userId) { 
+    box.innerHTML = '<div class="text-ink3 text-center py-4">ยังไม่เข้าสู่ระบบ</div>'; 
+    return; 
+  }
+  
+  const start = new Date(); 
+  start.setHours(0,0,0,0);
+  const end = new Date(); 
+  end.setHours(23,59,59,999);
+  
   try {
-    const admin = await checkIsAdmin(); // <-- renamed to avoid shadowing the import
-    let query = supabase.from('checkins').select('*')
+    const admin = await checkIsAdmin();
+    
+    let query = supabase
+      .from('checkins')
+      .select('*')
       .gte('created_at', start.toISOString())
       .lt('created_at', new Date(end.getTime()+1).toISOString());
-    if (CheckinState.scope === 'mine' && profile.userId) { query = query.eq('line_user_id', profile.userId); }
-    const { data, error } = await query.order('created_at', {ascending: false}).limit(200);
-    if (error) { console.error('Failed to load today list:', error); box.innerHTML = '<div class="text-red-600 text-center py-4">โหลดข้อมูลไม่สำเร็จ</div>'; return; }
-    if (!data || data.length === 0) { box.innerHTML = '<div class="text-ink3 text-center py-4">ยังไม่มีรายการวันนี้</div>'; return; }
+    
+    if (CheckinState.scope === 'mine' && profile.userId) { 
+      query = query.eq('line_user_id', profile.userId); 
+    }
+    
+    const { data, error } = await query
+      .order('created_at', {ascending: false})
+      .limit(200);
+    
+    if (error) { 
+      console.error('Failed to load today list:', error); 
+      box.innerHTML = '<div class="text-red-600 text-center py-4">โหลดข้อมูลไม่สำเร็จ</div>'; 
+      return; 
+    }
+    
+    if (!data || data.length === 0) { 
+      box.innerHTML = '<div class="text-ink3 text-center py-4">ยังไม่มีรายการวันนี้</div>'; 
+      return; 
+    }
+    
     box.innerHTML = data.map(record => {
-      const time = new Date(record.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-      const canEdit = (admin || (!record.within_radius && record.purpose !== 'work' && profile?.userId && record.line_user_id === profile.userId));
-      const editBtn = canEdit ? `<button class='btn btn-sm text-blue-600' onclick='editOffsite(${record.id}, "${record.purpose||''}", ${JSON.stringify(record.note||'').replace(/"/g,'&quot;')})'>แก้ไข</button>` : '';
-      const delBtn = admin ? `<button class='btn btn-sm text-red-600' onclick='deleteCheckin(${record.id})'>ลบ</button>` : '';
-      const statusBadge = record.status ? (
-        record.status === 'on_time' ? '<span class="badge ci-badge badge-ontime">ตรงเวลา</span>' :
-        record.status === 'late'    ? '<span class="badge ci-badge badge-late">สาย</span>' :
-                                       '<span class="badge ci-badge badge-offsite">นอกพื้นที่</span>'
-      ) : '';
+      const time = new Date(record.created_at).toLocaleTimeString('th-TH', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      const canEdit = (admin || (!record.within_radius && record.purpose !== 'work' && 
+                       profile?.userId && record.line_user_id === profile.userId));
+      
+      // ปุ่มแก้ไข - ปรับให้ responsive และใช้งานได้ดีในหน้าจอเล็ก
+      const editBtn = canEdit ? `
+        <button class='edit-btn btn-sm px-2 py-1 text-xs bg-blue-500 text-white rounded border-0 hover:bg-blue-600 transition-colors' 
+                style='min-width: 50px; font-size: 11px; white-space: nowrap;'
+                onclick='editOffsite(${record.id}, "${record.purpose||''}", ${JSON.stringify(record.note||'').replace(/"/g,'&quot;')})'>
+          แก้ไข
+        </button>
+      ` : '';
+      
+      const delBtn = admin ? `
+        <button class='delete-btn btn-sm px-2 py-1 text-xs bg-red-500 text-white rounded border-0 hover:bg-red-600 transition-colors' 
+                style='min-width: 40px; font-size: 11px; white-space: nowrap;'
+                onclick='deleteCheckin(${record.id})'>
+          ลบ
+        </button>
+      ` : '';
+      
+      // Badge ที่แสดงผลดีกว่า - แยกแต่ละ status ชัดเจน
+      let statusBadge = '';
+      if (record.status === 'on_time') {
+        statusBadge = '<span class="status-badge badge-ontime">ตรงเวลา</span>';
+      } else if (record.status === 'late') {
+        statusBadge = '<span class="status-badge badge-late">สาย</span>';
+      } else if (record.status === 'offsite') {
+        statusBadge = '<span class="status-badge badge-offsite">นอกพื้นที่</span>';
+      }
+      
       const distanceColor = record.within_radius ? 'text-green-600' : 'text-red-600';
-      return `<div class='card p-3 space-y-2'>
-          <div class='flex items-center gap-3'>
-            <img src='${record.line_picture_url || "/assets/default-avatar.png"}' class='w-10 h-10 rounded-full border object-cover' onerror="this.src='/assets/default-avatar.png'">
+      
+      return `
+        <div class='checkin-card card p-3 mb-2 border rounded-lg bg-white'>
+          <!-- Header Row -->
+          <div class='flex items-center gap-3 mb-2'>
+            <img src='${record.line_picture_url || "/assets/default-avatar.png"}' 
+                 class='w-10 h-10 rounded-full border-2 object-cover flex-shrink-0' 
+                 onerror="this.src='/assets/default-avatar.png'"
+                 loading="lazy">
+            
             <div class='flex-1 min-w-0'>
-              <div class='font-medium truncate'>${record.line_display_name || 'ไม่ระบุ'}</div>
-              <div class='text-sm text-ink3'>${time} • ${purposeLabel(record.purpose)}${record.note ? ' • ' + record.note : ''}</div>
+              <div class='font-medium text-sm truncate text-gray-900'>
+                ${record.line_display_name || 'ไม่ระบุ'}
+              </div>
+              <div class='text-xs text-gray-500 truncate'>
+                ${time} • ${purposeLabel(record.purpose)}${record.note ? ' • ' + record.note : ''}
+              </div>
             </div>
-            <div class='text-sm ${distanceColor} font-medium'>${fmtDist(record.distance_m || 0)}</div>
+            
+            <div class='text-xs ${distanceColor} font-semibold flex-shrink-0'>
+              ${fmtDist(record.distance_m || 0)}
+            </div>
           </div>
-          <div class='flex items-center justify-between'>
-            <div class='ci-badge-wrap flex items-center gap-2 flex-nowrap'>${statusBadge}</div>
-            <div class='flex items-center gap-2'>${editBtn}${delBtn}</div>
+          
+          <!-- Status and Actions Row -->
+          <div class='flex items-center justify-between gap-2'>
+            <div class='status-container flex items-center flex-wrap gap-1'>
+              ${statusBadge}
+            </div>
+            
+            <div class='actions-container flex items-center gap-1 flex-shrink-0'>
+              ${editBtn}
+              ${delBtn}
+            </div>
           </div>
-        </div>`;
+        </div>
+      `;
     }).join('');
+    
   } catch (error) {
     console.error('Error loading today list:', error);
     box.innerHTML = '<div class="text-red-600 text-center py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
   }
 }
 
-// === Enhanced Summary with responsive design ===
 // === Enhanced Summary with responsive design (positive tone + 3 cols on large) ===
 async function renderSummary() {
   const box = document.getElementById('checkinSummary'); if (!box) return;
@@ -1014,62 +1134,262 @@ window.addEventListener('resize', applyCheckinLatestSlider);
 document.addEventListener('DOMContentLoaded', applyCheckinLatestSlider);
 document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
 
-// === CSS Injection for enhanced styling (badge specificity fix) ===
-(function injectEnhancedStyles() {
+// === แก้ไข CSS สำหรับ responsive และ badge ===
+(function injectFixedStyles() {
   try {
-    const prev = document.getElementById('checkin-enhanced-styles');
-    if (prev) prev.remove();
+    // ลบ style เก่า
+    const existingStyles = document.querySelectorAll('#checkin-enhanced-styles, #checkin-fixed-styles');
+    existingStyles.forEach(style => style.remove());
+    
     const style = document.createElement('style');
-    style.id = 'checkin-enhanced-styles';
+    style.id = 'checkin-fixed-styles';
     style.textContent = `
-    /* ===== Badge styles scoped to Checkin view & explicit ci-badge class ===== */
-    #checkinView .badge, .ci-badge {
-      display: inline-flex !important;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      line-height: 1;
-      border: 1px solid transparent;
-      white-space: nowrap;
-      vertical-align: middle;
-      position: relative;
-    }
-    #checkinView .badge.badge-ontime, .ci-badge.badge-ontime {
-      background-color: #dcfce7 !important; color: #166534 !important; border-color: rgba(16,185,129,0.25) !important;
-    }
-    #checkinView .badge.badge-late, .ci-badge.badge-late {
-      background-color: #fef3c7 !important; color: #92400e !important; border-color: rgba(245,158,11,0.25) !important;
-    }
-    #checkinView .badge.badge-offsite, .ci-badge.badge-offsite {
-      background-color: #e0e7ff !important; color: #3730a3 !important; border-color: rgba(99,102,241,0.25) !important;
-    }
-    /* Badge container inside each card */
-    #checkinView .ci-badge-wrap, .ci-badge-wrap {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      flex-wrap: nowrap;
-      max-width: 100%;
-      overflow: hidden;
-    }
-  
-    /* Map container enhancements */
-    #map { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .leaflet-container { z-index: 1; }
-  
-    /* QR Reader rounded corners */
-    #qrReader { border-radius: 14px; overflow: hidden; }
-    #qrReader canvas, #qrReader video { border-radius: 14px !important; }
-  
-    /* Spinner */
-    @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-    .animate-spin { animation: spin 1s linear infinite; }
-  `;
+      /* === Checkin Card Responsive Styles === */
+      .checkin-card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s ease;
+      }
+      
+      .checkin-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      
+      /* === Status Badge Styles === */
+      .status-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 8px !important;
+        border-radius: 12px !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+        border: 1px solid;
+        min-height: 20px;
+      }
+      
+      .status-badge.badge-ontime {
+        background-color: #dcfce7 !important;
+        color: #15803d !important;
+        border-color: #86efac !important;
+      }
+      
+      .status-badge.badge-late {
+        background-color: #fef3c7 !important;
+        color: #a16207 !important;
+        border-color: #fde047 !important;
+      }
+      
+      .status-badge.badge-offsite {
+        background-color: #e0e7ff !important;
+        color: #4338ca !important;
+        border-color: #a5b4fc !important;
+      }
+      
+      /* === Button Styles === */
+      .edit-btn, .delete-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border: none !important;
+        border-radius: 6px !important;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500 !important;
+        text-align: center;
+        min-height: 24px;
+      }
+      
+      .edit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+      }
+      
+      .delete-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+      }
+      
+      .edit-btn:active, .delete-btn:active {
+        transform: translateY(0);
+      }
+      
+      /* === Container Layouts === */
+      .status-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+      
+      .actions-container {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      /* === Responsive Adjustments === */
+      @media (max-width: 480px) {
+        .checkin-card {
+          padding: 12px !important;
+          margin-bottom: 8px !important;
+        }
+        
+        .checkin-card .flex.items-center.gap-3 {
+          gap: 8px !important;
+        }
+        
+        .status-badge {
+          font-size: 9px !important;
+          padding: 1px 6px !important;
+          min-height: 18px !important;
+        }
+        
+        .edit-btn, .delete-btn {
+          font-size: 10px !important;
+          min-width: 40px !important;
+          min-height: 22px !important;
+          padding: 1px 6px !important;
+        }
+        
+        .actions-container {
+          gap: 3px !important;
+        }
+        
+        /* Stack actions below status on very small screens */
+        .checkin-card .flex.items-center.justify-between {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+        
+        .status-container {
+          justify-content: flex-start;
+        }
+        
+        .actions-container {
+          justify-content: flex-end;
+          flex-shrink: 0;
+        }
+      }
+      
+      @media (max-width: 360px) {
+        .checkin-card {
+          padding: 10px !important;
+        }
+        
+        .checkin-card .w-10.h-10 {
+          width: 32px !important;
+          height: 32px !important;
+        }
+        
+        .status-badge {
+          font-size: 8px !important;
+          padding: 1px 4px !important;
+          min-height: 16px !important;
+        }
+        
+        .edit-btn, .delete-btn {
+          font-size: 9px !important;
+          min-width: 35px !important;
+          min-height: 20px !important;
+        }
+      }
+      
+      /* === Animation for smooth transitions === */
+      .checkin-card {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      /* === Spinner Animation === */
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+      
+      /* === Map container === */
+      #map {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        z-index: 1;
+      }
+      
+      .leaflet-container {
+        z-index: 1 !important;
+      }
+      
+      /* === QR Reader === */
+      #qrReader {
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      
+      #qrReader canvas, #qrReader video {
+        border-radius: 14px !important;
+      }
+      
+      /* === Ensure buttons are clickable === */
+      .edit-btn, .delete-btn {
+        position: relative;
+        z-index: 10;
+        pointer-events: auto;
+      }
+      
+      /* === Touch targets for mobile === */
+      @media (pointer: coarse) {
+        .edit-btn, .delete-btn {
+          min-height: 32px !important;
+          min-width: 48px !important;
+          touch-action: manipulation;
+        }
+      }
+    `;
+    
     document.head.appendChild(style);
   } catch (e) {
-    console.warn('Style injection failed:', e);
+    console.warn('Fixed styles injection failed:', e);
   }
 })();
+
+// === เพิ่มการจัดการ touch events สำหรับ mobile ===
+document.addEventListener('DOMContentLoaded', function() {
+  // Ensure buttons are properly clickable on mobile
+  document.addEventListener('touchstart', function(e) {
+    const target = e.target;
+    if (target.matches('.edit-btn, .delete-btn')) {
+      target.style.backgroundColor = target.matches('.edit-btn') ? '#1d4ed8' : '#dc2626';
+    }
+  }, { passive: true });
+  
+  document.addEventListener('touchend', function(e) {
+    const target = e.target;
+    if (target.matches('.edit-btn')) {
+      setTimeout(() => {
+        target.style.backgroundColor = '#3b82f6';
+      }, 150);
+    } else if (target.matches('.delete-btn')) {
+      setTimeout(() => {
+        target.style.backgroundColor = '#ef4444';
+      }, 150);
+    }
+  }, { passive: true });
+});
