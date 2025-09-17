@@ -79,3 +79,157 @@ export function initProfileSWToggle() {
     document.addEventListener('DOMContentLoaded', () => setTimeout(initProfileSWToggle, 0));
   }
 })();
+
+///////////////////////////////
+// === Profile: preferences + user details (add-on) ===
+import { supabase } from '../api.js';
+import { openSheet, closeSheet } from '../ui.js';
+
+// ใช้กับ route #profile
+const onProfileRoute = () => {
+  const hash = (location.hash || '#').replace('#','').split('?')[0];
+  return hash === 'profile' || hash === '' || hash === 'tab-profile';
+};
+
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('APPWD_SETTINGS') || '{}'); }
+  catch { return {}; }
+}
+function saveSettings(patch) {
+  const cur = getSettings();
+  const next = { ...cur, ...patch };
+  localStorage.setItem('APPWD_SETTINGS', JSON.stringify(next));
+  document.dispatchEvent(new CustomEvent('appwd:settingsSaved', { detail: next }));
+}
+
+// ----- UI: แสดงรายละเอียดจากตาราง users -----
+function renderUserDetails(row) {
+  const host = document.querySelector('#profileView .card');
+  if (!host) return;
+
+  let box = document.getElementById('pfDetails');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'pfDetails';
+    box.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 mt-3';
+    host.appendChild(box);
+  }
+  const F = (label, value='—') =>
+    `<div class="card p-3 text-sm">
+       <div class="text-ink3">${label}</div>
+       <div class="font-medium break-words">${value || '—'}</div>
+     </div>`;
+
+  box.innerHTML = [
+    F('บทบาท (role)', row?.role),
+    F('ห้อง/กลุ่มสาระ', row?.classroom),
+    F('อีเมล', row?.email),
+    F('เบอร์โทร', row?.phone),
+    F('สร้างเมื่อ', row?.created_at ? new Date(row.created_at).toLocaleString('th-TH') : ''),
+    F('อัปเดตล่าสุด', row?.updated_at ? new Date(row.updated_at).toLocaleString('th-TH') : '')
+  ].join('');
+}
+
+async function loadUserDetails() {
+  const line = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
+  // อัปหัวโปรไฟล์เดิม
+  if (line) {
+    const avatar = document.getElementById('pfAvatar');
+    const name = document.getElementById('pfName');
+    const sub = document.getElementById('pfSub');
+    if (avatar && line.pictureUrl) avatar.src = line.pictureUrl;
+    if (name) name.textContent = line.displayName || 'ผู้ใช้';
+    if (sub)  sub.textContent  = line.userId || '';
+  }
+  if (!line?.userId) { renderUserDetails(null); return; }
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('line_user_id', line.userId)
+    .maybeSingle();
+
+  renderUserDetails(error ? null : data);
+}
+
+// ----- UI: แผงปรับธีม/ขนาดตัวอักษร -----
+function openThemeDialog() {
+  const s = getSettings();
+  const theme = s.THEME || 'light';
+  const fs = Number(s.FONT_SCALE || 1);
+  const ic = Number(s.ICON_SCALE || 1);
+
+  openSheet(`
+    <div class='space-y-4'>
+      <div class='font-semibold text-base'>ขนาดตัวอักษร & ธีม</div>
+
+      <div class='space-y-2'>
+        <div class='text-sm text-ink3'>ธีม</div>
+        <div class='grid grid-cols-3 gap-2'>
+          <label class='btn'><input type='radio' name='theme' value='light' ${theme==='light'?'checked':''}> <span>Light</span></label>
+          <label class='btn'><input type='radio' name='theme' value='dark' ${theme==='dark'?'checked':''}> <span>Dark</span></label>
+          <label class='btn'><input type='radio' name='theme' value='system' ${theme==='system'?'checked':''}> <span>System</span></label>
+        </div>
+      </div>
+
+      <div class='space-y-2'>
+        <div class='text-sm text-ink3'>ขนาดตัวอักษร</div>
+        <input id='fsRange' type='range' min='0.85' max='1.4' step='0.05' value='${fs}' class='w-full'>
+        <div class='text-sm'><span id='fsVal'>${fs.toFixed(2)}</span>x</div>
+      </div>
+
+      <div class='space-y-2'>
+        <div class='text-sm text-ink3'>ขนาดไอคอน</div>
+        <input id='icRange' type='range' min='0.9' max='1.6' step='0.05' value='${ic}' class='w-full'>
+        <div class='text-sm'><span id='icVal'>${ic.toFixed(2)}</span>x</div>
+      </div>
+
+      <div class='grid grid-cols-2 gap-2 pt-2'>
+        <button id='cancelTheme' class='btn'>ยกเลิก</button>
+        <button id='saveTheme' class='btn btn-prim'>บันทึก</button>
+      </div>
+    </div>
+  `);
+
+  const root = document.documentElement;
+  const fsRange = document.getElementById('fsRange');
+  const icRange = document.getElementById('icRange');
+  const fsVal = document.getElementById('fsVal');
+  const icVal = document.getElementById('icVal');
+
+  // Live preview
+  fsRange.oninput = () => { root.style.setProperty('--fs-base', fsRange.value); fsVal.textContent = (+fsRange.value).toFixed(2); };
+  icRange.oninput = () => { root.style.setProperty('--ic-scale', icRange.value); icVal.textContent = (+icRange.value).toFixed(2); };
+
+  // เปลี่ยนธีมทันทีตอนเลือก
+  document.querySelectorAll('input[name="theme"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      const v = r.value;
+      if (v === 'system') root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', v);
+    });
+  });
+
+  document.getElementById('cancelTheme').onclick = closeSheet;
+  document.getElementById('saveTheme').onclick = () => {
+    const chosen = (document.querySelector('input[name="theme"]:checked')?.value) || 'light';
+    saveSettings({ THEME: chosen, FONT_SCALE: Number(fsRange.value), ICON_SCALE: Number(icRange.value) });
+    closeSheet();
+  };
+}
+
+function wireProfileUI() {
+  // ปุ่มใน index.html: <button id='btnTheme' class='btn'>ขนาดตัวอักษร/ธีม</button>
+  const themeBtn = document.getElementById('btnTheme');
+  if (themeBtn) themeBtn.onclick = openThemeDialog;
+}
+
+// auto init เฉพาะตอนอยู่ route โปรไฟล์
+function initProfileExtras() {
+  if (!onProfileRoute()) return;
+  wireProfileUI();
+  loadUserDetails().catch(()=>{});
+}
+
+window.addEventListener('hashchange', initProfileExtras);
+document.addEventListener('DOMContentLoaded', initProfileExtras);
