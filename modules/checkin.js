@@ -1065,12 +1065,11 @@ function setupButtonHandlers() {
 }
 
 // === Enhanced home recent checkins ===
-export async function renderHomeRecent(kind = 'work') {
+export async function renderHomeRecent(kind) {
   const box = document.getElementById('homeCheckins');
   if (!box) return;
   
-  // Show loading state
-  box.innerHTML = skel(5, '60px');
+  box.innerHTML = skel(5, '52px');
   
   const start = new Date(); 
   start.setHours(0,0,0,0);
@@ -1086,7 +1085,6 @@ export async function renderHomeRecent(kind = 'work') {
       .order('created_at', {ascending: false})
       .limit(5);
     
-    // Filter by kind
     if (kind && kind !== 'work') {
       query = query.eq('purpose', kind);
     } else {
@@ -1097,92 +1095,59 @@ export async function renderHomeRecent(kind = 'work') {
     
     if (error) {
       console.error('Failed to load recent checkins:', error);
-      box.innerHTML = '<div class="text-ink3 text-center p-4">โหลดเช็คอินไม่สำเร็จ</div>';
+      box.innerHTML = '<div class="text-ink3">โหลดเช็คอินไม่สำเร็จ</div>';
       return;
     }
     
-    // Update tab state immediately
-    document.querySelectorAll('[data-ci-tab]').forEach(b => {
-      b.classList.toggle('btn-prim', b.getAttribute('data-ci-tab') === kind);
-    });
+    // Update tab state
+    document.querySelectorAll('[data-ci-tab]').forEach(b => 
+      b.classList.toggle('btn-prim', b.getAttribute('data-ci-tab') === (kind || 'work'))
+    );
     
     if (!data || data.length === 0) {
-      box.innerHTML = '<div class="text-ink3 text-center p-4">ยังไม่มีรายการวันนี้</div>';
+      box.innerHTML = '<div class="text-ink3">ยังไม่มีรายการ</div>';
       return;
     }
     
-    // Render with enhanced badge support
-    const renderedCards = data.map(record => {
+    box.innerHTML = data.map(record => {
       const time = new Date(record.created_at).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit'
       });
       
-      // Create status badge with explicit styling
-      let statusBadge = '';
-      if (record.status) {
-        if (record.status === 'on_time') {
-          statusBadge = '<span class="badge badge-ontime" style="background-color: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0;">ตรงเวลา</span>';
-        } else if (record.status === 'late') {
-          statusBadge = '<span class="badge badge-late" style="background-color: #fef3c7 !important; color: #92400e !important; border: 1px solid #fde68a;">สาย</span>';
-        } else if (record.status === 'offsite') {
-          statusBadge = '<span class="badge badge-offsite" style="background-color: #e0e7ff !important; color: #3730a3 !important; border: 1px solid #c7d2fe;">นอกพื้นที่</span>';
-        }
-      }
+      const statusBadge = record.status ? 
+        (record.status === 'on_time' ? 
+          '<span class="badge badge-ontime">ตรงเวลา</span>' : 
+          record.status === 'late' ? 
+            '<span class="badge badge-late">สาย</span>' : 
+            '<span class="badge badge-offsite">นอกพื้นที่</span>') : '';
       
       const distanceColor = record.within_radius ? 'text-green-600' : 'text-red-600';
-      const avatarUrl = record.line_picture_url || './icons/default-avatar.png';
       
       return `
-        <div class='card p-3 hover:shadow-md transition-all duration-200'>
-          <div class='flex items-center gap-3'>
-            <img src='${avatarUrl}' 
-                 class='w-10 h-10 rounded-full border object-cover bg-gray-100' 
-                 onerror="this.src='./icons/default-avatar.png'"
-                 loading="lazy">
-            <div class='flex-1 min-w-0'>
-              <div class='font-medium text-sm truncate' style='color:var(--ink)'>
-                ${record.line_display_name || 'ไม่ระบุชื่อ'}
-              </div>
-              <div class='flex items-center gap-2 text-xs text-ink3 mt-1'>
-                <span>${time}</span>
-                <span>•</span>
-                <span>${purposeLabel(record.purpose)}</span>
-                ${statusBadge ? '<span>•</span>' + statusBadge : ''}
-              </div>
+        <div class='card p-3 flex items-center gap-3 hover:shadow-md transition-shadow'>
+          <img src='${record.line_picture_url || '/assets/default-avatar.png'}' 
+               class='w-10 h-10 rounded-full border object-cover' 
+               onerror="this.src='/assets/default-avatar.png'">
+          <div class='flex-1 min-w-0'>
+            <div class='font-medium truncate'>${record.line_display_name || 'ไม่ระบุ'}</div>
+            <div class='text-sm text-ink3 flex items-center gap-2'>
+              <span>${time}</span>
+              <span>•</span>
+              <span>${purposeLabel(record.purpose)}</span>
+              ${statusBadge}
             </div>
-            <div class='text-xs font-medium ${distanceColor}'>
-              ${fmtDist(record.distance_m || 0)}
-            </div>
+          </div>
+          <div class='text-sm ${distanceColor} font-medium'>
+            ${fmtDist(record.distance_m || 0)}
           </div>
         </div>
       `;
     }).join('');
     
-    box.innerHTML = renderedCards;
-    
-    // Force badge style refresh
-    setTimeout(() => {
-      box.querySelectorAll('.badge').forEach(badge => {
-        if (badge.classList.contains('badge-late')) {
-          badge.style.backgroundColor = '#fef3c7';
-          badge.style.color = '#92400e';
-          badge.style.border = '1px solid #fde68a';
-        } else if (badge.classList.contains('badge-ontime')) {
-          badge.style.backgroundColor = '#dcfce7';
-          badge.style.color = '#166534'; 
-          badge.style.border = '1px solid #bbf7d0';
-        } else if (badge.classList.contains('badge-offsite')) {
-          badge.style.backgroundColor = '#e0e7ff';
-          badge.style.color = '#3730a3';
-          badge.style.border = '1px solid #c7d2fe';
-        }
-      });
-    }, 50);
-    
   } catch (error) {
     console.error('Error rendering home recent:', error);
-    box.innerHTML = '<div class="text-red-600 text-center p-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+    box.innerHTML = '<div class="text-red-600">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
   }
 }
 
@@ -1286,7 +1251,7 @@ async function loadToday() {
         minute: '2-digit'
       });
       
-      const canEdit = (adminStatus || (!record.within_radius && record.purpose !== 'work' && 
+      const canEdit = (isAdmin || (!record.within_radius && record.purpose !== 'work' && 
                        profile?.userId && record.line_user_id === profile.userId));
       
       const editBtn = canEdit ? `
@@ -1296,7 +1261,7 @@ async function loadToday() {
         </button>
       ` : '';
       
-      const delBtn = adminStatus ? `
+      const delBtn = isAdmin ? `
         <button class='btn btn-sm text-red-600' onclick='deleteCheckin(${record.id})'>
           ลบ
         </button>
@@ -1731,7 +1696,7 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     const style = document.createElement('style');
     style.id = 'checkin-enhanced-styles';
     style.textContent = `
-      /* Checkin enhanced styles - inject immediately */
+      /* Checkin enhanced styles */
       .badge {
         display: inline-flex;
         align-items: center;
@@ -1740,26 +1705,22 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
         border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 600;
-        line-height: 1.2;
-        white-space: nowrap;
+        line-height: 1;
       }
       
       .badge-ontime {
-        background-color: #dcfce7 !important;
-        color: #166534 !important;
-        border: 1px solid #bbf7d0;
+        background-color: #dcfce7;
+        color: #166534;
       }
       
       .badge-late {
-        background-color: #fef3c7 !important;
-        color: #92400e !important;
-        border: 1px solid #fde68a;
+        background-color: #fef3c7;
+        color: #92400e;
       }
       
       .badge-offsite {
-        background-color: #e0e7ff !important;
-        color: #3730a3 !important;
-        border: 1px solid #c7d2fe;
+        background-color: #e0e7ff;
+        color: #3730a3;
       }
       
       .btn-sm {
@@ -1775,17 +1736,6 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
       
       .animate-spin {
         animation: spin 1s linear infinite;
-      }
-      
-      /* Home checkin cards improvements */
-      #homeCheckins .card {
-        transition: all 0.2s ease;
-        min-height: 60px;
-      }
-      
-      #homeCheckins .card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       }
       
       /* Enhanced button positioning */
@@ -1821,25 +1771,6 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
       #qrReader video {
         border-radius: 14px !important;
       }
-      
-      /* Force badge visibility */
-      .badge {
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: inline-flex !important;
-      }
-      
-      /* Responsive adjustments */
-      @media (max-width: 420px) {
-        .badge {
-          font-size: 0.7rem;
-          padding: 0.125rem 0.375rem;
-        }
-        
-        #homeCheckins .card {
-          padding: 0.75rem;
-        }
-      }
     `;
     
     // Remove existing style if present
@@ -1851,23 +1782,3 @@ document.addEventListener('appwd:checkinSaved', applyCheckinLatestSlider);
     console.warn('Style injection failed:', e);
   }
 })();
-
-// Auto-inject styles when module loads
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      const existing = document.getElementById('checkin-enhanced-styles');
-      if (!existing) {
-        injectEnhancedStyles();
-      }
-    }, 100);
-  });
-} else {
-  // Document already loaded, inject immediately
-  setTimeout(() => {
-    const existing = document.getElementById('checkin-enhanced-styles');
-    if (!existing) {
-      injectEnhancedStyles();
-    }
-  }, 50);
-}
