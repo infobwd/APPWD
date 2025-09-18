@@ -428,7 +428,79 @@ window.retryGps = function() {
 };
 
 // === Enhanced QR Scanner with better error handling ===
-async function openScanner() {
+async function openScanner() {async function openScanner() {
+  const panel = document.getElementById('scanPanel');
+  const holder = document.getElementById('qrReader');
+  if (!panel || !holder) return;
+
+  try {
+    CheckinState.isLoadingScan = true; updateButtonStates();
+    panel.classList.remove('hide');
+    holder.innerHTML = `<div class="p-4 text-center"><div class="animate-spin text-blue-500 mb-2">⟳</div>กำลังเปิดกล้อง...</div>`;
+
+    CheckinState.scanner = new Html5Qrcode('qrReader');
+
+    // ดึงรายการกล้อง
+    const devices = await Html5Qrcode.getCameras();
+
+    // === สร้าง dropdown + ปุ่มสลับกล้อง ใน header ของ panel ===
+    const header = panel.querySelector('.flex.items-center.justify-between'); // div header ของ scanPanel
+    if (header && devices.length > 1 && !document.getElementById('cameraSelect')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'flex items-center gap-2';
+      wrap.innerHTML = `
+        <select id="cameraSelect" class="border rounded px-2 py-1 text-sm max-w-[220px]">
+          ${devices.map(d => `<option value="${d.id}">${d.label || 'Camera'}</option>`).join('')}
+        </select>
+        <button id="btnFlipCam" class="btn text-sm">สลับกล้อง</button>
+      `;
+      header.insertBefore(wrap, header.lastElementChild); // วางก่อนปุ่ม "ปิดกล้อง"
+
+      // เปลี่ยนกล้องจาก select
+      document.getElementById('cameraSelect').addEventListener('change', async (e) => {
+        await restartScanner(e.target.value);
+      });
+
+      // ปุ่มสลับกล้องวนไปเรื่อย ๆ
+      document.getElementById('btnFlipCam').addEventListener('click', async () => {
+        const idx = devices.findIndex(d => d.id === CheckinState.selectedCameraId);
+        const next = devices[(idx + 1) % devices.length];
+        await restartScanner(next.id);
+        document.getElementById('cameraSelect').value = next.id;
+      });
+    }
+
+    // เลือกกล้องเริ่มต้น: ใช้กล้องหลังถ้ามี
+    let targetId = CheckinState.selectedCameraId;
+    if (!targetId) {
+      const back = devices.find(d => /(back|rear|environment)/i.test(d.label || ''));
+      targetId = back?.id || devices[0]?.id;
+    }
+
+    await CheckinState.scanner.start(
+      targetId || { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+      (decodedText) => { /* ... onSuccess เดิม ... */ },
+      (_errorMessage) => { /* ignore continuous scan errors */ }
+    );
+
+    CheckinState.selectedCameraId = typeof targetId === 'string' ? targetId : CheckinState.selectedCameraId;
+    CheckinState.isLoadingScan = false; updateButtonStates();
+    showCheckinStatus('เปิดกล้องสำเร็จ กรุณานำ QR Code เข้ามาในกรอบ', 'info');
+
+  } catch (error) {
+    CheckinState.isLoadingScan = false; updateButtonStates();
+    console.error('Scanner error:', error);
+    let errorMsg = 'ไม่สามารถเปิดกล้องได้';
+    if (error.message?.includes('Permission')) errorMsg = 'ไม่ได้รับอนุญาตให้เข้าถึงกล้อง กรุณาอนุญาต';
+    else if (error.message?.includes('NotFound')) errorMsg = 'ไม่พบกล้องในอุปกรณ์นี้';
+    holder.innerHTML = `<div class="p-4 text-center text-red-600"><div class="mb-2">📷</div>
+        <div class="font-medium">${errorMsg}</div>
+        <button onclick="window.retryScanner()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm">ลองใหม่</button></div>`;
+    showCheckinStatus(errorMsg, 'error');
+  }
+}
+
   const panel = document.getElementById('scanPanel');
   const holder = document.getElementById('qrReader');
   if (!panel || !holder) return;
@@ -467,6 +539,113 @@ async function openScanner() {
     showCheckinStatus(errorMsg, 'error');
   }
 }
+
+async function restartScanner(deviceId) {
+  try {
+    if (!CheckinState.scanner) return;
+    await CheckinState.scanner.stop();
+    await CheckinState.scanner.clear();
+
+    await CheckinState.scanner.start(
+      deviceId || { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+      (decodedText) => {
+        CheckinState.lastText = decodedText;
+        const resultEl = document.getElementById('scanResult');
+        if (resultEl) {
+          resultEl.innerHTML = `<div class="p-2 bg-green-50 border border-green-200 rounded text-green-800">
+              <strong>สแกนสำเร็จ:</strong><br><span class="text-xs break-all">${decodedText}</span></div>`;
+        }
+        showCheckinStatus('สแกน QR สำเร็จ! ✅', 'success');
+      },
+      (_err) => {}
+    );
+    CheckinState.selectedCameraId = deviceId || CheckinState.selectedCameraId;
+  } catch (e) {
+    showCheckinStatus('สลับกล้องไม่สำเร็จ', 'error');
+    console.warn('restartScanner error:', e);
+  }
+}
+
+
+// async function openScanner() {
+//   const panel = document.getElementById('scanPanel');
+//   const holder = document.getElementById('qrReader');
+//   if (!panel || !holder) return;
+//   try {
+//     CheckinState.isLoadingScan = true; updateButtonStates();
+//     panel.classList.remove('hide');
+//     holder.innerHTML = `<div class="p-4 text-center"><div class="animate-spin text-blue-500 mb-2">⟳</div>กำลังเปิดกล้อง...</div>`;
+//     CheckinState.scanner = new Html5Qrcode('qrReader');
+//     const devices = await Html5Qrcode.getCameras();
+//     const backCamera = devices.find(d => (d.label||'').toLowerCase().includes('back')) || devices[0];
+//     await CheckinState.scanner.start(
+//       backCamera?.id || { facingMode: 'environment' },
+//       { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+//       (decodedText) => {
+//         CheckinState.lastText = decodedText;
+//         const resultEl = document.getElementById('scanResult');
+//         if (resultEl) {
+//           resultEl.innerHTML = `<div class="p-2 bg-green-50 border border-green-200 rounded text-green-800">
+//               <strong>สแกนสำเร็จ:</strong><br><span class="text-xs break-all">${decodedText}</span></div>`;
+//         }
+//         showCheckinStatus('สแกน QR สำเร็จ! ✅', 'success');
+//       },
+//       (_errorMessage) => { /* ignore continuous scan errors */ }
+//     );
+//     CheckinState.isLoadingScan = false; updateButtonStates();
+//     showCheckinStatus('เปิดกล้องสำเร็จ กรุณานำ QR Code เข้ามาในกรอบ', 'info');
+//   } catch (error) {
+//     CheckinState.isLoadingScan = false; updateButtonStates();
+//     console.error('Scanner error:', error);
+//     let errorMsg = 'ไม่สามารถเปิดกล้องได้';
+//     if (error.message?.includes('Permission')) errorMsg = 'ไม่ได้รับอนุญาตให้เข้าถึงกล้อง กรุณาอนุญาต';
+//     else if (error.message?.includes('NotFound')) errorMsg = 'ไม่พบกล้องในอุปกรณ์นี้';
+//     holder.innerHTML = `<div class="p-4 text-center text-red-600"><div class="mb-2">📷</div>
+//         <div class="font-medium">${errorMsg}</div>
+//         <button onclick="window.retryScanner()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm">ลองใหม่</button></div>`;
+//     showCheckinStatus(errorMsg, 'error');
+//   }
+// }
+
+//   const panel = document.getElementById('scanPanel');
+//   const holder = document.getElementById('qrReader');
+//   if (!panel || !holder) return;
+//   try {
+//     CheckinState.isLoadingScan = true; updateButtonStates();
+//     panel.classList.remove('hide');
+//     holder.innerHTML = `<div class="p-4 text-center"><div class="animate-spin text-blue-500 mb-2">⟳</div>กำลังเปิดกล้อง...</div>`;
+//     CheckinState.scanner = new Html5Qrcode('qrReader');
+//     const devices = await Html5Qrcode.getCameras();
+//     const backCamera = devices.find(d => (d.label||'').toLowerCase().includes('back')) || devices[0];
+//     await CheckinState.scanner.start(
+//       backCamera?.id || { facingMode: 'environment' },
+//       { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+//       (decodedText) => {
+//         CheckinState.lastText = decodedText;
+//         const resultEl = document.getElementById('scanResult');
+//         if (resultEl) {
+//           resultEl.innerHTML = `<div class="p-2 bg-green-50 border border-green-200 rounded text-green-800">
+//               <strong>สแกนสำเร็จ:</strong><br><span class="text-xs break-all">${decodedText}</span></div>`;
+//         }
+//         showCheckinStatus('สแกน QR สำเร็จ! ✅', 'success');
+//       },
+//       (_errorMessage) => { /* ignore continuous scan errors */ }
+//     );
+//     CheckinState.isLoadingScan = false; updateButtonStates();
+//     showCheckinStatus('เปิดกล้องสำเร็จ กรุณานำ QR Code เข้ามาในกรอบ', 'info');
+//   } catch (error) {
+//     CheckinState.isLoadingScan = false; updateButtonStates();
+//     console.error('Scanner error:', error);
+//     let errorMsg = 'ไม่สามารถเปิดกล้องได้';
+//     if (error.message?.includes('Permission')) errorMsg = 'ไม่ได้รับอนุญาตให้เข้าถึงกล้อง กรุณาอนุญาต';
+//     else if (error.message?.includes('NotFound')) errorMsg = 'ไม่พบกล้องในอุปกรณ์นี้';
+//     holder.innerHTML = `<div class="p-4 text-center text-red-600"><div class="mb-2">📷</div>
+//         <div class="font-medium">${errorMsg}</div>
+//         <button onclick="window.retryScanner()" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm">ลองใหม่</button></div>`;
+//     showCheckinStatus(errorMsg, 'error');
+//   }
+// }
 async function closeScanner() {
   const panel = document.getElementById('scanPanel');
   if (panel) panel.classList.add('hide');
