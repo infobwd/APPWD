@@ -146,7 +146,7 @@ export async function renderHome(){
         <div class='text-[12px] text-ink3 mb-1'>${esc(p.category||'ทั่วไป')} • ${date}</div>
         <a href='#post?id=${p.id}' class='block font-semibold leading-snug line-clamp-2 mb-1' style='color:var(--ink)'>${esc(p.title)}</a>
         <div class='flex items-center gap-3 text-[12px] text-ink2'>
-          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span>📤 ${stats.share_count || 0}</span>
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span>📤 ${s.shares}</span>
           <button onclick='sharePost(${p.id})' class='underline'>แชร์</button>
         </div>
       </div>
@@ -332,11 +332,25 @@ export async function renderDetail(id){
 }
 
 // -------- UTIL --------
+// async function fetchStats(ids){
+//   const map=new Map();
+//   if(!ids || ids.length===0) return map;
+//   const resp = await supabase.from('post_stats').select('post_id,view_count,like_count').in('post_id',ids);
+//   (resp.data||[]).forEach(r=>map.set(r.post_id, {views:r.view_count||0, likes:r.like_count||0}));
+//   return map;
+// }
+
 async function fetchStats(ids){
   const map=new Map();
   if(!ids || ids.length===0) return map;
-  const resp = await supabase.from('post_stats').select('post_id,view_count,like_count').in('post_id',ids);
-  (resp.data||[]).forEach(r=>map.set(r.post_id, {views:r.view_count||0, likes:r.like_count||0}));
+  const resp = await supabase.from('post_stats')
+    .select('post_id,view_count,like_count,share_count') // เพิ่ม share_count
+    .in('post_id',ids);
+  (resp.data||[]).forEach(r=>map.set(r.post_id, {
+    views:r.view_count||0, 
+    likes:r.like_count||0,
+    shares:r.share_count||0  // เพิ่ม shares
+  }));
   return map;
 }
 
