@@ -84,7 +84,7 @@ export async function sharePost(id) {
   
   // Create news URL
   const baseUrl = PUBLIC_URL || location.origin + location.pathname;
-  const newsUrl = `${baseUrl}#post?id=${post.id}`;
+  const newsUrl = `https://liff.line.me/2006490627-nERN5a26?post=${post.id}`;
   
   const newsData = {
     title,
