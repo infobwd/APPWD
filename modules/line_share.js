@@ -281,40 +281,68 @@ export async function shareNews(newsData) {
     // Initialize LIFF
     const liff = await initializeLiff();
     
-    // พยายามแชร์ด้วย shareTargetPicker ก่อน (ไม่ตรวจสอบ isInClient)
-    try {
-      // ตรวจสอบว่า API มีอยู่หรือไม่
-      if (typeof liff.shareTargetPicker === 'function') {
-        await liff.shareTargetPicker([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
+    // ตรวจสอบสภาพแวดล้อมอย่างละเอียด
+    const isInClient = liff.isInClient();
+    const context = isInClient ? await liff.getContext().catch(() => null) : null;
+    
+    console.log('Share environment check:', {
+      isInClient,
+      hasContext: !!context,
+      userAgent: navigator.userAgent,
+      platform: navigator.platform
+    });
+    
+    // บนมือถือต้องอยู่ใน LINE App จริงๆ ถึงจะใช้ shareTargetPicker ได้
+    if (isInClient && context) {
+      try {
+        // ตรวจสอบ API availability อย่างละเอียด
+        const canShare = await liff.isApiAvailable('shareTargetPicker');
+        console.log('Can use shareTargetPicker:', canShare);
         
-        showShareSuccess();
-        ShareState.shareInProgress = false;
-        return true;
+        if (canShare) {
+          await liff.shareTargetPicker([{
+            type: 'flex',
+            altText: altText,
+            contents: flexCard
+          }]);
+          
+          showShareSuccess();
+          ShareState.shareInProgress = false;
+          return true;
+        }
+      } catch (shareError) {
+        console.error('shareTargetPicker error:', shareError);
+        
+        // ถ้าเป็น user cancel ไม่ต้องแสดง error
+        if (shareError.message && shareError.message.includes('cancel')) {
+          hideShareLoading();
+          ShareState.shareInProgress = false;
+          return false;
+        }
       }
-    } catch (shareError) {
-      console.warn('shareTargetPicker failed:', shareError);
-      // ถ้า shareTargetPicker ไม่ได้ ให้ลอง fallback
     }
     
-    // Fallback: พยายามใช้ sendMessages
-    try {
-      if (typeof liff.sendMessages === 'function') {
-        await liff.sendMessages([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
-        
-        showShareSuccess();
-        ShareState.shareInProgress = false;
-        return true;
+    // Fallback สำหรับกรณีที่ไม่ใช่ LINE App หรือ shareTargetPicker ไม่ได้
+    console.log('Using fallback method');
+    
+    // ลอง sendMessages สำหรับกรณี LINE App แต่ shareTargetPicker ไม่ได้
+    if (isInClient) {
+      try {
+        const canSend = await liff.isApiAvailable('sendMessages');
+        if (canSend) {
+          await liff.sendMessages([{
+            type: 'flex',
+            altText: altText,
+            contents: flexCard
+          }]);
+          
+          showShareSuccess();
+          ShareState.shareInProgress = false;
+          return true;
+        }
+      } catch (sendError) {
+        console.error('sendMessages error:', sendError);
       }
-    } catch (sendError) {
-      console.warn('sendMessages failed:', sendError);
     }
     
     // Fallback สุดท้าย: คัดลอกลิงก์
