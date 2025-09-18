@@ -1,5 +1,4 @@
 /**
-*line_share.js
  * Simplified News Share Module
  * ระบบแชร์ข่าวแบบเฉพาะเจาะจง
  */
@@ -97,7 +96,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
   // สร้าง Flex Card แบบ minimal
   const flexCard = {
     type: 'bubble',
-    size: 'hero'
+    size: 'kilo'
   };
   
   // เพิ่มรูปภาพเฉพาะถ้า validate ผ่าน
