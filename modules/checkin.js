@@ -14,6 +14,8 @@ const CheckinState = {
   map: null,
   meMarker: null,
   scanner: null,
+ // Camera state
+  selectedCameraId: null,
   
   // Loading states
   isLoadingGps: false,
@@ -41,6 +43,7 @@ const CheckinState = {
     this.isLoadingGps = false;
     this.isLoadingScan = false;
     this.isCheckingin = false;
+    this.selectedCameraId = null;   // ← reset ด้วย
   },
   
   cleanupMap() {
