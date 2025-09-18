@@ -165,7 +165,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
     spacing: 'sm'
   };
   
-  // ปุ่มแบบง่าย - ใช้ LIFF URL
+  // ปุ่มแบบง่าย - ใช้ LIFF URL พร้อม post ID
   flexCard.footer = {
     type: 'box',
     layout: 'vertical',
@@ -177,7 +177,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
         action: {
           type: 'uri',
           label: 'อ่านข่าว',
-          uri: 'https://liff.line.me/2006490627-nERN5a26'
+          uri: safeUrl.startsWith('http') ? safeUrl : 'https://liff.line.me/2006490627-nERN5a26'
         }
       }
     ]
