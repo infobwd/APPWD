@@ -274,145 +274,47 @@ export async function shareNews(newsData) {
       throw new Error('ข้อมูลข่าวไม่ครบถ้วน');
     }
     
-    // Initialize LIFF
-    const liff = await initializeLiff();
-    
-    // ตรวจสอบการ login LINE
-    if (!liff.isLoggedIn()) {
-      hideShareLoading();
-      const shouldLogin = confirm('ต้องเข้าสู่ระบบ LINE ก่อนแชร์ ต้องการเข้าสู่ระบบหรือไม่?');
-      if (shouldLogin) {
-        try {
-          await liff.login();
-          // หลัง login สำเร็จ รีเซ็ต state และลองใหม่
-          ShareState.shareInProgress = false;
-          return await shareNews(newsData);
-        } catch (loginError) {
-          ShareState.shareInProgress = false;
-          showShareError('ไม่สามารถเข้าสู่ระบบ LINE ได้');
-          return false;
-        }
-      } else {
-        ShareState.shareInProgress = false;
-        return false;
-      }
-    }
-    
     // สร้าง Flex Message
     const flexCard = createNewsFlexCard(newsData);
     const altText = `📰 ${newsData.title}`;
     
-    // ตรวจสอบสภาพแวดล้อมอย่างละเอียด
-    const isInClient = liff.isInClient();
-    const context = isInClient ? await liff.getContext().catch(() => null) : null;
+    // Initialize LIFF
+    const liff = await initializeLiff();
     
-    console.log('Share environment check:', {
-      isInClient,
-      hasContext: !!context,
-      isLoggedIn: liff.isLoggedIn(),
-      userAgent: navigator.userAgent,
-      platform: navigator.platform
-    });
-    
-    // บนมือถือใน LINE App
-    if (isInClient && context && liff.isLoggedIn()) {
-      try {
-        // ตรวจสอบ API availability อย่างละเอียด
-        const canShare = await liff.isApiAvailable('shareTargetPicker');
-        console.log('Can use shareTargetPicker:', canShare);
-        
-        if (canShare) {
-          const shareResult = await liff.shareTargetPicker([{
-            type: 'flex',
-            altText: altText,
-            contents: flexCard
-          }]);
-          
-          console.log('Share result:', shareResult);
-          showShareSuccess();
-          ShareState.shareInProgress = false;
-          return true;
-        } else {
-          console.log('shareTargetPicker not available, trying sendMessages');
-        }
-      } catch (shareError) {
-        console.error('shareTargetPicker error:', shareError);
-        
-        // ถ้าเป็น user cancel ไม่ต้องแสดง error
-        if (shareError.message && (
-          shareError.message.includes('cancel') || 
-          shareError.message.includes('cancelled') ||
-          shareError.message.includes('User cancel')
-        )) {
-          hideShareLoading();
-          ShareState.shareInProgress = false;
-          return false;
-        }
-      }
-      
-      // Fallback: ลอง sendMessages สำหรับกรณีที่ shareTargetPicker ไม่ได้
-      try {
-        const canSend = await liff.isApiAvailable('sendMessages');
-        console.log('Can use sendMessages:', canSend);
-        
-        if (canSend) {
-          await liff.sendMessages([{
-            type: 'flex',
-            altText: altText,
-            contents: flexCard
-          }]);
-          
-          showShareSuccess();
-          ShareState.shareInProgress = false;
-          return true;
-        }
-      } catch (sendError) {
-        console.error('sendMessages error:', sendError);
-      }
-    }
-    
-    // Fallback สำหรับคอมพิวเตอร์หรือนอก LINE App  
-    console.log('Using fallback method - create deep link with Flex Message');
-    
-    // สำหรับคอมพิวเตอร์ - สร้าง Deep Link ที่มี Flex Message
-    if (!isInClient) {
-      try {
-        // สร้าง payload สำหรับ Flex Message
-        const flexPayload = {
+    // พยายามแชร์ด้วย shareTargetPicker ก่อน (ไม่ตรวจสอบ isInClient)
+    try {
+      // ตรวจสอบว่า API มีอยู่หรือไม่
+      if (typeof liff.shareTargetPicker === 'function') {
+        await liff.shareTargetPicker([{
           type: 'flex',
           altText: altText,
           contents: flexCard
-        };
+        }]);
         
-        const liffId = CFG?.LIFF_ID || window.LIFF_ID || '';
-        if (!liffId) {
-          throw new Error('LIFF ID not configured');
-        }
-        
-        // Encode payload
-        const encodedPayload = encodeURIComponent(JSON.stringify(flexPayload));
-        
-        // สร้าง LIFF URL ที่มี flex payload
-        const deepLinkUrl = `https://liff.line.me/${liffId}?flexMessage=${encodedPayload}`;
-        
-        // พยายามเปิด LINE app โดยตรง
-        const lineAppUrl = `line://app/${liffId}?flexMessage=${encodedPayload}`;
-        
-        // ลองเปิด LINE app ก่อน
-        window.location.href = lineAppUrl;
-        
-        // Fallback: เปิดในเบราว์เซอร์หลังจาก delay เล็กน้อย
-        setTimeout(() => {
-          window.open(deepLinkUrl, '_blank');
-        }, 1000);
-        
-        showShareSuccess('กำลังเปิด LINE เพื่อแชร์...');
+        showShareSuccess();
         ShareState.shareInProgress = false;
         return true;
-        
-      } catch (deepLinkError) {
-        console.log('Deep link creation failed:', deepLinkError);
       }
+    } catch (shareError) {
+      console.warn('shareTargetPicker failed:', shareError);
+      // ถ้า shareTargetPicker ไม่ได้ ให้ลอง fallback
+    }
+    
+    // Fallback: พยายามใช้ sendMessages
+    try {
+      if (typeof liff.sendMessages === 'function') {
+        await liff.sendMessages([{
+          type: 'flex',
+          altText: altText,
+          contents: flexCard
+        }]);
+        
+        showShareSuccess();
+        ShareState.shareInProgress = false;
+        return true;
+      }
+    } catch (sendError) {
+      console.warn('sendMessages failed:', sendError);
     }
     
     // Fallback สุดท้าย: คัดลอกลิงก์
@@ -520,128 +422,4 @@ window.shareNewsSimple = async function(title, url) {
 // === Export for compatibility ===
 export { shareNews as sharePostData };
 
-// === Deep Link Handler ===
-(async function handleFlexMessageDeepLink() {
-  try {
-    const urlParams = new URLSearchParams(location.search);
-    const flexPayload = urlParams.get('flexMessage');
-    
-    if (!flexPayload) return;
-    
-    showShareLoading('กำลังเตรียม Flex Message...');
-    
-    let messageData;
-    try {
-      messageData = JSON.parse(decodeURIComponent(flexPayload));
-    } catch (error) {
-      throw new Error('ข้อมูล Flex Message ไม่ถูกต้อง');
-    }
-    
-    // Initialize LIFF
-    const liff = await initializeLiff({ timeout: 8000 });
-    
-    // ตรวจสอบว่าเป็น LINE App และ login แล้ว
-    if (!liff.isLoggedIn()) {
-      hideShareLoading();
-      const shouldLogin = confirm('ต้องเข้าสู่ระบบ LINE ก่อนแชร์ ต้องการเข้าสู่ระบบหรือไม่?');
-      if (shouldLogin) {
-        await liff.login();
-      } else {
-        return;
-      }
-    }
-    
-    const isInClient = liff.isInClient();
-    
-    if (isInClient) {
-      showShareLoading('กำลังเปิดหน้าต่างแชร์...');
-      
-      const canShare = await liff.isApiAvailable('shareTargetPicker');
-      
-      if (canShare) {
-        await liff.shareTargetPicker([messageData]);
-        showShareSuccess('แชร์สำเร็จ!');
-        
-        // ทำความสะอาด URL
-        const newUrl = new URL(location.href);
-        newUrl.searchParams.delete('flexMessage');
-        history.replaceState({}, document.title, newUrl.toString());
-        
-        // ปิดหน้าต่างหลังจากแชร์เสร็จ
-        setTimeout(() => {
-          if (liff.isInClient()) {
-            try {
-              liff.closeWindow();
-            } catch (e) {
-              window.close();
-            }
-          }
-        }, 2000);
-        
-      } else {
-        throw new Error('ไม่สามารถแชร์ได้ กรุณาเปิดใน LINE app');
-      }
-    } else {
-      throw new Error('กรุณาเปิดลิงก์นี้ใน LINE app เพื่อแชร์');
-    }
-    
-  } catch (error) {
-    console.error('Deep link flex message handler failed:', error);
-    
-    hideShareLoading();
-    
-    let errorMessage = 'การแชร์ไม่สำเร็จ';
-    
-    if (error.message?.includes('LINE app')) {
-      errorMessage = 'กรุณาเปิดลิงก์นี้ใน LINE app เพื่อแชร์';
-    } else if (error.message?.includes('ข้อมูล')) {
-      errorMessage = error.message;
-    }
-    
-    showShareError(errorMessage);
-    
-    // แสดงทางเลือกอื่น
-    setTimeout(() => {
-      showAlternativeShareOptions();
-    }, 3000);
-  }
-})();
-
-function showAlternativeShareOptions() {
-  const alternativeEl = document.createElement('div');
-  alternativeEl.className = 'fixed top-4 left-4 right-4 z-50 p-4 bg-white border border-gray-200 rounded-lg shadow-lg';
-  alternativeEl.innerHTML = `
-    <div class="text-center space-y-3">
-      <div class="font-medium">ตัวเลือกอื่น</div>
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <button onclick="copyCurrentUrl()" class="btn btn-sm bg-blue-500 text-white">
-          คัดลอกลิงก์
-        </button>
-        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="btn btn-sm">
-          ปิด
-        </button>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(alternativeEl);
-}
-
-window.copyCurrentUrl = function() {
-  try {
-    navigator.clipboard.writeText(location.href).then(() => {
-      showShareSuccess('คัดลอกลิงก์สำเร็จ!');
-    }).catch(() => {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = location.href;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      showShareSuccess('คัดลอกลิงก์สำเร็จ!');
-    });
-  } catch (error) {
-    showShareError('ไม่สามารถคัดลอกลิงก์ได้');
-  }
-};
+console.log('LINE Share module loaded successfully');
