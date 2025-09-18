@@ -91,7 +91,8 @@ export async function sharePost(id) {
     url: newsUrl,
     imageUrl,
     category,
-    publishedAt
+    publishedAt,
+    postId: post.id  // เพิ่ม postId สำหรับ LIFF URL
   };
   
   return await shareNews(newsData);
