@@ -258,19 +258,41 @@ export async function shareNews(newsData) {
     // Initialize LIFF
     const liff = await initializeLiff();
     
-    // ตรวจสอบว่าอยู่ใน LINE App และสามารถแชร์ได้
-    if (liff.isInClient() && await liff.isApiAvailable('shareTargetPicker')) {
-      await liff.shareTargetPicker([{
-        type: 'flex',
-        altText: altText,
-        contents: flexCard
-      }]);
-      
-      showShareSuccess();
-      ShareState.shareInProgress = false;
-      return true;
-      
-    } else {
+    // พยายามแชร์ด้วย shareTargetPicker ก่อน (ไม่ตรวจสอบ isInClient)
+    try {
+      // ตรวจสอบว่า API มีอยู่หรือไม่
+      if (typeof liff.shareTargetPicker === 'function') {
+        await liff.shareTargetPicker([{
+          type: 'flex',
+          altText: altText,
+          contents: flexCard
+        }]);
+        
+        showShareSuccess();
+        ShareState.shareInProgress = false;
+        return true;
+      }
+    } catch (shareError) {
+      console.warn('shareTargetPicker failed:', shareError);
+      // ถ้า shareTargetPicker ไม่ได้ ให้ลอง fallback
+    }
+    
+    // Fallback: พยายามใช้ sendMessages
+    try {
+      if (typeof liff.sendMessages === 'function') {
+        await liff.sendMessages([{
+          type: 'flex',
+          altText: altText,
+          contents: flexCard
+        }]);
+        
+        showShareSuccess();
+        ShareState.shareInProgress = false;
+        return true;
+      }
+    } catch (sendError) {
+      console.warn('sendMessages failed:', sendError);
+    }
       // Fallback: คัดลอกลิงก์แทน
       await copyNewsUrl(newsData.url || location.href);
       ShareState.shareInProgress = false;
