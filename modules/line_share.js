@@ -165,7 +165,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
     spacing: 'sm'
   };
   
-  // ปุ่มแบบง่าย
+  // ปุ่มแบบง่าย - ใช้ LIFF URL
   flexCard.footer = {
     type: 'box',
     layout: 'vertical',
@@ -177,7 +177,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
         action: {
           type: 'uri',
           label: 'อ่านข่าว',
-          uri: safeUrl
+          uri: 'https://liff.line.me/2006490627-nERN5a26'
         }
       }
     ]
@@ -421,7 +421,6 @@ window.shareNewsSimple = async function(title, url) {
 
 // === Export for compatibility ===
 export { shareNews as sharePostData };
-export { shareNews };
 
 // === Alternative LIFF-based Share ===
 export async function shareLiffDirect(newsData) {
