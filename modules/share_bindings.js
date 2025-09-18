@@ -1,9 +1,10 @@
 /**
- * Updated Share Bindings for News-only sharing
+ * line_share.js
+ Updated Share Bindings for News-only sharing
  * การเชื่อมต่อการแชร์แบบเฉพาะข่าว
  */
 
-import { shareNews } from './line_share.js';  // เปลี่ยนจาก line_share.js
+import { shareNews } from './line_share.js';  
 import { PUBLIC_URL } from '../config.js';
 import { supabase } from '../api.js';
 
@@ -91,8 +92,7 @@ export async function sharePost(id) {
     url: newsUrl,
     imageUrl,
     category,
-    publishedAt,
-    postId: post.id  // เพิ่ม postId สำหรับ LIFF URL
+    publishedAt
   };
   
   return await shareNews(newsData);
