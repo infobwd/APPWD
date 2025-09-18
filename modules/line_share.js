@@ -293,11 +293,11 @@ export async function shareNews(newsData) {
     } catch (sendError) {
       console.warn('sendMessages failed:', sendError);
     }
-      // Fallback: คัดลอกลิงก์แทน
-      await copyNewsUrl(newsData.url || location.href);
-      ShareState.shareInProgress = false;
-      return true;
-    }
+    
+    // Fallback สุดท้าย: คัดลอกลิงก์
+    await copyNewsUrl(newsData.url || location.href);
+    ShareState.shareInProgress = false;
+    return true;
     
   } catch (error) {
     console.error('Share failed:', error);
