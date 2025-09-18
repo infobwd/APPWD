@@ -354,7 +354,8 @@ window.sharePost = async function(id){
       {type:'text', text:(p.category||'ทั่วไป'), size:'xs', color:'#6B7280', wrap:true, margin:'sm'}
     ]},
     footer:{type:'box', layout:'vertical', spacing:'sm', contents:[
-      {type:'button', style:'primary', height:'sm', action:{type:'uri', label:'อ่านข่าว', uri:`https://liff.line.me/2006490627-nERN5a26?post=${p.id}`}}
+      {type:'button', style:'primary', height:'sm', action:{type:'uri', label:'อ่านข่าว', uri:`https://liff.line.me/2006490627-nERN5a26#post?id=${p.id}`}}
+      
     ]}
   };
   try{
