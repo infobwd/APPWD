@@ -373,4 +373,7 @@ window.shareNewsSimple = async function(title, url) {
   return await shareNews(newsData);
 };
 
-console.log('News Share module loaded successfully');
+// === Export for compatibility ===
+export { shareNews as sharePostData };
+
+console.log('LINE Share module loaded successfully');
