@@ -281,37 +281,72 @@ export async function shareNews(newsData) {
     // Initialize LIFF
     const liff = await initializeLiff();
     
-    // พยายามแชร์ด้วย shareTargetPicker ก่อน (ไม่ตรวจสอบ isInClient)
+    // ตรวจสอบ environment และ capabilities
+    const isLineApp = liff.isInClient && liff.isInClient();
+    const isLoggedIn = liff.isLoggedIn && liff.isLoggedIn();
+    
+    console.log('LIFF Environment:', { isLineApp, isLoggedIn });
+    
+    // พยายามแชร์ด้วย shareTargetPicker ก่อน
     try {
-      // ตรวจสอบว่า API มีอยู่หรือไม่
+      // ตรวจสอบว่า API มีอยู่และใช้งานได้
       if (typeof liff.shareTargetPicker === 'function') {
-        await liff.shareTargetPicker([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
+        // ตรวจสอบ API availability (สำหรับเบราว์เซอร์ LINE)
+        let canUseSharePicker = true;
+        try {
+          if (typeof liff.isApiAvailable === 'function') {
+            canUseSharePicker = await liff.isApiAvailable('shareTargetPicker');
+          }
+        } catch (e) {
+          console.warn('Cannot check API availability:', e);
+        }
         
-        showShareSuccess();
-        ShareState.shareInProgress = false;
-        return true;
+        if (canUseSharePicker) {
+          console.log('Attempting shareTargetPicker...');
+          await liff.shareTargetPicker([{
+            type: 'flex',
+            altText: altText,
+            contents: flexCard
+          }]);
+          
+          showShareSuccess();
+          ShareState.shareInProgress = false;
+          return true;
+        } else {
+          console.warn('shareTargetPicker not available');
+        }
       }
     } catch (shareError) {
       console.warn('shareTargetPicker failed:', shareError);
-      // ถ้า shareTargetPicker ไม่ได้ ให้ลอง fallback
+      // Continue to fallback
     }
     
     // Fallback: พยายามใช้ sendMessages
     try {
       if (typeof liff.sendMessages === 'function') {
-        await liff.sendMessages([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
+        let canUseSendMessages = true;
+        try {
+          if (typeof liff.isApiAvailable === 'function') {
+            canUseSendMessages = await liff.isApiAvailable('sendMessages');
+          }
+        } catch (e) {
+          console.warn('Cannot check sendMessages availability:', e);
+        }
         
-        showShareSuccess();
-        ShareState.shareInProgress = false;
-        return true;
+        if (canUseSendMessages && isLoggedIn) {
+          console.log('Attempting sendMessages...');
+          await liff.sendMessages([{
+            type: 'flex',
+            altText: altText,
+            contents: flexCard
+          }]);
+          
+          showShareSuccess();
+          ShareState.shareInProgress = false;
+          return true;
+        } else {
+          console.warn('sendMessages not available or not logged in');
+        }
       }
     } catch (sendError) {
       console.warn('sendMessages failed:', sendError);
@@ -419,7 +454,8 @@ window.shareNewsSimple = async function(title, url) {
   return await shareNews(newsData);
 };
 
-// === Export for compatibility ===
-export { shareNews as sharePostData };
+// === Export Functions ===
+export { shareNews };
+export { shareNews as sharePostData }; // สำหรับ backward compatibility
 
 console.log('LINE Share module loaded successfully');
