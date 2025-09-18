@@ -274,12 +274,33 @@ export async function shareNews(newsData) {
       throw new Error('ข้อมูลข่าวไม่ครบถ้วน');
     }
     
+    // Initialize LIFF
+    const liff = await initializeLiff();
+    
+    // ตรวจสอบการ login LINE
+    if (!liff.isLoggedIn()) {
+      hideShareLoading();
+      const shouldLogin = confirm('ต้องเข้าสู่ระบบ LINE ก่อนแชร์ ต้องการเข้าสู่ระบบหรือไม่?');
+      if (shouldLogin) {
+        try {
+          await liff.login();
+          // หลัง login สำเร็จ รีเซ็ต state และลองใหม่
+          ShareState.shareInProgress = false;
+          return await shareNews(newsData);
+        } catch (loginError) {
+          ShareState.shareInProgress = false;
+          showShareError('ไม่สามารถเข้าสู่ระบบ LINE ได้');
+          return false;
+        }
+      } else {
+        ShareState.shareInProgress = false;
+        return false;
+      }
+    }
+    
     // สร้าง Flex Message
     const flexCard = createNewsFlexCard(newsData);
     const altText = `📰 ${newsData.title}`;
-    
-    // Initialize LIFF
-    const liff = await initializeLiff();
     
     // ตรวจสอบสภาพแวดล้อมอย่างละเอียด
     const isInClient = liff.isInClient();
@@ -288,47 +309,52 @@ export async function shareNews(newsData) {
     console.log('Share environment check:', {
       isInClient,
       hasContext: !!context,
+      isLoggedIn: liff.isLoggedIn(),
       userAgent: navigator.userAgent,
       platform: navigator.platform
     });
     
-    // บนมือถือต้องอยู่ใน LINE App จริงๆ ถึงจะใช้ shareTargetPicker ได้
-    if (isInClient && context) {
+    // บนมือถือใน LINE App
+    if (isInClient && context && liff.isLoggedIn()) {
       try {
         // ตรวจสอบ API availability อย่างละเอียด
         const canShare = await liff.isApiAvailable('shareTargetPicker');
         console.log('Can use shareTargetPicker:', canShare);
         
         if (canShare) {
-          await liff.shareTargetPicker([{
+          const shareResult = await liff.shareTargetPicker([{
             type: 'flex',
             altText: altText,
             contents: flexCard
           }]);
           
+          console.log('Share result:', shareResult);
           showShareSuccess();
           ShareState.shareInProgress = false;
           return true;
+        } else {
+          console.log('shareTargetPicker not available, trying sendMessages');
         }
       } catch (shareError) {
         console.error('shareTargetPicker error:', shareError);
         
         // ถ้าเป็น user cancel ไม่ต้องแสดง error
-        if (shareError.message && shareError.message.includes('cancel')) {
+        if (shareError.message && (
+          shareError.message.includes('cancel') || 
+          shareError.message.includes('cancelled') ||
+          shareError.message.includes('User cancel')
+        )) {
           hideShareLoading();
           ShareState.shareInProgress = false;
           return false;
         }
       }
-    }
-    
-    // Fallback สำหรับกรณีที่ไม่ใช่ LINE App หรือ shareTargetPicker ไม่ได้
-    console.log('Using fallback method');
-    
-    // ลอง sendMessages สำหรับกรณี LINE App แต่ shareTargetPicker ไม่ได้
-    if (isInClient) {
+      
+      // Fallback: ลอง sendMessages สำหรับกรณีที่ shareTargetPicker ไม่ได้
       try {
         const canSend = await liff.isApiAvailable('sendMessages');
+        console.log('Can use sendMessages:', canSend);
+        
         if (canSend) {
           await liff.sendMessages([{
             type: 'flex',
@@ -342,6 +368,29 @@ export async function shareNews(newsData) {
         }
       } catch (sendError) {
         console.error('sendMessages error:', sendError);
+      }
+    }
+    
+    // Fallback สำหรับคอมพิวเตอร์หรือนอก LINE App
+    console.log('Using fallback method - copy URL');
+    
+    // สำหรับคอมพิวเตอร์ - พยายาม Web Share API ก่อน
+    if (!isInClient && navigator.share && navigator.canShare) {
+      try {
+        const shareData = {
+          title: newsData.title,
+          text: newsData.description || newsData.title,
+          url: newsData.url
+        };
+        
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          showShareSuccess();
+          ShareState.shareInProgress = false;
+          return true;
+        }
+      } catch (webShareError) {
+        console.log('Web Share API failed:', webShareError);
       }
     }
     
