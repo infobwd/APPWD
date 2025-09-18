@@ -355,11 +355,11 @@ export async function shareNews(newsData) {
 // === Share Count Recording ===
 async function recordShareCount(newsData) {
   try {
-    console.log('Recording share count for:', newsData); // Debug log
+    console.log('Recording share count for:', newsData);
     
-    // ตรวจสอบข้อกำหนดพื้นฐาน
-    if (!window.supabase) {
-      console.warn('Supabase not available');
+    const db = await getSupabase();
+    if (!db) {
+      console.warn('Supabase not available from any source');
       return;
     }
     
@@ -370,15 +370,14 @@ async function recordShareCount(newsData) {
     
     console.log('Calling increment_share for post ID:', newsData.postId);
     
-    const { data, error } = await window.supabase
-      .rpc('increment_share', { p_post_id: newsData.postId });
+    const { data, error } = await db.rpc('increment_share', { 
+      p_post_id: newsData.postId 
+    });
     
     if (error) {
       console.error('Failed to record share count:', error);
     } else {
       console.log('Share count recorded successfully:', data);
-      
-      // อัพเดทสถิติใน UI ทันที (ถ้าอยู่ในหน้าเดียวกัน)
       updateShareCountInUI(newsData.postId, data);
     }
   } catch (error) {
