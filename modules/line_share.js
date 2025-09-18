@@ -355,21 +355,53 @@ export async function shareNews(newsData) {
 // === Share Count Recording ===
 async function recordShareCount(newsData) {
   try {
-    // ต้องมี supabase และ postId
-    if (!window.supabase || !newsData.postId) {
+    console.log('Recording share count for:', newsData); // Debug log
+    
+    // ตรวจสอบข้อกำหนดพื้นฐาน
+    if (!window.supabase) {
+      console.warn('Supabase not available');
       return;
     }
+    
+    if (!newsData || !newsData.postId) {
+      console.warn('Missing postId in newsData:', newsData);
+      return;
+    }
+    
+    console.log('Calling increment_share for post ID:', newsData.postId);
     
     const { data, error } = await window.supabase
       .rpc('increment_share', { p_post_id: newsData.postId });
     
     if (error) {
-      console.warn('Failed to record share count:', error);
+      console.error('Failed to record share count:', error);
     } else {
-      console.log('Share count recorded:', data);
+      console.log('Share count recorded successfully:', data);
+      
+      // อัพเดทสถิติใน UI ทันที (ถ้าอยู่ในหน้าเดียวกัน)
+      updateShareCountInUI(newsData.postId, data);
     }
   } catch (error) {
-    console.warn('Error recording share count:', error);
+    console.error('Error recording share count:', error);
+  }
+}
+
+// อัพเดทจำนวน share ใน UI ทันที
+function updateShareCountInUI(postId, newCount) {
+  try {
+    // อัพเดทใน post detail page
+    const shareCountEl = document.querySelector(`#shareCount-${postId}`);
+    if (shareCountEl) {
+      shareCountEl.textContent = newCount;
+    }
+    
+    // อัพเดทในรายการข่าว
+    const listShareEl = document.querySelector(`[data-post-share-count="${postId}"]`);
+    if (listShareEl) {
+      listShareEl.textContent = newCount;
+    }
+  } catch (error) {
+    console.warn('Failed to update share count in UI:', error);
   }
 }
 
