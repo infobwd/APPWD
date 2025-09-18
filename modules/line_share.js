@@ -421,5 +421,59 @@ window.shareNewsSimple = async function(title, url) {
 
 // === Export for compatibility ===
 export { shareNews as sharePostData };
+export { shareNews };
+
+// === Alternative LIFF-based Share ===
+export async function shareLiffDirect(newsData) {
+  try {
+    // ตรวจสอบ LIFF SDK
+    if (!window.liff) {
+      throw new Error('LIFF SDK not available');
+    }
+    
+    // Initialize ถ้ายังไม่ได้
+    if (!window.liff.getOS) {
+      const liffId = window.LIFF_ID || '';
+      if (!liffId) {
+        throw new Error('LIFF ID not configured');
+      }
+      await window.liff.init({ liffId });
+    }
+    
+    // สร้าง Flex Message
+    const flexCard = createNewsFlexCard(newsData);
+    const altText = `📰 ${newsData.title || 'ข่าวสาร'}`;
+    
+    showShareLoading();
+    
+    // แชร์ด้วย LIFF API โดยตรง
+    await window.liff.shareTargetPicker([{
+      type: 'flex',
+      altText: altText,
+      contents: flexCard
+    }]);
+    
+    showShareSuccess();
+    return true;
+    
+  } catch (error) {
+    console.error('LIFF share failed:', error);
+    hideShareLoading();
+    
+    // Fallback: คัดลอกลิงก์
+    if (newsData.url) {
+      try {
+        await copyNewsUrl(newsData.url);
+        return true;
+      } catch (copyError) {
+        showShareError('ไม่สามารถแชร์ได้ กรุณาลองใหม่');
+        return false;
+      }
+    } else {
+      showShareError('ไม่สามารถแชร์ได้ กรุณาเปิดใน LINE app');
+      return false;
+    }
+  }
+}
 
 console.log('LINE Share module loaded successfully');
