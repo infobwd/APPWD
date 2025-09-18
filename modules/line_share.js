@@ -357,7 +357,24 @@ async function recordShareCount(newsData) {
   try {
     console.log('Recording share count for:', newsData);
     
-    const db = await getSupabase();
+    // ค้นหา supabase แบบ inline
+    let db = null;
+    
+    // ลองจาก global variables
+    if (window.supabase) {
+      db = window.supabase;
+    } else if (globalThis.supabase) {
+      db = globalThis.supabase;
+    } else {
+      // ลอง dynamic import
+      try {
+        const apiModule = await import('../api.js');
+        db = apiModule.supabase;
+      } catch (importError) {
+        console.warn('Cannot import supabase:', importError);
+      }
+    }
+    
     if (!db) {
       console.warn('Supabase not available from any source');
       return;
