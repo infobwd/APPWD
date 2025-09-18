@@ -55,7 +55,8 @@ async function initializeLiff() {
       throw new Error('LIFF ID not configured');
     }
     
-    if (!window.liff.isInitialized()) {
+    // ตรวจสอบว่า LIFF ถูก initialize แล้วหรือยัง
+    if (!window.liff.getOS) {
       await window.liff.init({ liffId });
     }
     
