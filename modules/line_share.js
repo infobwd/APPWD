@@ -291,6 +291,9 @@ export async function shareNews(newsData) {
           contents: flexCard
         }]);
         
+        // เพิ่มการบันทึก share count
+        await recordShareCount(newsData);
+        
         showShareSuccess();
         ShareState.shareInProgress = false;
         return true;
@@ -309,6 +312,9 @@ export async function shareNews(newsData) {
           contents: flexCard
         }]);
         
+        // เพิ่มการบันทึก share count
+        await recordShareCount(newsData);
+        
         showShareSuccess();
         ShareState.shareInProgress = false;
         return true;
@@ -319,6 +325,10 @@ export async function shareNews(newsData) {
     
     // Fallback สุดท้าย: คัดลอกลิงก์
     await copyNewsUrl(newsData.url || location.href);
+    
+    // บันทึก share count แม้ fallback
+    await recordShareCount(newsData);
+    
     ShareState.shareInProgress = false;
     return true;
     
@@ -339,6 +349,27 @@ export async function shareNews(newsData) {
     
     showShareError(errorMessage);
     return false;
+  }
+}
+
+// === Share Count Recording ===
+async function recordShareCount(newsData) {
+  try {
+    // ต้องมี supabase และ postId
+    if (!window.supabase || !newsData.postId) {
+      return;
+    }
+    
+    const { data, error } = await window.supabase
+      .rpc('increment_share', { p_post_id: newsData.postId });
+    
+    if (error) {
+      console.warn('Failed to record share count:', error);
+    } else {
+      console.log('Share count recorded:', data);
+    }
+  } catch (error) {
+    console.warn('Error recording share count:', error);
   }
 }
 
@@ -451,6 +482,9 @@ export async function shareLiffDirect(newsData) {
       altText: altText,
       contents: flexCard
     }]);
+    
+    // บันทึก share count
+    await recordShareCount(newsData);
     
     showShareSuccess();
     return true;
