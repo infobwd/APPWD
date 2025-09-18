@@ -1,6 +1,6 @@
 /**
- ** line_share.js
- * Updated Share Bindings for News-only sharing
+ * line_share.js
+ Updated Share Bindings for News-only sharing
  * การเชื่อมต่อการแชร์แบบเฉพาะข่าว
  */
 
@@ -75,6 +75,8 @@ export async function sharePost(id) {
     return false;
   }
   
+  console.log('Sharing post:', post); // Debug log
+  
   // Prepare news data for sharing
   const title = post?.title || post?.name || document.title;
   const imageUrl = pickCover(post);
@@ -93,8 +95,10 @@ export async function sharePost(id) {
     imageUrl,
     category,
     publishedAt,
-    postId: post.id  // เพิ่ม postId สำหรับ LIFF URL
+    postId: post.id  // เพิ่ม postId สำหรับ LIFF URL และ tracking
   };
+  
+  console.log('News data prepared:', newsData); // Debug log
   
   return await shareNews(newsData);
 }
