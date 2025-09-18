@@ -73,64 +73,86 @@ async function initializeLiff() {
 
 // === News Flex Message Creator ===
 function createNewsFlexCard({ title, description, url, imageUrl, category, publishedAt }) {
-  const safeTitle = (title || 'ข่าวสาร').substring(0, 60);
-  const safeDesc = description ? description.substring(0, 100) : null;
+  // Validate และทำความสะอาดข้อมูล
+  const safeTitle = (title || 'ข่าวสาร').replace(/[^\u0E00-\u0E7F\w\s\-.,!?()]/g, '').substring(0, 60);
+  const safeDesc = description ? description.replace(/[^\u0E00-\u0E7F\w\s\-.,!?()]/g, '').substring(0, 100) : null;
   const safeUrl = url || location.href;
-  const safeImageUrl = imageUrl && isValidImageUrl(imageUrl) ? imageUrl : null;
+  const safeCategory = (category || 'ทั่วไป').replace(/[^\u0E00-\u0E7F\w\s\-]/g, '').substring(0, 20);
   
+  // ตรวจสอบ URL รูปภาพอย่างเข้มงวด
+  let validImageUrl = null;
+  if (imageUrl) {
+    try {
+      const urlObj = new URL(imageUrl);
+      if (urlObj.protocol === 'https:' && 
+          /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(urlObj.pathname + urlObj.search)) {
+        validImageUrl = imageUrl;
+      }
+    } catch (e) {
+      console.warn('Invalid image URL:', imageUrl);
+    }
+  }
+  
+  // สร้าง Flex Card แบบ minimal
   const flexCard = {
     type: 'bubble',
     size: 'kilo'
   };
   
-  // เพิ่มรูปภาพถ้ามี
-  if (safeImageUrl) {
+  // เพิ่มรูปภาพเฉพาะถ้า validate ผ่าน
+  if (validImageUrl) {
     flexCard.hero = {
       type: 'image',
-      url: safeImageUrl,
+      url: validImageUrl,
       size: 'full',
       aspectRatio: '20:13',
       aspectMode: 'cover'
     };
   }
   
-  // เนื้อหาหลัก
+  // เนื้อหาหลัก - ใช้ข้อมูลน้อยที่สุด
   const bodyContents = [
     {
       type: 'text',
       text: safeTitle,
       weight: 'bold',
       size: 'md',
-      wrap: true,
-      maxLines: 3
+      wrap: true
     }
   ];
   
-  if (safeDesc) {
+  // เพิ่ม description เฉพาะถ้ามีและไม่ใช่ข้อความว่าง
+  if (safeDesc && safeDesc.trim()) {
     bodyContents.push({
       type: 'text',
       text: safeDesc,
       size: 'sm',
       color: '#6b7280',
-      wrap: true,
-      maxLines: 3
+      wrap: true
     });
   }
   
-  // เพิ่มข้อมูลเมตา
-  if (category || publishedAt) {
-    bodyContents.push({ type: 'spacer', size: 'sm' });
-    
-    const metaText = [];
-    if (category) metaText.push(category);
-    if (publishedAt) {
-      const date = new Date(publishedAt).toLocaleDateString('th-TH');
-      metaText.push(date);
+  // เพิ่มข้อมูล meta อย่างง่าย
+  const metaParts = [];
+  if (safeCategory !== 'ทั่วไป') metaParts.push(safeCategory);
+  if (publishedAt) {
+    try {
+      const date = new Date(publishedAt);
+      if (!isNaN(date.getTime())) {
+        metaParts.push(date.toLocaleDateString('th-TH', { 
+          day: 'numeric', 
+          month: 'short' 
+        }));
+      }
+    } catch (e) {
+      // Skip date if invalid
     }
-    
+  }
+  
+  if (metaParts.length > 0) {
     bodyContents.push({
       type: 'text',
-      text: metaText.join(' • '),
+      text: metaParts.join(' • '),
       size: 'xs',
       color: '#9ca3af'
     });
@@ -143,7 +165,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
     spacing: 'sm'
   };
   
-  // ปุ่มอ่านต่อ
+  // ปุ่มแบบง่าย
   flexCard.footer = {
     type: 'box',
     layout: 'vertical',
@@ -151,9 +173,10 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
       {
         type: 'button',
         style: 'primary',
+        height: 'sm',
         action: {
           type: 'uri',
-          label: 'อ่านข่าวเต็ม',
+          label: 'อ่านข่าว',
           uri: safeUrl
         }
       }
