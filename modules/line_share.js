@@ -177,7 +177,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
         action: {
           type: 'uri',
           label: 'อ่านข่าว',
-          uri: `https://liff.line.me/2006490627-nERN5a26?post=${post.id}`
+          uri: 'https://liff.line.me/2006490627-nERN5a26'
         }
       }
     ]
