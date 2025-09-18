@@ -97,7 +97,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
   // สร้าง Flex Card แบบ minimal
   const flexCard = {
     type: 'bubble',
-    size: 'kilo'
+    size: 'hero'
   };
   
   // เพิ่มรูปภาพเฉพาะถ้า validate ผ่าน
