@@ -1,10 +1,10 @@
 /**
- * line_share.js
- Updated Share Bindings for News-only sharing
+ ** line_share.js
+ * Updated Share Bindings for News-only sharing
  * การเชื่อมต่อการแชร์แบบเฉพาะข่าว
  */
 
-import { shareNews } from './line_share.js';  
+import { shareNews } from './line_share.js';  // เปลี่ยนจาก line_share.js
 import { PUBLIC_URL } from '../config.js';
 import { supabase } from '../api.js';
 
@@ -84,7 +84,7 @@ export async function sharePost(id) {
   
   // Create news URL
   const baseUrl = PUBLIC_URL || location.origin + location.pathname;
-  const newsUrl = `https://liff.line.me/2006490627-nERN5a26?post=${post.id}`;
+  const newsUrl = `${baseUrl}#post?id=${post.id}`;
   
   const newsData = {
     title,
@@ -92,7 +92,8 @@ export async function sharePost(id) {
     url: newsUrl,
     imageUrl,
     category,
-    publishedAt
+    publishedAt,
+    postId: post.id  // เพิ่ม postId สำหรับ LIFF URL
   };
   
   return await shareNews(newsData);
