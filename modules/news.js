@@ -1,5 +1,6 @@
 
-// ==== News Filters State ====
+// news.js
+//==== News Filters State ====
 
 let currentCat = '__ALL__';
 let featuredOnly = false;
