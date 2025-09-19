@@ -1,36 +1,16 @@
 /**
- *line_share.js
- Simplified News Share Module
- * ระบบแชร์ข่าวแบบเฉพาะเจาะจง
+ * line_share.js - Fixed Version
+ * แก้ไขปัญหาแสดงว่าแชร์สำเร็จโดยที่ยังไม่ได้เลือกผู้รับ
  */
 
 import * as CFG from '../config.js';
 
-// === Simple State Management ===
+// === State Management ===
 const ShareState = {
   isLiffReady: false,
   isInitializing: false,
   shareInProgress: false
 };
-
-// === Utility Functions ===
-function safeJsonStringify(obj) {
-  try {
-    return JSON.stringify(obj || {});
-  } catch (error) {
-    console.error('JSON stringify failed:', error);
-    return '{}';
-  }
-}
-
-function safeUrlEncode(str) {
-  try {
-    return encodeURIComponent(str);
-  } catch (error) {
-    console.error('URL encode failed:', error);
-    return '';
-  }
-}
 
 // === LIFF Management ===
 async function initializeLiff() {
@@ -39,8 +19,12 @@ async function initializeLiff() {
   }
   
   if (ShareState.isInitializing) {
-    // รออีกครั้งถ้ากำลัง initialize อยู่
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // รอถ้ากำลัง initialize อยู่
+    let attempts = 0;
+    while (ShareState.isInitializing && attempts < 30) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
     return ShareState.isLiffReady ? window.liff : null;
   }
   
@@ -57,11 +41,19 @@ async function initializeLiff() {
     }
     
     // ตรวจสอบว่า LIFF ถูก initialize แล้วหรือยัง
-    if (!window.liff.getOS) {
+    try {
+      // ถ้าเรียก getOS() ได้ = init แล้ว
+      window.liff.getOS();
+      ShareState.isLiffReady = true;
+      console.log('LIFF already initialized');
+    } catch (e) {
+      // ยังไม่ได้ init
+      console.log('Initializing LIFF...');
       await window.liff.init({ liffId });
+      ShareState.isLiffReady = true;
+      console.log('LIFF initialized successfully');
     }
     
-    ShareState.isLiffReady = true;
     ShareState.isInitializing = false;
     return window.liff;
     
@@ -73,67 +65,59 @@ async function initializeLiff() {
 }
 
 // === News Flex Message Creator ===
-function createNewsFlexCard({ title, description, url, imageUrl, category, publishedAt }) {
-  // Validate และทำความสะอาดข้อมูล
-  const safeTitle = (title || 'ข่าวสาร').replace(/[^\u0E00-\u0E7F\w\s\-.,!?()]/g, '').substring(0, 60);
-  const safeDesc = description ? description.replace(/[^\u0E00-\u0E7F\w\s\-.,!?()]/g, '').substring(0, 100) : null;
-  const safeUrl = url || location.href;
-  const safeCategory = (category || 'ทั่วไป').replace(/[^\u0E00-\u0E7F\w\s\-]/g, '').substring(0, 20);
+function createNewsFlexCard({ title, description, url, imageUrl, category, publishedAt, postId }) {
+  // Clean data
+  const safeTitle = (title || 'ข่าวสาร').substring(0, 100);
+  const safeDesc = description ? description.substring(0, 150) : null;
+  const safeCategory = (category || 'ทั่วไป').substring(0, 30);
   
-  // ตรวจสอบ URL รูปภาพอย่างเข้มงวด
-  let validImageUrl = null;
-  if (imageUrl) {
-    try {
-      const urlObj = new URL(imageUrl);
-      if (urlObj.protocol === 'https:' && 
-          /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(urlObj.pathname + urlObj.search)) {
-        validImageUrl = imageUrl;
-      }
-    } catch (e) {
-      console.warn('Invalid image URL:', imageUrl);
-    }
-  }
+  // สร้าง URL สำหรับเปิดข่าว
+  const baseUrl = CFG.PUBLIC_URL || location.origin + location.pathname;
+  const newsUrl = postId ? `${baseUrl}#post?id=${postId}` : (url || location.href);
   
-  // สร้าง Flex Card แบบ minimal
+  // สร้าง Flex Card
   const flexCard = {
     type: 'bubble',
     size: 'kilo'
   };
   
-  // เพิ่มรูปภาพเฉพาะถ้า validate ผ่าน
-  if (validImageUrl) {
+  // เพิ่มรูปภาพถ้ามี
+  if (imageUrl && imageUrl.startsWith('https://')) {
     flexCard.hero = {
       type: 'image',
-      url: validImageUrl,
+      url: imageUrl,
       size: 'full',
       aspectRatio: '20:13',
       aspectMode: 'cover'
     };
   }
   
-  // เนื้อหาหลัก - ใช้ข้อมูลน้อยที่สุด
+  // เนื้อหาหลัก
   const bodyContents = [
     {
       type: 'text',
       text: safeTitle,
       weight: 'bold',
       size: 'md',
-      wrap: true
+      wrap: true,
+      maxLines: 2
     }
   ];
   
-  // เพิ่ม description เฉพาะถ้ามีและไม่ใช่ข้อความว่าง
+  // เพิ่ม description ถ้ามี
   if (safeDesc && safeDesc.trim()) {
     bodyContents.push({
       type: 'text',
       text: safeDesc,
       size: 'sm',
       color: '#6b7280',
-      wrap: true
+      wrap: true,
+      maxLines: 2,
+      margin: 'sm'
     });
   }
   
-  // เพิ่มข้อมูล meta อย่างง่าย
+  // เพิ่ม metadata
   const metaParts = [];
   if (safeCategory !== 'ทั่วไป') metaParts.push(safeCategory);
   if (publishedAt) {
@@ -145,9 +129,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
           month: 'short' 
         }));
       }
-    } catch (e) {
-      // Skip date if invalid
-    }
+    } catch (e) {}
   }
   
   if (metaParts.length > 0) {
@@ -155,7 +137,8 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
       type: 'text',
       text: metaParts.join(' • '),
       size: 'xs',
-      color: '#9ca3af'
+      color: '#9ca3af',
+      margin: 'sm'
     });
   }
   
@@ -166,7 +149,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
     spacing: 'sm'
   };
   
-  // ปุ่มแบบง่าย - ใช้ LIFF URL พร้อม post ID
+  // ปุ่มอ่านข่าว
   flexCard.footer = {
     type: 'box',
     layout: 'vertical',
@@ -178,7 +161,7 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
         action: {
           type: 'uri',
           label: 'อ่านข่าว',
-          uri: safeUrl.startsWith('http') ? safeUrl : 'https://liff.line.me/2006490627-nERN5a26'
+          uri: newsUrl.startsWith('http') ? newsUrl : `https://${newsUrl.replace(/^\/+/, '')}`
         }
       }
     ]
@@ -187,56 +170,46 @@ function createNewsFlexCard({ title, description, url, imageUrl, category, publi
   return flexCard;
 }
 
-function isValidImageUrl(url) {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.protocol === 'https:' && 
-           /\.(jpg|jpeg|png|gif|webp)$/i.test(urlObj.pathname);
-  } catch {
-    return false;
-  }
-}
-
 // === UI Feedback Functions ===
+let currentMessage = null;
+
 function showShareLoading() {
+  hideAllMessages();
   const loading = document.createElement('div');
   loading.id = 'shareLoading';
-  loading.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-medium text-center';
+  loading.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-medium text-center max-w-sm mx-auto';
   loading.innerHTML = `
     <div class="flex items-center justify-center gap-2">
       <span class="animate-spin">⟳</span>
-      <span>กำลังแชร์...</span>
+      <span>กำลังเตรียมแชร์...</span>
     </div>
   `;
   document.body.appendChild(loading);
+  currentMessage = loading;
 }
 
-function hideShareLoading() {
-  const loadingEl = document.getElementById('shareLoading');
-  if (loadingEl) loadingEl.remove();
-}
-
-function showShareSuccess() {
-  hideShareLoading();
+function showShareSuccess(message = 'แชร์สำเร็จ!') {
+  hideAllMessages();
   const successEl = document.createElement('div');
-  successEl.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm font-medium text-center';
+  successEl.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm font-medium text-center max-w-sm mx-auto';
   successEl.innerHTML = `
     <div class="flex items-center justify-center gap-2">
       <span>✅</span>
-      <span>แชร์สำเร็จ!</span>
+      <span>${message}</span>
     </div>
   `;
   document.body.appendChild(successEl);
+  currentMessage = successEl;
   
   setTimeout(() => {
-    if (successEl && successEl.parentElement) {
+    if (successEl.parentElement) {
       successEl.remove();
     }
   }, 3000);
 }
 
 function showShareError(message) {
-  hideShareLoading();
+  hideAllMessages();
   const errorEl = document.createElement('div');
   errorEl.className = 'fixed top-4 left-4 right-4 z-50 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg text-sm';
   errorEl.innerHTML = `
@@ -250,143 +223,241 @@ function showShareError(message) {
   `;
   
   document.body.appendChild(errorEl);
+  currentMessage = errorEl;
   
   setTimeout(() => {
-    if (errorEl && errorEl.parentElement) {
+    if (errorEl.parentElement) {
       errorEl.remove();
     }
   }, 5000);
 }
 
-// === Main Share Function ===
+function hideAllMessages() {
+  // ลบข้อความเก่าทั้งหมด
+  ['shareLoading', 'shareSuccess', 'shareError'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  
+  // ลบ current message
+  if (currentMessage && currentMessage.parentElement) {
+    currentMessage.remove();
+    currentMessage = null;
+  }
+}
+
+// === Main Share Function (แก้ไขแล้ว) ===
 export async function shareNews(newsData) {
+  // ป้องกันการแชร์ซ้ำซ้อน
   if (ShareState.shareInProgress) {
-    showShareError('กำลังดำเนินการแชร์อยู่ กรุณารอสักครู่');
+    console.log('Share already in progress');
     return false;
   }
   
   ShareState.shareInProgress = true;
   
   try {
-    showShareLoading();
-    
     // ตรวจสอบข้อมูลข่าว
     if (!newsData || !newsData.title) {
       throw new Error('ข้อมูลข่าวไม่ครบถ้วน');
+    }
+    
+    console.log('Starting share process for:', newsData.title);
+    showShareLoading();
+    
+    // Initialize LIFF
+    let liff;
+    try {
+      liff = await initializeLiff();
+    } catch (error) {
+      console.error('LIFF init error:', error);
+      throw new Error('ไม่สามารถเริ่มต้นระบบแชร์ได้');
+    }
+    
+    // ตรวจสอบว่า shareTargetPicker พร้อมใช้งาน
+    const canShare = liff && 
+                     typeof liff.shareTargetPicker === 'function' && 
+                     liff.isApiAvailable && 
+                     liff.isApiAvailable('shareTargetPicker');
+    
+    if (!canShare) {
+      console.log('shareTargetPicker not available, using fallback');
+      hideAllMessages();
+      return await fallbackShare(newsData);
     }
     
     // สร้าง Flex Message
     const flexCard = createNewsFlexCard(newsData);
     const altText = `📰 ${newsData.title}`;
     
-    // Initialize LIFF
-    const liff = await initializeLiff();
+    console.log('Opening shareTargetPicker...');
     
-    // พยายามแชร์ด้วย shareTargetPicker ก่อน (ไม่ตรวจสอบ isInClient)
+    // เปิด shareTargetPicker และรอผลลัพธ์
     try {
-      // ตรวจสอบว่า API มีอยู่หรือไม่
-      if (typeof liff.shareTargetPicker === 'function') {
-        await liff.shareTargetPicker([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
-        
-        // เพิ่มการบันทึก share count
+      const shareResult = await liff.shareTargetPicker([{
+        type: 'flex',
+        altText: altText,
+        contents: flexCard
+      }]);
+      
+      // ตรวจสอบผลลัพธ์
+      console.log('Share result:', shareResult);
+      
+      // shareTargetPicker จะ return undefined ถ้าสำเร็จ
+      // หรือ throw error ถ้าผู้ใช้ยกเลิก
+      
+      hideAllMessages();
+      showShareSuccess();
+      
+      // บันทึก share count
+      if (newsData.postId) {
         await recordShareCount(newsData);
-        
-        showShareSuccess();
-        ShareState.shareInProgress = false;
-        return true;
       }
+      
+      ShareState.shareInProgress = false;
+      return true;
+      
     } catch (shareError) {
-      console.warn('shareTargetPicker failed:', shareError);
-      // ถ้า shareTargetPicker ไม่ได้ ให้ลอง fallback
-    }
-    
-    // Fallback: พยายามใช้ sendMessages
-    try {
-      if (typeof liff.sendMessages === 'function') {
-        await liff.sendMessages([{
-          type: 'flex',
-          altText: altText,
-          contents: flexCard
-        }]);
-        
-        // เพิ่มการบันทึก share count
-        await recordShareCount(newsData);
-        
-        showShareSuccess();
+      console.log('shareTargetPicker error:', shareError);
+      
+      // ตรวจสอบว่าผู้ใช้ยกเลิกหรือไม่
+      if (shareError.code === 'CANCEL' || 
+          shareError.message?.toLowerCase().includes('cancel') ||
+          shareError.message?.toLowerCase().includes('user cancel')) {
+        console.log('User cancelled share');
+        hideAllMessages();
         ShareState.shareInProgress = false;
-        return true;
+        return false;
       }
-    } catch (sendError) {
-      console.warn('sendMessages failed:', sendError);
+      
+      // Error อื่นๆ ให้ลอง fallback
+      console.error('Share error:', shareError);
+      hideAllMessages();
+      return await fallbackShare(newsData);
     }
-    
-    // Fallback สุดท้าย: คัดลอกลิงก์
-    await copyNewsUrl(newsData.url || location.href);
-    
-    // บันทึก share count แม้ fallback
-    await recordShareCount(newsData);
-    
-    ShareState.shareInProgress = false;
-    return true;
     
   } catch (error) {
-    console.error('Share failed:', error);
-    ShareState.shareInProgress = false;
+    console.error('Share process failed:', error);
+    hideAllMessages();
     
     let errorMessage = 'ไม่สามารถแชร์ข่าวได้';
     
-    if (error.message?.includes('User cancel')) {
-      hideShareLoading();
-      return false;
-    } else if (error.message?.includes('LIFF')) {
+    if (error.message?.includes('LIFF')) {
       errorMessage = 'กรุณาเปิดใน LINE app เพื่อแชร์';
     } else if (error.message?.includes('ข้อมูล')) {
       errorMessage = error.message;
     }
     
     showShareError(errorMessage);
+    ShareState.shareInProgress = false;
     return false;
+    
+  } finally {
+    // Ensure flag is reset
+    ShareState.shareInProgress = false;
+  }
+}
+
+// === Fallback Share Function ===
+async function fallbackShare(newsData) {
+  const { title, url } = newsData;
+  const shareUrl = url || location.href;
+  const shareText = `${title}\n${shareUrl}`;
+  
+  try {
+    // ตรวจสอบว่าเป็นมือถือหรือไม่
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // ลองใช้ Web Share API ก่อน
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: title,
+            text: title,
+            url: shareUrl
+          });
+          showShareSuccess();
+          if (newsData.postId) {
+            await recordShareCount(newsData);
+          }
+          return true;
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            // User cancelled
+            return false;
+          }
+        }
+      }
+      
+      // ใช้ LINE URL scheme
+      const lineUrl = `line://msg/text/${encodeURIComponent(shareText)}`;
+      window.location.href = lineUrl;
+      
+      // รอสักครู่แล้วแสดงผล
+      setTimeout(() => {
+        showShareSuccess('กำลังเปิด LINE...');
+        if (newsData.postId) {
+          recordShareCount(newsData);
+        }
+      }, 500);
+      
+      return true;
+    }
+    
+    // Desktop - คัดลอกลิงก์
+    await copyToClipboard(shareText);
+    return true;
+    
+  } catch (error) {
+    console.error('Fallback share failed:', error);
+    showShareError('ไม่สามารถแชร์ได้ กรุณาลองใหม่');
+    return false;
+  }
+}
+
+// === Copy to Clipboard ===
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showShareSuccess('คัดลอกลิงก์แล้ว! 📋 วางได้ทุกที่');
+  } catch (error) {
+    // Fallback for old browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showShareSuccess('คัดลอกลิงก์แล้ว! 📋');
   }
 }
 
 // === Share Count Recording ===
 async function recordShareCount(newsData) {
   try {
-    console.log('Recording share count for:', newsData);
+    if (!newsData || !newsData.postId) {
+      console.warn('No postId for recording share');
+      return;
+    }
     
-    // ค้นหา supabase แบบ inline
-    let db = null;
-    
-    // ลองจาก global variables
-    if (window.supabase) {
-      db = window.supabase;
-    } else if (globalThis.supabase) {
-      db = globalThis.supabase;
-    } else {
-      // ลอง dynamic import
+    // หา supabase
+    let db = window.supabase;
+    if (!db) {
       try {
         const apiModule = await import('../api.js');
         db = apiModule.supabase;
-      } catch (importError) {
-        console.warn('Cannot import supabase:', importError);
+      } catch (e) {
+        console.warn('Cannot access supabase');
+        return;
       }
     }
     
-    if (!db) {
-      console.warn('Supabase not available from any source');
-      return;
-    }
+    if (!db) return;
     
-    if (!newsData || !newsData.postId) {
-      console.warn('Missing postId in newsData:', newsData);
-      return;
-    }
-    
-    console.log('Calling increment_share for post ID:', newsData.postId);
+    console.log('Recording share for post:', newsData.postId);
     
     const { data, error } = await db.rpc('increment_share', { 
       p_post_id: newsData.postId 
@@ -395,7 +466,7 @@ async function recordShareCount(newsData) {
     if (error) {
       console.error('Failed to record share count:', error);
     } else {
-      console.log('Share count recorded successfully:', data);
+      console.log('Share count recorded:', data);
       updateShareCountInUI(newsData.postId, data);
     }
   } catch (error) {
@@ -403,83 +474,64 @@ async function recordShareCount(newsData) {
   }
 }
 
-// อัพเดทจำนวน share ใน UI ทันที
+// === Update UI ===
 function updateShareCountInUI(postId, newCount) {
-  try {
-    // อัพเดทใน post detail page
-    const shareCountEl = document.querySelector(`#shareCount-${postId}`);
-    if (shareCountEl) {
-      shareCountEl.innerHTML = `📤 ${newCount}`;  // รวม icon
+  // Update all elements showing share count
+  const selectors = [
+    `#shareCount-${postId}`,
+    `[data-post-share-count="${postId}"]`,
+    `[data-share-id="${postId}"]`
+  ];
+  
+  document.querySelectorAll(selectors.join(',')).forEach(el => {
+    if (el) {
+      el.textContent = `📤 ${newCount}`;
     }
-    
-    // อัพเดทในรายการข่าว
-    const listShareEl = document.querySelector(`[data-post-share-count="${postId}"]`);
-    if (listShareEl) {
-      listShareEl.innerHTML = `📤 ${newCount}`;  // รวม icon
-    }
-    
-    // อัพเดทแบบ span ที่มี class text-sm
-    const shareSpans = document.querySelectorAll(`span[data-share-id="${postId}"]`);
-    shareSpans.forEach(span => {
-      span.innerHTML = `📤 ${newCount}`;  // รวม icon
-    });
-    
-    console.log(`UI updated: Post ${postId} shares = ${newCount}`);
-  } catch (error) {
-    console.warn('Failed to update share count in UI:', error);
-  }
+  });
 }
 
-// === Fallback Copy Function ===
-async function copyNewsUrl(url) {
+// === Global Functions ===
+window.sharePost = async function(postId) {
   try {
-    await navigator.clipboard.writeText(url);
-    showShareSuccess('คัดลอกลิงก์สำเร็จ! สามารถแชร์ได้แล้ว');
-  } catch (error) {
-    // Fallback สำหรับเบราว์เซอร์เก่า
-    const textArea = document.createElement('textarea');
-    textArea.value = url;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    showShareSuccess('คัดลอกลิงก์สำเร็จ! สามารถแชร์ได้แล้ว');
-  }
-}
-
-// === Global Interface ===
-window.shareNewsPost = async function(postId) {
-  try {
-    // ดึงข้อมูลข่าวจากฐานข้อมูล (ต้องมี supabase)
-    if (!window.supabase) {
-      throw new Error('ไม่พบระบบฐานข้อมูล');
+    // ตรวจสอบ supabase
+    let db = window.supabase;
+    if (!db) {
+      try {
+        const apiModule = await import('../api.js');
+        db = apiModule.supabase;
+      } catch (e) {
+        showShareError('ไม่พบระบบฐานข้อมูล');
+        return false;
+      }
     }
     
-    const { data: post, error } = await window.supabase
+    // ดึงข้อมูลข่าว
+    const { data: post, error } = await db
       .from('posts')
       .select('id,title,body,category,cover_url,published_at')
       .eq('id', postId)
       .maybeSingle();
     
     if (error || !post) {
-      throw new Error('ไม่พบข่าวที่ต้องการแชร์');
+      showShareError('ไม่พบข่าวที่ต้องการแชร์');
+      return false;
     }
     
-    // สร้าง URL สำหรับข่าว
-    const baseUrl = localStorage.getItem('APPWD_PUBLIC_URL') || './';
-    const newsUrl = `${baseUrl}index.html#post?id=${post.id}`;
+    // สร้าง URL
+    const baseUrl = localStorage.getItem('APPWD_PUBLIC_URL') || location.origin + location.pathname;
+    const newsUrl = `${baseUrl}#post?id=${post.id}`;
     
-    // สร้างคำอธิบายสั้น ๆ จาก body
+    // สร้าง description
     let description = '';
     if (post.body) {
-      // ลบ Markdown syntax และตัด text สั้น ๆ
       const plainText = post.body.replace(/[#*\[\]()]/g, '').trim();
-      description = plainText.substring(0, 80);
-      if (plainText.length > 80) description += '...';
+      description = plainText.substring(0, 100);
+      if (plainText.length > 100) description += '...';
     }
     
-    // เตรียมข้อมูลสำหรับแชร์
+    // เตรียมข้อมูล
     const newsData = {
+      postId: post.id,
       title: post.title,
       description: description,
       url: newsUrl,
@@ -491,79 +543,27 @@ window.shareNewsPost = async function(postId) {
     return await shareNews(newsData);
     
   } catch (error) {
-    console.error('Share news post failed:', error);
-    showShareError(error.message || 'ไม่สามารถแชร์ข่าวได้');
+    console.error('sharePost error:', error);
+    showShareError('ไม่สามารถแชร์ข่าวได้');
     return false;
   }
 };
 
-// === Alternative Simple Function ===
-window.shareNewsSimple = async function(title, url) {
-  const newsData = {
-    title: title || 'ข่าวสาร',
-    url: url || location.href
-  };
-  
-  return await shareNews(newsData);
-};
-
-// === Export for compatibility ===
-export { shareNews as sharePostData };
-
-// === Alternative LIFF-based Share ===
-export async function shareLiffDirect(newsData) {
-  try {
-    // ตรวจสอบ LIFF SDK
-    if (!window.liff) {
-      throw new Error('LIFF SDK not available');
-    }
-    
-    // Initialize ถ้ายังไม่ได้
-    if (!window.liff.getOS) {
-      const liffId = window.LIFF_ID || '';
-      if (!liffId) {
-        throw new Error('LIFF ID not configured');
-      }
-      await window.liff.init({ liffId });
-    }
-    
-    // สร้าง Flex Message
-    const flexCard = createNewsFlexCard(newsData);
-    const altText = `📰 ${newsData.title || 'ข่าวสาร'}`;
-    
-    showShareLoading();
-    
-    // แชร์ด้วย LIFF API โดยตรง
-    await window.liff.shareTargetPicker([{
-      type: 'flex',
-      altText: altText,
-      contents: flexCard
-    }]);
-    
-    // บันทึก share count
-    await recordShareCount(newsData);
-    
-    showShareSuccess();
-    return true;
-    
-  } catch (error) {
-    console.error('LIFF share failed:', error);
-    hideShareLoading();
-    
-    // Fallback: คัดลอกลิงก์
-    if (newsData.url) {
-      try {
-        await copyNewsUrl(newsData.url);
-        return true;
-      } catch (copyError) {
-        showShareError('ไม่สามารถแชร์ได้ กรุณาลองใหม่');
-        return false;
-      }
-    } else {
-      showShareError('ไม่สามารถแชร์ได้ กรุณาเปิดใน LINE app');
-      return false;
-    }
-  }
+// === Pre-initialize LIFF (background) ===
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    // ไม่ block การโหลดหน้า
+    setTimeout(() => {
+      initializeLiff().then(success => {
+        console.log('LIFF pre-initialized:', success ? 'ready' : 'failed');
+      }).catch(err => {
+        console.log('LIFF pre-init skipped:', err.message);
+      });
+    }, 1000);
+  });
 }
 
-console.log('LINE Share module loaded successfully');
+// === Exports ===
+export { shareNews as sharePostData };
+
+console.log('LINE Share module loaded (Fixed version)');
