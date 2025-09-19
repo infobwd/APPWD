@@ -245,109 +245,36 @@ async function loadPage(p){
 }
 
 // -------- DETAIL --------
-// -------- DETAIL WITH AUTO LOGIN --------
 export async function renderDetail(id){
-  const box = document.getElementById('postDetail');
+  const box=document.getElementById('postDetail');
   if(!box) return;
-  
-  // แสดง loading
   box.innerHTML = skel(4,'80px');
-  
-  // ตรวจสอบว่า login แล้วหรือยัง
-  const profile = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
-  
-  // ถ้ายังไม่ login และอยู่ใน LIFF environment
-  if (!profile && window.liff) {
-    try {
-      // ตรวจสอบว่า LIFF พร้อมใช้งานหรือยัง
-      if (!window.liff.isLoggedIn || !window.liff.isLoggedIn()) {
-        box.innerHTML = `
-          <div class="text-center py-8">
-            <div class="mb-4">
-              <svg class="w-16 h-16 mx-auto text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-              </svg>
-            </div>
-            <h3 class="text-lg font-semibold mb-2">กรุณาเข้าสู่ระบบเพื่ออ่านข่าว</h3>
-            <p class="text-sm text-ink3 mb-4">ระบบจะนำคุณเข้าสู่ระบบด้วย LINE อัตโนมัติ</p>
-            <div class="text-sm text-ink3">กำลังเข้าสู่ระบบ...</div>
-          </div>
-        `;
-        
-        // รอ 1 วินาทีเพื่อให้ผู้ใช้เห็นข้อความ
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // บังคับ login ด้วย LIFF
-        await forceLineLogin();
-        return; // จะ redirect ไป LINE login แล้ว
-      }
-    } catch (error) {
-      console.error('Auto login failed:', error);
-      // ถ้า auto login ไม่ได้ ให้แสดงปุ่ม manual login
-      box.innerHTML = `
-        <div class="text-center py-8">
-          <div class="mb-4">
-            <svg class="w-16 h-16 mx-auto text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold mb-2">กรุณาเข้าสู่ระบบเพื่ออ่านข่าว</h3>
-          <p class="text-sm text-ink3 mb-4">คุณต้องเข้าสู่ระบบด้วย LINE เพื่ออ่านเนื้อหาข่าวนี้</p>
-          <button id="btnLoginForPost" class="btn btn-prim">เข้าสู่ระบบด้วย LINE</button>
-        </div>
-      `;
-      
-      // เพิ่ม event listener สำหรับปุ่ม login
-      const btnLogin = document.getElementById('btnLoginForPost');
-      if (btnLogin) {
-        btnLogin.onclick = async () => {
-          await forceLineLogin();
-        };
-      }
-      return;
-    }
-  }
 
-  // ดำเนินการต่อถ้า login แล้ว
   const resp = await supabase
     .from('posts')
     .select('id,title,category,body,cover_url,published_at,created_by,is_featured')
     .eq('id', id).maybeSingle();
-    
   const p = resp.data;
-  if(!p){ 
-    box.innerHTML = '<div class="text-ink3">ไม่พบข่าว</div>'; 
-    return; 
-  }
+  if(!p){ box.innerHTML = '<div class="text-ink3">ไม่พบข่าว</div>'; return; }
 
-  // เพิ่ม view count
-  try{ 
-    await supabase.rpc('increment_view',{p_post_id:p.id}); 
-  } catch(_){}
+  try{ await supabase.rpc('increment_view',{p_post_id:p.id}); }catch(_){}
 
-  // ดึงสถิติ
   const statResp = await supabase
     .from('post_stats')
-    .select('view_count,like_count,share_count')
-    .eq('post_id',p.id)
-    .maybeSingle();
-    
+    .select('view_count,like_count,share_count').eq('post_id',p.id).maybeSingle();
   const views = (statResp.data && statResp.data.view_count) || 0;
   const likes = (statResp.data && statResp.data.like_count) || 0;
   const shares = (statResp.data && statResp.data.share_count) || 0;
 
-  // ตรวจสอบว่า user ถูกใจข่าวนี้หรือยัง
   const prof = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const lineId = prof?.userId || null;
   let liked = false;
-  
   if(lineId){
     const lk = await supabase.from('post_likes').select('post_id')
       .eq('post_id',p.id).eq('line_user_id',lineId).maybeSingle();
     liked = !!lk.data;
   }
 
-  // Render content
   const cover = p.cover_url ? `<img class='cover mb-3' src='${p.cover_url}'>` : '';
   const md = window.marked ? window.marked.parse(p.body||'') : (p.body||'');
   const safe = window.DOMPurify ? window.DOMPurify.sanitize(md) : md;
@@ -362,121 +289,49 @@ export async function renderDetail(id){
     <div class='prose prose-sm max-w-none mb-4' style='color:var(--ink)'>${safe}</div>
     <div class='flex items-center gap-2'>
       <button id='btnLike' class='btn' aria-pressed='${liked}'>${liked?'❤️':'🤍'} <span id='likeCount' class='ml-1'>${likes}</span></button>
-      <button id='btnShare' class='btn'>แชร์ LINE</button>
-      <span class='text-sm text-ink3'>📤 ${shares} ครั้ง</span>
+      <button id='btnShare' class='btn'>แชร์ LINE</button><span class='text-sm text-ink3'>📤 ${shares} ครั้ง</span>
       <div class='ml-auto text-sm text-ink3'>เปิดอ่าน <span id='viewCount'>${views}</span> ครั้ง</div>
     </div>
     ${can?`<div class='mt-3 flex gap-2'><button class='btn btn-prim' id='editP'>แก้ไข</button><button class='btn' id='delP'>ลบ</button></div>`:''}`;
 
-  // เพิ่ม event listeners...
-  const editBtn = document.getElementById('editP');
-  const delBtn = document.getElementById('delP');
-  if(editBtn) editBtn.onclick = () => openEditSheet(p);
-  if(delBtn) delBtn.onclick = async() => {
+  const editBtn=document.getElementById('editP');
+  const delBtn=document.getElementById('delP');
+  if(editBtn) editBtn.onclick=()=>openEditSheet(p);
+  if(delBtn) delBtn.onclick=async()=>{
     if(!confirm('ลบข่าวนี้?')) return;
-    const del = await supabase.from('posts').delete().eq('id',p.id);
+    const del=await supabase.from('posts').delete().eq('id',p.id);
     if(del.error){ toast('ลบไม่สำเร็จ'); return; }
     location.hash='#news';
   };
 
-  const likeBtn = document.getElementById('btnLike');
+  const likeBtn=document.getElementById('btnLike');
   if(likeBtn){
-    likeBtn.onclick = async() => {
-      if(!lineId){ 
-        toast('กรุณาเข้าสู่ระบบด้วย LINE ก่อน'); 
-        return; 
-      }
+    likeBtn.onclick=async()=>{
+      if(!lineId){ toast('กรุณาเข้าสู่ระบบด้วย LINE ก่อน'); return; }
       const pressed = (likeBtn.getAttribute('aria-pressed')==='true');
       try{
         if(pressed){
-          const res = await supabase.rpc('unlike_post',{p_post_id:p.id,p_line_user_id:lineId});
+          const res=await supabase.rpc('unlike_post',{p_post_id:p.id,p_line_user_id:lineId});
           likeBtn.setAttribute('aria-pressed','false');
           likeBtn.firstChild.nodeValue='🤍';
           document.getElementById('likeCount').textContent=(res.data||0);
         }else{
-          const res = await supabase.rpc('like_post',{p_post_id:p.id,p_line_user_id:lineId});
+          const res=await supabase.rpc('like_post',{p_post_id:p.id,p_line_user_id:lineId});
           likeBtn.setAttribute('aria-pressed','true');
           likeBtn.firstChild.nodeValue='❤️';
           document.getElementById('likeCount').textContent=(res.data||0);
         }
-      }catch(_){ 
-        toast('ดำเนินการไม่สำเร็จ'); 
-      }
+      }catch(_){ toast('ดำเนินการไม่สำเร็จ'); }
     };
   }
-  
-  const btnShare = document.getElementById('btnShare');
-  if(btnShare) btnShare.onclick = () => sharePost(p.id);
+  const btnShare=document.getElementById('btnShare');
+  if(btnShare) btnShare.onclick=()=>sharePost(p.id);
 
-  // อัพเดท view count หลังจาก 1.2 วินาที
-  setTimeout(async() => {
-    const s2 = await supabase.from('post_stats').select('view_count').eq('post_id',p.id).maybeSingle();
-    if(s2.data && document.getElementById('viewCount')) {
-      document.getElementById('viewCount').textContent = s2.data.view_count;
-    }
-  }, 1200);
+  setTimeout(async()=>{
+    const s2=await supabase.from('post_stats').select('view_count').eq('post_id',p.id).maybeSingle();
+    if(s2.data && document.getElementById('viewCount')) document.getElementById('viewCount').textContent=s2.data.view_count;
+  },1200);
 }
-
-// ฟังก์ชันสำหรับบังคับ LINE Login
-async function forceLineLogin() {
-  try {
-    // ตรวจสอบว่า LIFF พร้อมใช้งาน
-    if (!window.liff) {
-      console.error('LIFF SDK not loaded');
-      toast('ไม่สามารถเข้าสู่ระบบได้ กรุณาเปิดใน LINE');
-      return;
-    }
-
-    // Initialize LIFF ถ้ายังไม่ได้ทำ
-    if (!window.liff.isLoggedIn) {
-      const liffId = window.LIFF_ID || localStorage.getItem('LIFF_ID') || '';
-      if (!liffId) {
-        console.error('LIFF ID not configured');
-        toast('ไม่พบการตั้งค่า LIFF');
-        return;
-      }
-      
-      await window.liff.init({ liffId });
-    }
-
-    // ตรวจสอบสถานะ login
-    if (!window.liff.isLoggedIn()) {
-      // บันทึก URL ปัจจุบันเพื่อกลับมาหลัง login
-      const currentUrl = window.location.href;
-      sessionStorage.setItem('redirectAfterLogin', currentUrl);
-      
-      // Redirect ไป LINE Login
-      window.liff.login({
-        redirectUri: window.location.origin + window.location.pathname
-      });
-    } else {
-      // ถ้า login แล้วแต่ยังไม่มี profile ให้ดึงมา
-      const profile = await window.liff.getProfile();
-      localStorage.setItem('LINE_PROFILE', JSON.stringify(profile));
-      
-      // Reload หน้าเพื่อแสดงข้อมูล
-      window.location.reload();
-    }
-  } catch (error) {
-    console.error('Force login error:', error);
-    toast('ไม่สามารถเข้าสู่ระบบได้');
-  }
-}
-
-// เพิ่มฟังก์ชันตรวจสอบและ redirect หลัง login
-document.addEventListener('DOMContentLoaded', () => {
-  // ตรวจสอบว่ามี redirect URL หลังจาก login หรือไม่
-  const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
-  if (redirectUrl) {
-    sessionStorage.removeItem('redirectAfterLogin');
-    // ตรวจสอบว่า login สำเร็จแล้ว
-    const profile = localStorage.getItem('LINE_PROFILE');
-    if (profile) {
-      // Redirect กลับไปหน้าที่ต้องการ
-      window.location.href = redirectUrl;
-    }
-  }
-});
 
 // -------- UTIL --------
 async function fetchStats(ids){
