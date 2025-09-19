@@ -229,7 +229,7 @@ async function loadPage(p){
         </div>
         <div class='text-[12px] text-ink3'>${esc(p.category||'ทั่วไป')} • ${date}</div>
         <div class='flex items-center gap-3 mt-1 text-[12px] text-ink2'>
-          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span>
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span>📤 ${s.shares}</span>
           <button onclick='sharePost(${p.id})' class='underline'>แชร์</button>
         </div>
         ${tools}
@@ -333,14 +333,6 @@ export async function renderDetail(id){
 }
 
 // -------- UTIL --------
-// async function fetchStats(ids){
-//   const map=new Map();
-//   if(!ids || ids.length===0) return map;
-//   const resp = await supabase.from('post_stats').select('post_id,view_count,like_count').in('post_id',ids);
-//   (resp.data||[]).forEach(r=>map.set(r.post_id, {views:r.view_count||0, likes:r.like_count||0}));
-//   return map;
-// }
-
 async function fetchStats(ids){
   const map=new Map();
   if(!ids || ids.length===0) return map;
