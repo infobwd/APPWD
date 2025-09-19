@@ -408,14 +408,22 @@ function updateShareCountInUI(postId, newCount) {
     // อัพเดทใน post detail page
     const shareCountEl = document.querySelector(`#shareCount-${postId}`);
     if (shareCountEl) {
-      shareCountEl.textContent = newCount;
+      shareCountEl.innerHTML = `📤 ${newCount}`;  // รวม icon
     }
     
     // อัพเดทในรายการข่าว
     const listShareEl = document.querySelector(`[data-post-share-count="${postId}"]`);
     if (listShareEl) {
-      listShareEl.textContent = newCount;
+      listShareEl.innerHTML = `📤 ${newCount}`;  // รวม icon
     }
+    
+    // อัพเดทแบบ span ที่มี class text-sm
+    const shareSpans = document.querySelectorAll(`span[data-share-id="${postId}"]`);
+    shareSpans.forEach(span => {
+      span.innerHTML = `📤 ${newCount}`;  // รวม icon
+    });
+    
+    console.log(`UI updated: Post ${postId} shares = ${newCount}`);
   } catch (error) {
     console.warn('Failed to update share count in UI:', error);
   }
