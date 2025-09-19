@@ -1,5 +1,6 @@
 /**
- * Simplified News Share Module
+ *line_share.js
+ Simplified News Share Module
  * ระบบแชร์ข่าวแบบเฉพาะเจาะจง
  */
 
