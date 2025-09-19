@@ -1,5 +1,5 @@
 /**
- * line_share.js
+ * share_bindings.js
  Updated Share Bindings for News-only sharing
  * การเชื่อมต่อการแชร์แบบเฉพาะข่าว
  */
