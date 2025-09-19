@@ -263,6 +263,7 @@ export async function renderDetail(id){
     .select('view_count,like_count,share_count').eq('post_id',p.id).maybeSingle();
   const views = (statResp.data && statResp.data.view_count) || 0;
   const likes = (statResp.data && statResp.data.like_count) || 0;
+  const shares = (statResp.data && statResp.data.share_count) || 0;
 
   const prof = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
   const lineId = prof?.userId || null;
@@ -287,7 +288,7 @@ export async function renderDetail(id){
     <div class='prose prose-sm max-w-none mb-4' style='color:var(--ink)'>${safe}</div>
     <div class='flex items-center gap-2'>
       <button id='btnLike' class='btn' aria-pressed='${liked}'>${liked?'❤️':'🤍'} <span id='likeCount' class='ml-1'>${likes}</span></button>
-      <button id='btnShare' class='btn'>แชร์ LINE</button>
+      <button id='btnShare' class='btn'>แชร์ LINE</button><span class='text-sm text-ink3'>📤 ${shares} ครั้ง</span>
       <div class='ml-auto text-sm text-ink3'>เปิดอ่าน <span id='viewCount'>${views}</span> ครั้ง</div>
     </div>
     ${can?`<div class='mt-3 flex gap-2'><button class='btn btn-prim' id='editP'>แก้ไข</button><button class='btn' id='delP'>ลบ</button></div>`:''}`;
