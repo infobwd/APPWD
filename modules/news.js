@@ -146,7 +146,7 @@ export async function renderHome(){
         <div class='text-[12px] text-ink3 mb-1'>${esc(p.category||'ทั่วไป')} • ${date}</div>
         <a href='#post?id=${p.id}' class='block font-semibold leading-snug line-clamp-2 mb-1' style='color:var(--ink)'>${esc(p.title)}</a>
         <div class='flex items-center gap-3 text-[12px] text-ink2'>
-          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span id='shareCount-${p.id}' class='text-sm text-ink3'>📤 ${shares}</span>
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span id='shareCount-${p.id}' class='text-sm text-ink3'>📤 ${s.shares}</span>
           <button onclick='sharePost(${p.id})' class='underline'>แชร์</button>
         </div>
       </div>
