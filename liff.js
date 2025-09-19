@@ -1,3 +1,4 @@
+/*liff.js*/
 import { LIFF_ID,PUBLIC_URL } from './config.js';
 const badge=document.getElementById('userBadge'), avatar=document.getElementById('userAvatar'), nameEl=document.getElementById('userName');
 const pfAvatar=document.getElementById('pfAvatar'), pfName=document.getElementById('pfName');
