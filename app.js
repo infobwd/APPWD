@@ -1,3 +1,4 @@
+/*app.js*/
 import * as News from './modules/news.js';
 import * as Links from './modules/links.js';
 import * as Checkin from './modules/checkin.js';
