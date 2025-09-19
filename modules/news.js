@@ -229,7 +229,7 @@ async function loadPage(p){
         </div>
         <div class='text-[12px] text-ink3'>${esc(p.category||'ทั่วไป')} • ${date}</div>
         <div class='flex items-center gap-3 mt-1 text-[12px] text-ink2'>
-          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span>📤 ${s.shares}</span>
+          <span>👁️ ${s.views}</span><span>❤️ ${s.likes}</span><span data-post-share-count='${p.id}' class='text-[12px] text-ink2'>📤 ${s.shares}</span>
           <button onclick='sharePost(${p.id})' class='underline'>แชร์</button>
         </div>
         ${tools}
