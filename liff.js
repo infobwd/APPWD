@@ -1,26 +1,34 @@
-/* liff.js (safe, settings-aware) */
+/* liff.js (v565) — safe init, no LIFF errors */
 
 import { LIFF_ID as CFG_LIFF_ID, PUBLIC_URL } from './config.js';
 
-// ---- optional: ดึง getSetting() ถ้ามี settings.js ----
-let getSetting = null;
-try {
-  const mod = await import('./settings.js'); // อาจไม่มีในบางโปรเจกต์ → try/catch
-  getSetting = typeof mod.getSetting === 'function' ? mod.getSetting : null;
-} catch (_) { /* ignore */ }
+// ---------- optional: settings.getSetting ----------
+async function tryGetSetting(key) {
+  try {
+    const mod = await import('./settings.js'); // อาจไม่มีในโปรเจกต์
+    if (typeof mod.getSetting === 'function') {
+      return await mod.getSetting(key);
+    }
+  } catch (_) {}
+  // เผื่อค่าค้างในแคช global
+  if (window.__APP_SETTINGS && key in window.__APP_SETTINGS) {
+    return window.__APP_SETTINGS[key];
+  }
+  return null;
+}
 
-// ---- DOM refs (ทนต่อการไม่มี element) ----
+// ---------- DOM refs ----------
 const badge    = document.getElementById('userBadge');
 const avatar   = document.getElementById('userAvatar');
 const nameEl   = document.getElementById('userName');
 const pfAvatar = document.getElementById('pfAvatar');
 const pfName   = document.getElementById('pfName');
 
-const btnLogin  = document.getElementById('btnLineLogin');
-const btnLogout = document.getElementById('btnLogout');
-const btnLogout2= document.getElementById('btnLogout2');
+const btnLogin   = document.getElementById('btnLineLogin');
+const btnLogout  = document.getElementById('btnLogout');
+const btnLogout2 = document.getElementById('btnLogout2');
 
-// ---- helpers ----
+// ---------- helpers ----------
 function ensureSlash(u){ return u && u.endsWith('/') ? u : (u || '') + '/'; }
 function saveProfile(p){ try{ localStorage.setItem('LINE_PROFILE', JSON.stringify(p||{})); }catch(e){} }
 function loadProfile(){ try{ return JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null'); }catch(e){ return null; } }
@@ -38,117 +46,129 @@ function renderProfile(p){
 }
 
 function guessRedirectBase(){
-  // PUBLIC_URL มาก่อน, ไม่มีก็ใช้ origin + path root ปัจจุบัน
   if (PUBLIC_URL) return ensureSlash(PUBLIC_URL);
   try {
     const url = new URL(location.href);
-    // เอา path จนถึงโฟลเดอร์โปรเจกต์ (มี index.html ไหมไม่สนใจ)
     const parts = url.pathname.split('/');
-    parts.pop(); // ตัดไฟล์ออก
+    if (parts[parts.length-1].includes('.')) parts.pop(); // ตัดไฟล์ท้าย path ถ้ามี
     return `${url.origin}${parts.join('/')}/`;
-  } catch {
-    return ensureSlash(location.origin);
-  }
+  } catch { return ensureSlash(location.origin); }
 }
 
+function hasLiff(){ return typeof window !== 'undefined' && typeof window.liff !== 'undefined'; }
+
 async function resolveLiffId(){
-  // ลำดับความสำคัญ: window.__APPCFG → settings.getSetting → window.__APP_SETTINGS → config.js
-  const fromCfgObj = (window.__APPCFG && window.__APPCFG.LIFF_ID) || null;
-  if (fromCfgObj && String(fromCfgObj).trim()) return String(fromCfgObj).trim();
+  // ลำดับ: window.__APPCFG → settings.getSetting → window.__APP_SETTINGS → config.js
+  const cfgObj = (window.__APPCFG && window.__APPCFG.LIFF_ID) ? String(window.__APPCFG.LIFF_ID).trim() : '';
+  if (cfgObj) return cfgObj;
 
-  if (getSetting) {
-    try {
-      const v = await getSetting('LIFF_ID');
-      if (v && String(v).trim()) return String(v).trim();
-    } catch (_) {}
-  }
+  const s = await tryGetSetting('LIFF_ID');
+  if (s && String(s).trim()) return String(s).trim();
 
-  const fromCache = (window.__APP_SETTINGS && window.__APP_SETTINGS.LIFF_ID) || null;
-  if (fromCache && String(fromCache).trim()) return String(fromCache).trim();
+  const cached = (window.__APP_SETTINGS && window.__APP_SETTINGS.LIFF_ID) ? String(window.__APP_SETTINGS.LIFF_ID).trim() : '';
+  if (cached) return cached;
 
   if (CFG_LIFF_ID && String(CFG_LIFF_ID).trim()) return String(CFG_LIFF_ID).trim();
 
   return null;
 }
 
-function hasLiff(){
-  return typeof window !== 'undefined' && typeof window.liff !== 'undefined';
+// ---------- LIFF init gate ----------
+let liffInitPromise = null;
+let liffReady = false;
+let resolvedLiffId = null;
+
+async function ensureLiffReady() {
+  if (!hasLiff()) {
+    console.warn('[LIFF] SDK not loaded, skip');
+    return false;
+  }
+  if (liffReady) return true;
+
+  if (!liffInitPromise) {
+    resolvedLiffId = await resolveLiffId();
+    if (!resolvedLiffId) {
+      console.warn('[LIFF] no LIFF_ID configured. Set it in settings first.');
+      return false;
+    }
+    liffInitPromise = (async () => {
+      try {
+        await liff.init({ liffId: resolvedLiffId });
+        liffReady = true;
+        return true;
+      } catch (e) {
+        console.warn('[LIFF] init error', e);
+        liffReady = false;
+        liffInitPromise = null; // allow retry
+        return false;
+      }
+    })();
+  }
+  return await liffInitPromise;
 }
 
-// ---- Core actions ----
+// ---------- Actions ----------
 async function doLogin(){
-  if (!hasLiff()) return;
+  const ok = await ensureLiffReady();
+  if (!ok) {
+    alert('ยังไม่ได้ตั้งค่า LIFF_ID กรุณาเปิดหน้าโปรไฟล์แล้วกรอกค่าที่ "ค่าระบบ (ปลอดภัย)".');
+    if (!location.hash.includes('profile')) location.hash = '#profile';
+    return;
+  }
   try {
-    if (!liff.isLoggedIn()) {
-      liff.login({ redirectUri: guessRedirectBase() + 'auth-bridge.html' });
-    }
+    if (liff.isLoggedIn()) return; // ไม่ต้องทำอะไร
+    liff.login({ redirectUri: guessRedirectBase() + 'auth-bridge.html' });
   } catch(e) {
     console.warn('[LIFF] login error', e);
   }
 }
 
-function doLogout(){
+async function maybeGetProfile(){
   try {
-    if (hasLiff() && liff.isLoggedIn()) liff.logout();
-  } catch(_) {}
-  clearProfile();
-  location.replace(guessRedirectBase());
-}
-
-// ---- Init ----
-async function init(){
-  // แม้ไม่มี LIFF/ID ก็พยายาม render โปรไฟล์จาก cache
-  const cached = loadProfile();
-  if (cached) renderProfile(cached);
-
-  // guard: ถ้า SDK ยังไม่โหลด ไม่ทำอะไร
-  if (!hasLiff()) {
-    console.warn('[LIFF] SDK not loaded, skip init');
-    return;
-  }
-
-  // หา LIFF_ID จาก settings/config; ถ้าไม่มี → ข้ามการ init เพื่อกัน "Failed to fetch"
-  const LID = await resolveLiffId();
-  if (!LID) {
-    console.warn('[LIFF] skip init: no LIFF_ID configured');
-    return;
-  }
-
-  try {
-    await liff.init({ liffId: LID });
-
+    const ok = await ensureLiffReady();
+    if (!ok) return;
     if (liff.isLoggedIn()) {
       const prof = await liff.getProfile();
       saveProfile(prof);
       renderProfile(prof);
-    } else {
-      // ยังไม่ล็อกอิน → แสดง cache ถ้ามี, โชว์ปุ่ม login
-      if (!cached) {
-        // ไม่มีแคช → โชว์ปุ่ม login ชัด ๆ
-        if (btnLogin) btnLogin.classList.remove('hide');
-      }
     }
   } catch(e) {
-    // กันแอปพัง กรณี domain/LIFF_ID ยังไม่ถูกต้อง
-    console.warn('[LIFF] init error', e);
+    console.warn('[LIFF] getProfile error', e);
   }
 }
 
-// ---- Wire buttons & global events ----
-if (btnLogin)  btnLogin.onclick  = () => doLogin();
-if (btnLogout) btnLogout.onclick = () => doLogout();
-if (btnLogout2)btnLogout2.onclick= () => doLogout();
+function doLogout(){
+  try { if (hasLiff() && liffReady && liff.isLoggedIn()) liff.logout(); } catch(_){}
+  clearProfile();
+  location.replace(guessRedirectBase());
+}
 
-// รับอีเวนต์จากหน้าอื่น/โมดูลอื่น (ที่เราใช้ในหน้า #profile)
+// ---------- Init ----------
+async function init(){
+  // เรนเดอร์จาก cache ก่อน เพื่อไม่ให้หน้าโล่ง
+  const cached = loadProfile();
+  if (cached) renderProfile(cached);
+
+  // พยายามเตรียม LIFF แต่ถ้าไม่มี LIFF_ID จะข้ามอย่างนุ่มนวล
+  await maybeGetProfile();
+
+  // โชว์ปุ่มล็อกอินถ้ายังไม่ล็อกอินและไม่มี cache
+  if (!cached && btnLogin) btnLogin.classList.remove('hide');
+}
+
+// ---------- Wire buttons & events ----------
+if (btnLogin)   btnLogin.onclick  = () => doLogin();
+if (btnLogout)  btnLogout.onclick = () => doLogout();
+if (btnLogout2) btnLogout2.onclick= () => doLogout();
+
 window.addEventListener('app:liff:login',  () => doLogin());
 window.addEventListener('app:liff:logout', () => doLogout());
 
-// ให้หน้า auth-bridge เรียกใช้ง่าย ๆ หลังได้ profile ใหม่
+// auth-bridge อัปเดตโปรไฟล์ผ่าน localStorage
 window.addEventListener('storage', (e) => {
   if (e.key === 'LINE_PROFILE') {
     try { renderProfile(JSON.parse(e.newValue || 'null')); } catch(_) {}
   }
 });
 
-// เริ่มทำงานเมื่อ DOM พร้อม
 document.addEventListener('DOMContentLoaded', init);
