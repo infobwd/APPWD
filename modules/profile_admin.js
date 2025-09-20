@@ -1,11 +1,11 @@
 // modules/profile_admin.js
-// Profile view (responsive + accordion) + Settings Bridge + School Lat/Lng picker
-// หมายเหตุ: ไม่แตะส่วน "ขนาดตัวอักษร & ธีม" ของเดิม — เปิดช่อง #profile-general-slot ให้เสียบ UI เดิมได้
+// Profile view (responsive, full-card) + Secure Settings + School Lat/Lng map picker + App Links Admin
+// ไม่ยุ่งส่วน "ขนาดตัวอักษร & ธีม" เดิม — เพิ่มปุ่ม #btnTheme ให้ระบบเดิม hook ได้
 
 import { supabase } from '../api.js';
 import { toast } from '../ui.js';
 
-// ====== Leaflet loader (เบา ๆ; ถ้า index.html โหลดไว้แล้วจะข้าม) ======
+// ============= Leaflet loader (โหลดเฉพาะเมื่อจำเป็น) =============
 async function ensureLeafletLoaded() {
   if (window.L) return true;
   await new Promise((resolve) => {
@@ -24,7 +24,7 @@ async function ensureLeafletLoaded() {
   return true;
 }
 
-// ====== Settings API (อ่าน/เขียน key ในตาราง settings) ======
+// ============= Settings API =============
 const SettingsAPI = {
   async get(keys = []) {
     if (!keys.length) return {};
@@ -32,12 +32,9 @@ const SettingsAPI = {
       .from('settings')
       .select('key, value')
       .in('key', keys);
-    if (error) {
-      console.error('[settings.get]', error);
-      return {};
-    }
+    if (error) { console.error('[settings.get]', error); return {}; }
     const out = {};
-    (data || []).forEach(r => (out[r.key] = r.value));
+    (data || []).forEach(r => out[r.key] = r.value);
     return out;
   },
   async set(pairs = {}) {
@@ -47,29 +44,13 @@ const SettingsAPI = {
   }
 };
 
-// ====== Utils ======
+// ============= Utils =============
 const h = (strings, ...vals) =>
   strings.reduce((acc, s, i) => acc + s + (vals[i] ?? ''), '');
 
-function scrollIntoViewSafe(el) {
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function accordion(id, title, innerHTML, open = false) {
+function card(title, bodyHTML, extra='') {
   return h`
-  <details id="${id}" class="bg-white rounded-xl card p-0 overflow-hidden"${open ? ' open' : ''}>
-    <summary class="list-none cursor-pointer select-none px-5 py-4 flex items-center justify-between">
-      <span class="text-lg font-semibold">${title}</span>
-      <span class="text-slate-500 text-sm">คลิกเพื่อแสดง/ซ่อน</span>
-    </summary>
-    <div class="px-5 pb-5">${innerHTML}</div>
-  </details>`;
-}
-
-function card(title, bodyHTML) {
-  return h`
-  <section class="bg-white rounded-xl card p-5">
+  <section class="bg-white rounded-xl card p-5 ${extra}">
     <div class="flex items-center justify-between gap-3 mb-3">
       <h3 class="text-lg font-semibold">${title}</h3>
     </div>
@@ -77,7 +58,7 @@ function card(title, bodyHTML) {
   </section>`;
 }
 
-// ====== Map Picker (Leaflet) ======
+// ============= Map Picker =============
 async function renderMapPicker(container, lat, lng) {
   await ensureLeafletLoaded();
   container.innerHTML = `<div id="schoolMap" class="w-full h-72 rounded-lg"></div>`;
@@ -89,28 +70,24 @@ async function renderMapPicker(container, lat, lng) {
 
   const latEl = document.getElementById('inputSchoolLat');
   const lngEl = document.getElementById('inputSchoolLng');
-
   const updateInputs = (p) => {
     const { lat, lng } = p;
     latEl.value = lat.toFixed(6);
     lngEl.value = lng.toFixed(6);
   };
-
   marker.on('dragend', () => updateInputs(marker.getLatLng()));
   map.on('click', (e) => { marker.setLatLng(e.latlng); updateInputs(e.latlng); });
 }
 
-// ====== Main Render ======
+// ============= Main Render =============
 export async function render() {
-  // ใช้ #profileView เป็นหลัก; fallback ไป #app กันพลาด
-  const app = document.getElementById('profileView')
-           || document.getElementById('app')
-           || document.body;
+  // เป้าหมายหลักคือ #profileView; เผื่อไม่มีให้ fallback
+  const root = document.getElementById('profileView') || document.getElementById('app') || document.body;
+  try { root.classList.remove('hide'); } catch (_) {}
 
-  try { app.classList.remove('hide'); } catch (_) {}
-
-  app.innerHTML = h`
+  root.innerHTML = h`
   <div id="profileResponsive" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
     ${card('ข้อมูลผู้ใช้', `
       <div class="flex items-center gap-4">
         <img id="pfAvatar" src="" class="w-16 h-16 rounded-full object-cover bg-slate-200" alt="avatar"/>
@@ -125,12 +102,16 @@ export async function render() {
       </div>
     `)}
 
-    ${card('การตั้งค่าทั่วไป (ย่อ)', `
-      <!-- เว้นช่องให้เสียบ "ขนาดตัวอักษร & ธีม" ของเดิม -->
-      <div id="profile-general-slot"></div>
+    ${card('การตั้งค่าทั่วไป', `
+      <!-- ช่องเสียบสำหรับ UI เดิมของพี่ (ขนาดตัวอักษร & ธีม) ถ้ามี HTML เดิม ให้ append เข้ามาที่นี่ -->
+      <div id="profile-general-slot" class="space-y-2"></div>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <button id="btnTheme" class="btn">ขนาดตัวอักษร/ธีม</button>
+        <button id="btnLogout2" class="btn">ออกจากระบบ</button>
+      </div>
     `)}
 
-    ${accordion('profile-settings', 'ค่าระบบ (ปลอดภัย)', `
+    ${card('ค่าระบบ (ปลอดภัย)', `
       <div class="grid sm:grid-cols-2 gap-3">
         <div>
           <label class="text-sm text-slate-600">SUPABASE_URL</label>
@@ -149,9 +130,9 @@ export async function render() {
         <button id="btnSaveSecure" class="btn btn-prim">บันทึกค่าระบบ</button>
         <button id="btnReloadSecure" class="btn">โหลดจาก DB</button>
       </div>
-    `, /*open=*/false)}
+    `, 'md:col-span-2')}
 
-    ${accordion('profile-advanced', 'ตำแหน่งโรงเรียน (SCHOOL_LAT/LNG)', `
+    ${card('ตำแหน่งโรงเรียน (SCHOOL_LAT/LNG)', `
       <div class="grid sm:grid-cols-2 gap-3">
         <div>
           <label class="text-sm text-slate-600">SCHOOL_LAT</label>
@@ -169,11 +150,17 @@ export async function render() {
         <button id="btnSaveSchoolLL" class="btn btn-prim">บันทึกพิกัด</button>
         <button id="btnReloadSchoolLL" class="btn">โหลดจาก DB</button>
       </div>
-    `, /*open=*/ location.hash.includes('profile-advanced'))}
+    `, 'md:col-span-2')}
+
+    ${card('จัดการแอปลิงก์ (ผู้ดูแล)', `
+      <div id="applinksAdminPanel" class="space-y-2">
+        <div class="text-sm text-ink3">กำลังโหลดโมดูลจัดการลิงก์…</div>
+      </div>
+    `, 'md:col-span-2')}
   </div>
   `;
 
-  // ===== เติมข้อมูลโปรไฟล์จาก LINE (ถ้ามี liff.js จะอัปเดตแทน) =====
+  // ---------- เติมข้อมูลโปรไฟล์จาก LINE ----------
   try {
     const lp = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
     if (lp?.pictureUrl) document.getElementById('pfAvatar').src = lp.pictureUrl;
@@ -181,7 +168,20 @@ export async function render() {
     if (lp?.userId) document.getElementById('pfSub').textContent = lp.userId;
   } catch(e){ /* ignore */ }
 
-  // ===== โหลด/บันทึก ค่าระบบ (ปลอดภัย) =====
+  // ---------- ปุ่ม Theme & Logout สำรอง ----------
+  document.getElementById('btnTheme')?.addEventListener('click', () => {
+    // ให้ระบบเดิม hook; ถ้าไม่มี ให้แจ้งเตือนเบา ๆ
+    const hooked = window.dispatchEvent(new CustomEvent('app:open:theme', {bubbles:true}));
+    if (!hooked) toast('เปิดหน้าตั้งค่าธีม/ตัวอักษรจากระบบเดิมไม่สำเร็จ');
+  });
+  document.getElementById('btnLogout2')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('app:liff:logout'));
+  });
+  // ปุ่มบนหัวการ์ดยังคงเดิม
+  document.getElementById('btnLineLogin')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:login')));
+  document.getElementById('btnLogout')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:logout')));
+
+  // ---------- ค่าระบบ (ปลอดภัย) ----------
   async function loadSecure(){
     const v = await SettingsAPI.get(['SUPABASE_URL','SUPABASE_ANON_KEY','LIFF_ID']);
     document.getElementById('inSupabaseUrl').value = v.SUPABASE_URL || '';
@@ -201,7 +201,7 @@ export async function render() {
   document.getElementById('btnSaveSecure').onclick   = () => saveSecure().catch(e => toast('บันทึกไม่สำเร็จ: '+e.message));
   await loadSecure();
 
-  // ===== Lat/Lng + Map =====
+  // ---------- Lat/Lng + Map ----------
   let lat = 14.000000, lng = 99.000000; // default
   async function loadSchoolLL(){
     const v = await SettingsAPI.get(['SCHOOL_LAT','SCHOOL_LNG']);
@@ -222,21 +222,32 @@ export async function render() {
   document.getElementById('btnSaveSchoolLL').onclick   = () => saveSchoolLL().catch(e=>toast('บันทึกพิกัดไม่สำเร็จ: '+e.message));
   await loadSchoolLL();
 
-  // ===== auto-focus advanced เมื่อมี #profile-advanced ใน URL =====
-  if (location.hash.includes('profile-advanced')) {
-    const adv = document.getElementById('profile-advanced');
-    if (adv && !adv.open) adv.open = true;
-    setTimeout(()=>scrollIntoViewSafe(adv), 100);
+  // ---------- App Links Admin (เฉพาะผู้ดูแล) ----------
+  const isAdminUser = await isAdmin();
+  const panel = document.getElementById('applinksAdminPanel');
+  if (isAdminUser) {
+    try {
+      // รองรับหลาย signature: renderAdminPanel(id) หรือ render(id) หรือ default(id)
+      const mod = await import('./applinks_admin.js');
+      if (typeof mod.renderAdminPanel === 'function') {
+        await mod.renderAdminPanel('applinksAdminPanel');
+      } else if (typeof mod.render === 'function') {
+        await mod.render('applinksAdminPanel');
+      } else if (typeof mod.default === 'function') {
+        await mod.default('applinksAdminPanel');
+      } else {
+        panel.innerHTML = `<div class="text-sm text-ink3">ไม่พบเมธอดเรนเดอร์ใน applinks_admin.js</div>`;
+      }
+    } catch (e) {
+      console.error('[applinks_admin] load error', e);
+      panel.innerHTML = `<div class="text-sm text-red-600">โหลดโมดูล applinks_admin ไม่สำเร็จ: ${e.message}</div>`;
+    }
+  } else {
+    panel.innerHTML = `<div class="text-sm text-ink3">ส่วนนี้สำหรับผู้ดูแลระบบเท่านั้น</div>`;
   }
-
-  // ===== ปุ่ม Login/Logout (ปล่อยให้ liff.js ดูแล event หลัก) =====
-  const btnLogin = document.getElementById('btnLineLogin');
-  const btnLogout = document.getElementById('btnLogout');
-  btnLogin?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:login')));
-  btnLogout?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:logout')));
 }
 
-// ===== Helper สิทธิ์ (คงชื่อไว้ให้โมดูลอื่นเรียก) =====
+// ============= Helper: ตรวจสิทธิ์ผู้ดูแล =============
 export async function isAdmin() {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
