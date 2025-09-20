@@ -1604,3 +1604,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, { passive: true });
 });
+
+document.addEventListener('click', async (e)=>{
+  const fab = e.target.closest?.('#fabScan'); if(!fab) return;
+  const { data } = await supabase.auth.getUser();
+  const prof = JSON.parse(localStorage.getItem('LINE_PROFILE')||'null');
+  if(!(data?.user || prof?.userId)){
+    e.preventDefault();
+    openSheet(`<div class="space-y-2 text-sm">
+      <div class="font-semibold">ต้องเข้าสู่ระบบก่อนเช็คอิน</div>
+      <div>กรุณาเข้าสู่ระบบด้วย LINE แล้วลองใหม่อีกครั้ง</div>
+    </div>`, { title:'ต้องเข้าสู่ระบบ' });
+  }
+}, true);
+
