@@ -1,11 +1,13 @@
 // modules/profile_admin.js
-// Profile view (responsive, full-card) + Secure Settings + School Lat/Lng map picker + App Links Admin
-// ไม่ยุ่งส่วน "ขนาดตัวอักษร & ธีม" เดิม — เพิ่มปุ่ม #btnTheme ให้ระบบเดิม hook ได้
+// Profile view (full cards) + Secure Settings + School Lat/Lng map picker + App Links Admin
+// - ไม่ยุ่ง UI "ขนาดตัวอักษร & ธีม" เดิม (คงไว้ให้ระบบเดิมดูแล)
+// - ย้าย anchor id="profile-advanced" มาอยู่ถูกตำแหน่ง (เหนือการ์ดพิกัด)
+// - isAdmin() รองรับทั้ง profiles และ users (is_admin / role)
 
 import { supabase } from '../api.js';
 import { toast } from '../ui.js';
 
-// ============= Leaflet loader (โหลดเฉพาะเมื่อจำเป็น) =============
+// ---------- Leaflet (โหลดเมื่อจำเป็น) ----------
 async function ensureLeafletLoaded() {
   if (window.L) return true;
   await new Promise((resolve) => {
@@ -24,7 +26,7 @@ async function ensureLeafletLoaded() {
   return true;
 }
 
-// ============= Settings API =============
+// ---------- Settings API ----------
 const SettingsAPI = {
   async get(keys = []) {
     if (!keys.length) return {};
@@ -34,7 +36,7 @@ const SettingsAPI = {
       .in('key', keys);
     if (error) { console.error('[settings.get]', error); return {}; }
     const out = {};
-    (data || []).forEach(r => out[r.key] = r.value);
+    (data || []).forEach(r => (out[r.key] = r.value));
     return out;
   },
   async set(pairs = {}) {
@@ -44,9 +46,8 @@ const SettingsAPI = {
   }
 };
 
-// ============= Utils =============
-const h = (strings, ...vals) =>
-  strings.reduce((acc, s, i) => acc + s + (vals[i] ?? ''), '');
+// ---------- Utils ----------
+const h = (strings, ...vals) => strings.reduce((a, s, i) => a + s + (vals[i] ?? ''), '');
 
 function card(title, bodyHTML, extra='') {
   return h`
@@ -58,14 +59,11 @@ function card(title, bodyHTML, extra='') {
   </section>`;
 }
 
-// ============= Map Picker =============
 async function renderMapPicker(container, lat, lng) {
   await ensureLeafletLoaded();
   container.innerHTML = `<div id="schoolMap" class="w-full h-72 rounded-lg"></div>`;
   const map = L.map('schoolMap', { scrollWheelZoom: true }).setView([lat, lng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
   const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
 
   const latEl = document.getElementById('inputSchoolLat');
@@ -79,9 +77,8 @@ async function renderMapPicker(container, lat, lng) {
   map.on('click', (e) => { marker.setLatLng(e.latlng); updateInputs(e.latlng); });
 }
 
-// ============= Main Render =============
+// ---------- Main ----------
 export async function render() {
-  // เป้าหมายหลักคือ #profileView; เผื่อไม่มีให้ fallback
   const root = document.getElementById('profileView') || document.getElementById('app') || document.body;
   try { root.classList.remove('hide'); } catch (_) {}
 
@@ -103,7 +100,7 @@ export async function render() {
     `)}
 
     ${card('การตั้งค่าทั่วไป', `
-      <!-- ช่องเสียบสำหรับ UI เดิมของพี่ (ขนาดตัวอักษร & ธีม) ถ้ามี HTML เดิม ให้ append เข้ามาที่นี่ -->
+      <!-- เว้นช่องสำหรับ UI เดิม (ขนาดตัวอักษร & ธีม) -->
       <div id="profile-general-slot" class="space-y-2"></div>
       <div class="grid grid-cols-2 gap-2 mt-2">
         <button id="btnTheme" class="btn">ขนาดตัวอักษร/ธีม</button>
@@ -130,7 +127,11 @@ export async function render() {
         <button id="btnSaveSecure" class="btn btn-prim">บันทึกค่าระบบ</button>
         <button id="btnReloadSecure" class="btn">โหลดจาก DB</button>
       </div>
+      <div class="text-[12px] text-ink3 mt-1">* ตั้งค่าให้ถูกต้องก่อน เพื่อหลีกเลี่ยง LIFF init error</div>
     `, 'md:col-span-2')}
+
+    <!-- Anchor ให้เลื่อนไปที่พิกัดได้ตรงจุด -->
+    <span id="profile-advanced"></span>
 
     ${card('ตำแหน่งโรงเรียน (SCHOOL_LAT/LNG)', `
       <div class="grid sm:grid-cols-2 gap-3">
@@ -160,28 +161,26 @@ export async function render() {
   </div>
   `;
 
-  // ---------- เติมข้อมูลโปรไฟล์จาก LINE ----------
+  // โปรไฟล์จาก LINE (ถ้ามี)
   try {
     const lp = JSON.parse(localStorage.getItem('LINE_PROFILE') || 'null');
     if (lp?.pictureUrl) document.getElementById('pfAvatar').src = lp.pictureUrl;
     if (lp?.displayName) document.getElementById('pfName').textContent = lp.displayName;
     if (lp?.userId) document.getElementById('pfSub').textContent = lp.userId;
-  } catch(e){ /* ignore */ }
+  } catch {}
 
-  // ---------- ปุ่ม Theme & Logout สำรอง ----------
+  // ปุ่มธีม/ออกจากระบบ (โยน event ให้ระบบเดิม)
   document.getElementById('btnTheme')?.addEventListener('click', () => {
-    // ให้ระบบเดิม hook; ถ้าไม่มี ให้แจ้งเตือนเบา ๆ
-    const hooked = window.dispatchEvent(new CustomEvent('app:open:theme', {bubbles:true}));
-    if (!hooked) toast('เปิดหน้าตั้งค่าธีม/ตัวอักษรจากระบบเดิมไม่สำเร็จ');
+    const ok = window.dispatchEvent(new CustomEvent('app:open:theme', { bubbles: true }));
+    if (!ok) toast('เปิดหน้าตั้งค่าธีม/ตัวอักษรจากระบบเดิมไม่สำเร็จ');
   });
   document.getElementById('btnLogout2')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('app:liff:logout'));
   });
-  // ปุ่มบนหัวการ์ดยังคงเดิม
   document.getElementById('btnLineLogin')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:login')));
   document.getElementById('btnLogout')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('app:liff:logout')));
 
-  // ---------- ค่าระบบ (ปลอดภัย) ----------
+  // ค่าระบบ
   async function loadSecure(){
     const v = await SettingsAPI.get(['SUPABASE_URL','SUPABASE_ANON_KEY','LIFF_ID']);
     document.getElementById('inSupabaseUrl').value = v.SUPABASE_URL || '';
@@ -201,8 +200,8 @@ export async function render() {
   document.getElementById('btnSaveSecure').onclick   = () => saveSecure().catch(e => toast('บันทึกไม่สำเร็จ: '+e.message));
   await loadSecure();
 
-  // ---------- Lat/Lng + Map ----------
-  let lat = 14.000000, lng = 99.000000; // default
+  // Map + พิกัด
+  let lat = 14.0, lng = 99.0;
   async function loadSchoolLL(){
     const v = await SettingsAPI.get(['SCHOOL_LAT','SCHOOL_LNG']);
     if (v.SCHOOL_LAT != null) lat = Number(v.SCHOOL_LAT);
@@ -222,12 +221,17 @@ export async function render() {
   document.getElementById('btnSaveSchoolLL').onclick   = () => saveSchoolLL().catch(e=>toast('บันทึกพิกัดไม่สำเร็จ: '+e.message));
   await loadSchoolLL();
 
-  // ---------- App Links Admin (เฉพาะผู้ดูแล) ----------
-  const isAdminUser = await isAdmin();
+  // ถ้า URL มี #profile-advanced → เลื่อนไปที่ anchor และโฟกัสการ์ดพิกัด
+  if (location.hash.includes('profile-advanced')) {
+    const anchor = document.getElementById('profile-advanced');
+    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // โหลดแผงจัดการแอปลิงก์ (เฉพาะผู้ดูแล)
+  const admin = await isAdmin();
   const panel = document.getElementById('applinksAdminPanel');
-  if (isAdminUser) {
+  if (admin) {
     try {
-      // รองรับหลาย signature: renderAdminPanel(id) หรือ render(id) หรือ default(id)
       const mod = await import('./applinks_admin.js');
       if (typeof mod.renderAdminPanel === 'function') {
         await mod.renderAdminPanel('applinksAdminPanel');
@@ -247,16 +251,28 @@ export async function render() {
   }
 }
 
-// ============= Helper: ตรวจสิทธิ์ผู้ดูแล =============
+// ---------- ตรวจสิทธิ์ผู้ดูแล (flexible: profiles → users) ----------
 export async function isAdmin() {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
   if (!uid) return false;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('user_id', uid)
-    .maybeSingle();
-  if (error) return false;
-  return data?.role === 'admin';
+
+  // 1) profiles.role = 'admin'
+  try {
+    const { data } = await supabase.from('profiles').select('role').eq('user_id', uid).maybeSingle();
+    if (data?.role === 'admin') return true;
+  } catch {}
+
+  // 2) users.is_admin = true หรือ users.role = 'admin' (id หรือ user_id)
+  try {
+    let { data } = await supabase.from('users').select('is_admin, role').eq('id', uid).maybeSingle();
+    if (!data) {
+      const r2 = await supabase.from('users').select('is_admin, role').eq('user_id', uid).maybeSingle();
+      data = r2.data;
+    }
+    if (data?.is_admin === true) return true;
+    if ((data?.role || '').toLowerCase() === 'admin') return true;
+  } catch {}
+
+  return false;
 }
